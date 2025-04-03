@@ -164,7 +164,7 @@
 
 ### GET Product popular 
 - 설명 : 최근 3일 이내에 인기상품 상위 5개를 요청하는 API (매 한시간마다 갱신)
-- endpoint : /v1/products/best
+- endpoint : /v1/products/bests
 - method : GET
 
 #### Response
