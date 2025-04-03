@@ -24,6 +24,7 @@ erDiagram
     COUPON{
         INT id PK
         ENUM type
+        VARCHAR description
         INT discount
         INT quantity
         INT issued
@@ -104,16 +105,17 @@ erDiagram
 
 
 ### COUPON
-| 컬럼 이름        | 타입        | 제약 조건                         | 설명                |
-|------------------|-----------|-------------------------------|-------------------|
-| id               | INT       | PK                            | 기본 키              |
-| type             | ENUM      | NOT NULL (`PERCENT`, `FIXED`) | 쿠폰 유형 (열거형)       |
-| discount         | INT       | NOT NULL                      | 할인 금액 또는 할인율      |
-| quantity         | INT       | NOT NULL                      | 발행 가능 수량          |
-| issued           | INT       | NOT NULL DEFAULT 0            | 현재까지 발행된 수량       |
-| expiration_days  | INT       | NOT NULL                      | 발행 후 유효 기간 (일 단위) |
-| created_at       | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP     | 생성 일시             |
-| updated_at       | TIMESTAMP | ON UPDATE CURRENT_TIMESTAMP   | 수정 일시             |
+| 컬럼 이름           | 타입        | 제약 조건                       | 설명                |
+|-----------------|-----------|-----------------------------|-------------------|
+| id              | INT       | PK                          | 기본 키              |
+| type            | ENUM      | NOT NULL (`PERCENT`, `FIXED`) | 쿠폰 유형 (열거형)       |
+| description     | VARCHAR   |                             | 쿠폰 설명             |
+| discount        | INT       | NOT NULL                    | 할인 금액 또는 할인율      |
+| quantity        | INT       | NOT NULL                    | 발행 가능 수량          |
+| issued          | INT       | NOT NULL DEFAULT 0          | 현재까지 발행된 수량       |
+| expiration_days | INT       | NOT NULL                    | 발행 후 유효 기간 (일 단위) |
+| created_at      | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP   | 생성 일시             |
+| updated_at      | TIMESTAMP | ON UPDATE CURRENT_TIMESTAMP | 수정 일시             |
 
 
 ### COUPON ISSUE
