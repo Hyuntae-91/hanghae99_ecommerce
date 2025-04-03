@@ -206,7 +206,7 @@
 ## Coupon API
 ### GET Coupon
 - 설명 : 사용자의 보유 쿠폰을 응답하는 API
-- endpoint : /v1/coupons
+- endpoint : /v1/coupon
 - method : GET
 - header : userId
 
@@ -248,7 +248,7 @@
 
 ### POST Coupon
 - 설명 : 사용자에게 쿠폰을 지급하는 API
-- endpoint : /v1/coupons/{couponId:int}/issue
+- endpoint : /v1/coupon/{couponId:int}/issue
 - method : POST
 - header : userId
 
