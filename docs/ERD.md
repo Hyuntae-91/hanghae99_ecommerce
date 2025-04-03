@@ -1,8 +1,7 @@
 # ERD 설계
 
 ## ER 다이어그램
-![ERD](./image/ERD.png)
-```
+```mermaid
 erDiagram
     USER||--o{COUPON_ISSUE: has
     USER{
