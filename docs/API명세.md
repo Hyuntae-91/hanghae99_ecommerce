@@ -290,6 +290,12 @@
 
 
 ## Order API
+### Post Order Cart
+- 설명 : 장바구니 추가 요청하는 API
+- endpoint : /v1/order/cart
+- method: POST
+- header : userId
+
 ### Post Order
 - 설명 : 주문 생성 요청하는 API
 - endpoint : /v1/order
@@ -299,8 +305,17 @@
 #### Request
 ```
 {
-    "productId": 1,
-    "quantity": 1,
+    "products1": [
+        {
+            "product_id": 1,
+            "quantity": 1
+        },
+        {
+            "product_id": 2,
+            "quantity": 1
+        },
+        ...
+    ],
     "couponIssueId": 0 or null
 }
 ```

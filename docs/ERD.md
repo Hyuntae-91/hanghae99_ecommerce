@@ -1,84 +1,87 @@
 # ERD 설계
 
 ## ER 다이어그램
-```mermaid
-erDiagram
-    USER||--o{COUPON_ISSUE: has
-    USER{
-        INT id PK
-        BIGINT point
-        TIMESTAMP created_at
-        TIMESTAMP updated_at
-    }
-    USER||--o{POINT_HISTORY: has
-    POINT_HISTORY{
-        INT id PK
-        INT user_id FK
-        BIGINT point
-        ENUM type
-        TIMESTAMP created_at
-        TIMESTAMP updated_at
-    }
-    COUPON||--o{COUPON_ISSUE: has
-    COUPON{
-        INT id PK
-        ENUM type
-        VARCHAR description
-        INT discount
-        INT quantity
-        INT issued
-        INT expiration_days
-        TIMESTAMP created_at
-        TIMESTAMP updated_at
-    }
-    COUPON_ISSUE{
-        INT id PK
-        INT user_id FK
-        INT coupon_id FK
-        TINYINT state
-        TIMESTAMP start_at
-        TIMESTAMP end_at
-        TIMESTAMP created_at
-        TIMESTAMP updated_at
-    }
-    PRODUCT||--||PRODUCT_STOCK: is
-    PRODUCT{
-        INT id PK
-        VARCHAR name
-        INT price
-        TINYINT state
-        TIMESTAMP created_at
-        TIMESTAMP updated_at
-    }
-    PRODUCT_STOCK{
-        INT id PK
-        INT product_id FK
-        INT stock
-        TIMESTAMP created_at
-        TIMESTAMP updated_at
-    }
-    USER||--o{ORDER: has
-    COUPON_ISSUE||--||ORDER: has
-    PRODUCT||--o{ORDER: has
-    ORDER{
-        INT id PK
-        INT user_id FK
-        INT coupon_issue_id FK
-        INT product_id FK
-        INT quantity
-        BIGINT total_price
-        TINYINT state
-        TIMESTAMP created_at
-        TIMESTAMP updated_at
-    }
-    ORDER||--o{PAYMENT: has
-    PAYMENT{
-        INT id PK
-        INT order_id FK
-        TINYINT state
-        TIMESTAMP created_at
-        TIMESTAMP updated_at
-    }
+![ERD](./image/ERD.png)
+```
+Table USER {
+  id int [pk]
+  point bigint
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table POINT_HISTORY {
+  id int [pk]
+  user_id int [ref: > USER.id]
+  point bigint
+  type enum
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table COUPON {
+  id int [pk]
+  type enum
+  description varchar
+  discount int
+  quantity int
+  issued int
+  expiration_days int
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table COUPON_ISSUE {
+  id int [pk]
+  user_id int [ref: > USER.id]
+  coupon_id int [ref: > COUPON.id]
+  state tinyint
+  start_at timestamp
+  end_at timestamp
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table PRODUCT {
+  id int [pk]
+  name varchar
+  price int
+  total_stock int
+  current_stock int
+  state tinyint
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table ORDER {
+  id int [pk]
+  user_id int [ref: > USER.id]
+  coupon_issue_id int [ref: > COUPON_ISSUE.id]
+  total_price bigint
+  state tinyint
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table ORDER_ITEM {
+  id int [pk]
+  user_id int [ref: > USER.id]
+  order_id int [ref: > ORDER.id]
+  product_id int [ref: > PRODUCT.id]
+  each_price bigint
+  quantity int
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table PAYMENT {
+  id int [pk]
+  order_id int [ref: > "ORDER".id]
+  state tinyint
+  created_at timestamp
+  updated_at timestamp
+}
+}
 ```
 
 ## 설계 내용
@@ -131,24 +134,16 @@ erDiagram
 
 
 ### PRODUCT
-| 컬럼 이름     | 타입      | 제약 조건                     | 설명                                     |
-|--------------|-----------|-------------------------------|----------------------------------------|
-| id           | INT       | PK                             | 기본 키                                   |
-| name         | VARCHAR   | NOT NULL                      | 상품 이름                                  |
-| price        | INT       | NOT NULL                      | 상품 가격 (단위: 원)                          |
-| state        | TINYINT   | NOT NULL                      | 상품 상태 (-1: 삭제, 1: 판매중, 2: 품절, 3: 숨김 등) |
-| created_at   | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP     | 생성 일시                                  |
-| updated_at   | TIMESTAMP | ON UPDATE CURRENT_TIMESTAMP   | 수정 일시                                  |
-
-
-### PRODUCT STOCK
-| 컬럼 이름     | 타입      | 제약 조건                      | 설명                         |
-|--------------|-----------|----------------------------|------------------------------|
-| id           | INT       | PK                         | 기본 키                      |
-| product_id   | INT       | FK                         | 연결된 상품 ID (외래 키)      |
-| stock        | INT       | NOT NULL                   | 재고 수량                    |
-| created_at   | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP  | 생성 일시                    |
-| updated_at   | TIMESTAMP | ON UPDATE CURRENT_TIMESTAMP | 수정 일시                    |
+| 컬럼 이름         | 타입      | 제약 조건                     | 설명                                     |
+|---------------|-----------|-------------------------------|----------------------------------------|
+| id            | INT       | PK                             | 기본 키                                   |
+| name          | VARCHAR   | NOT NULL                      | 상품 이름                                  |
+| price         | INT       | NOT NULL                      | 상품 가격 (단위: 원)                          |
+| total_stock   | INT       | NOT NULL                      | 상품 전체 재고                              |
+| current_stock | INT       | NOT NULL                      | 현재 재고                                 |
+| state         | TINYINT   | NOT NULL                      | 상품 상태 (-1: 삭제, 1: 판매중, 2: 품절, 3: 숨김 등) |
+| created_at    | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP     | 생성 일시                                  |
+| updated_at    | TIMESTAMP | ON UPDATE CURRENT_TIMESTAMP   | 수정 일시                                  |
 
 
 ### ORDER
@@ -157,13 +152,23 @@ erDiagram
 | id               | INT       | PK                          | 기본 키                                  |
 | user_id          | INT       | FK                          | 사용자 ID (외래 키)                         |
 | coupon_issue_id  | INT       | FK, NULL                    | 발급된 쿠폰 ID (외래 키), 선택 가능               |
-| product_id       | INT       | FK                          | 상품 ID (외래 키)                          |
-| quantity         | INT       | NOT NULL                    | 구매 수량                                 |
 | total_price      | BIGINT    | NOT NULL                    | 총 결제 금액 (할인 반영 후)                     |
 | state            | TINYINT   | NOT NULL                    | 주문 상태 (-1: 주문 취소, 0: 주문 대기, 1: 주문 완료) |
 | created_at       | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP   | 생성 일시                                 |
 | updated_at       | TIMESTAMP | ON UPDATE CURRENT_TIMESTAMP | 수정 일시                                 |
 
+### ORDER ITEM
+| 컬럼 이름      | 타입      | 제약 조건                       | 설명              |
+|------------|-----------|-----------------------------|-----------------|
+| id         | INT       | PK                          | 기본 키            |
+| user_id   | INT       | FK                          | 사용자 ID (외래 키)     |
+| order_id   | INT       | FK, NULL                        | 주문 ID (외래 키)    |
+| product_id | INT       | FK                          | 상품 ID (외래 키)    |
+| each_price | BIGINT    | NOT NULL                    | 상품 1개에 대한 단위 가격 |
+| quantity   | INT   | NOT NULL                    | 주문 수량           |
+| created_at | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP   | 생성 일시           |
+| updated_at | TIMESTAMP | ON UPDATE CURRENT_TIMESTAMP | 수정 일시           |
+설명 : 장바구니 역할. 주문 상태에 들어가면 그 때, order_id 를 update 시켜준다.
 
 ### PAYMENT
 | 컬럼 이름     | 타입      | 제약 조건                    | 설명                                    |
