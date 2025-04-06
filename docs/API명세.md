@@ -296,6 +296,31 @@
 - method: POST
 - header : userId
 
+#### Request
+```
+{
+    "productId": 1,
+    "quantity": 1
+}
+```
+
+#### Response
+```
+{
+    "cart_list": [
+        {
+            "productId": 1,
+            "quantity": 1,
+        },
+        {
+            "productId": 1,
+            "quantity": 1,
+        },
+        ...
+    ]
+}
+```
+
 ### Post Order
 - 설명 : 주문 생성 요청하는 API
 - endpoint : /v1/order
@@ -305,13 +330,13 @@
 #### Request
 ```
 {
-    "products1": [
+    "products": [
         {
-            "product_id": 1,
+            "productId": 1,
             "quantity": 1
         },
         {
-            "product_id": 2,
+            "productId": 2,
             "quantity": 1
         },
         ...
