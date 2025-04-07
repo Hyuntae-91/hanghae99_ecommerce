@@ -81,7 +81,7 @@ Table PAYMENT {
   created_at timestamp
   updated_at timestamp
 }
-}
+
 ```
 
 ## 설계 내용
@@ -139,7 +139,6 @@ Table PAYMENT {
 | id            | INT       | PK                             | 기본 키                                   |
 | name          | VARCHAR   | NOT NULL                      | 상품 이름                                  |
 | price         | INT       | NOT NULL                      | 상품 가격 (단위: 원)                          |
-| total_stock   | INT       | NOT NULL                      | 상품 전체 재고                              |
 | current_stock | INT       | NOT NULL                      | 현재 재고                                 |
 | state         | TINYINT   | NOT NULL                      | 상품 상태 (-1: 삭제, 1: 판매중, 2: 품절, 3: 숨김 등) |
 | created_at    | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP     | 생성 일시                                  |
