@@ -1,9 +1,12 @@
-package kr.hhplus.be.server.dto.product;
+package kr.hhplus.be.server.application.product.dto;
+
+import java.time.LocalDateTime;
 
 public record ProductResponse(
         Long id,
         String name,
         Long price,
-        Long state,
+        int state,
         String createdAt
-) {}
+) {
+}

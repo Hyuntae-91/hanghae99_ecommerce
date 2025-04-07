@@ -1,4 +1,4 @@
-package kr.hhplus.be.server.controller.product;
+package kr.hhplus.be.server.interfaces.api.product;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -7,10 +7,10 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import kr.hhplus.be.server.dto.ErrorResponse;
-import kr.hhplus.be.server.dto.product.ProductBestResponse;
-import kr.hhplus.be.server.dto.product.ProductListResponse;
-import kr.hhplus.be.server.dto.product.ProductResponse;
+import kr.hhplus.be.server.application.product.dto.ProductListResponse;
+import kr.hhplus.be.server.application.product.dto.ProductResponse;
+import kr.hhplus.be.server.exception.ErrorResponse;
+import kr.hhplus.be.server.application.product.dto.ProductBestResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
