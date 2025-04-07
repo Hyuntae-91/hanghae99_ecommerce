@@ -1,9 +1,9 @@
 package kr.hhplus.be.server.interfaces.api.point;
 
-import kr.hhplus.be.server.application.point.PointChargeRequest;
-import kr.hhplus.be.server.application.point.PointChargeResponse;
-import kr.hhplus.be.server.application.point.PointHistoryResponse;
-import kr.hhplus.be.server.application.point.PointResponse;
+import kr.hhplus.be.server.application.point.dto.PointChargeRequest;
+import kr.hhplus.be.server.application.point.dto.PointChargeResponse;
+import kr.hhplus.be.server.application.point.dto.PointHistoryResponse;
+import kr.hhplus.be.server.application.point.dto.PointResponse;
 import kr.hhplus.be.server.domain.point.PointService;
 import kr.hhplus.be.server.exception.ErrorResponse;
 import lombok.RequiredArgsConstructor;

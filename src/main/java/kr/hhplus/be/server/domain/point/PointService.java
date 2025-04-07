@@ -4,7 +4,7 @@ import jakarta.transaction.Transactional;
 import kr.hhplus.be.server.domain.point.model.PointHistory;
 import kr.hhplus.be.server.domain.point.model.PointHistoryType;
 import kr.hhplus.be.server.domain.point.model.UserPoint;
-import kr.hhplus.be.server.application.point.PointHistoryDto;
+import kr.hhplus.be.server.application.point.dto.PointHistoryDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;

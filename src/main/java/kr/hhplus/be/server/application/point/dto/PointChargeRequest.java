@@ -1,4 +1,4 @@
-package kr.hhplus.be.server.application.point;
+package kr.hhplus.be.server.application.point.dto;
 
 public record PointChargeRequest(
         Long point

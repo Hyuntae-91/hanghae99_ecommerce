@@ -8,10 +8,10 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import kr.hhplus.be.server.exception.ErrorResponse;
-import kr.hhplus.be.server.application.point.PointChargeRequest;
-import kr.hhplus.be.server.application.point.PointChargeResponse;
-import kr.hhplus.be.server.application.point.PointHistoryResponse;
-import kr.hhplus.be.server.application.point.PointResponse;
+import kr.hhplus.be.server.application.point.dto.PointChargeRequest;
+import kr.hhplus.be.server.application.point.dto.PointChargeResponse;
+import kr.hhplus.be.server.application.point.dto.PointHistoryResponse;
+import kr.hhplus.be.server.application.point.dto.PointResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 

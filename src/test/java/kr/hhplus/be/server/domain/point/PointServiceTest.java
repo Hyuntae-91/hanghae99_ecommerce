@@ -4,7 +4,7 @@ import kr.hhplus.be.server.domain.common.exception.ResourceNotFoundException;
 import kr.hhplus.be.server.domain.point.model.PointHistory;
 import kr.hhplus.be.server.domain.point.model.PointHistoryType;
 import kr.hhplus.be.server.domain.point.model.UserPoint;
-import kr.hhplus.be.server.application.point.PointHistoryDto;
+import kr.hhplus.be.server.application.point.dto.PointHistoryDto;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
