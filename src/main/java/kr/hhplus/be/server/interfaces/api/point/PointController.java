@@ -26,7 +26,7 @@ public class PointController implements PointApi {
                     .body(new ErrorResponse(404, "User Not Found"));
         }
 
-        PointResponse response = new PointResponse(userId, pointService.getPoint(userId));
+        PointResponse response = PointResponse.from(pointService.getUserPoint(userId));
         return ResponseEntity.ok(response);
     }
 

@@ -41,7 +41,7 @@ class PointServiceTest {
             when(pointRepository.get(1L)).thenReturn(userPoint);
 
             // when
-            Long result = pointService.getPoint(1L);
+            Long result = pointService.getUserPoint(1L);
 
             // then
             assertThat(result).isEqualTo(500L);
@@ -54,7 +54,7 @@ class PointServiceTest {
             when(pointRepository.get(1L)).thenThrow(new ResourceNotFoundException("User not found"));
 
             // when & then
-            assertThatThrownBy(() -> pointService.getPoint(1L))
+            assertThatThrownBy(() -> pointService.getUserPoint(1L))
                     .isInstanceOf(ResourceNotFoundException.class)
                     .hasMessageContaining("User not found");
 
