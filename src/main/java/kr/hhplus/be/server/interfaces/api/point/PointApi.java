@@ -1,17 +1,13 @@
 package kr.hhplus.be.server.interfaces.api.point;
 
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import kr.hhplus.be.server.exception.ErrorResponse;
-import kr.hhplus.be.server.application.point.dto.PointChargeRequest;
-import kr.hhplus.be.server.application.point.dto.PointChargeResponse;
-import kr.hhplus.be.server.application.point.dto.PointHistoryResponse;
-import kr.hhplus.be.server.application.point.dto.PointResponse;
+import kr.hhplus.be.server.interfaces.api.point.dto.*;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -40,9 +36,7 @@ public interface PointApi {
     @GetMapping("/history")
     ResponseEntity<?> getHistory(
             @RequestHeader("userId") Long userId,
-            @Parameter(description = "페이지 번호", example = "1") @RequestParam(defaultValue = "1") int page,
-            @Parameter(description = "페이지 크기", example = "10") @RequestParam(defaultValue = "10") int size,
-            @Parameter(description = "정렬 기준", example = "createdAt/name/price") @RequestParam(defaultValue = "createdAt") String sort
+            @RequestBody PointHistoryRequest request
     );
 
     @Operation(summary = "포인트 충전", description = "유저의 포인트를 충전하는 API")

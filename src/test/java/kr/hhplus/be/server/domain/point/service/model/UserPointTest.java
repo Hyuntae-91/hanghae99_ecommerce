@@ -1,5 +1,6 @@
-package kr.hhplus.be.server.domain.point.model;
+package kr.hhplus.be.server.domain.point.service.model;
 
+import kr.hhplus.be.server.domain.point.model.UserPoint;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
