@@ -1,26 +1,26 @@
 package kr.hhplus.be.server.domain.point.service.dto;
 
-import kr.hhplus.be.server.domain.point.dto.UserPointRequestDto;
+import kr.hhplus.be.server.domain.point.dto.UserPointServiceRequest;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.*;
 
-class UserPointRequestDtoTest {
+class UserPointServiceRequestTest {
 
     @Test
     void validInput_doesNotThrow() {
-        assertThatCode(() -> new UserPointRequestDto(1L)).doesNotThrowAnyException();
+        assertThatCode(() -> new UserPointServiceRequest(1L)).doesNotThrowAnyException();
     }
 
     @Test
     void nullUserId_throwsException() {
-        assertThatThrownBy(() -> new UserPointRequestDto(null))
+        assertThatThrownBy(() -> new UserPointServiceRequest(null))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
     void invalidUserId_throwsException() {
-        assertThatThrownBy(() -> new UserPointRequestDto(0L))
+        assertThatThrownBy(() -> new UserPointServiceRequest(0L))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 }

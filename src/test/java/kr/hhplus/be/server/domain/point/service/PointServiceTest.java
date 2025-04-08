@@ -41,7 +41,7 @@ class PointServiceTest {
             when(pointRepository.get(any())).thenReturn(userPoint);
 
             // when
-            UserPointResponseDto result = pointService.getUserPoint(new UserPointRequestDto(userId));
+            UserPointServiceResponse result = pointService.getUserPoint(new UserPointServiceRequest(userId));
 
             // then
             assertThat(result.point()).isEqualTo(500L);
@@ -57,7 +57,7 @@ class PointServiceTest {
                     .thenThrow(new ResourceNotFoundException("User not found"));
 
             // when & then
-            assertThatThrownBy(() -> pointService.getUserPoint(new UserPointRequestDto(userId)))
+            assertThatThrownBy(() -> pointService.getUserPoint(new UserPointServiceRequest(userId)))
                     .isInstanceOf(ResourceNotFoundException.class)
                     .hasMessageContaining("User not found");
 
@@ -81,7 +81,7 @@ class PointServiceTest {
             when(pointRepository.get(any())).thenReturn(userPoint);
 
             // when
-            PointChargeResponseDto result = pointService.charge(new PointChargeRequestDto(userId, chargeAmount));
+            PointChargeServiceResponse result = pointService.charge(new PointChargeServiceRequest(userId, chargeAmount));
 
             // then
             assertThat(result.point()).isEqualTo(300L);
@@ -98,7 +98,7 @@ class PointServiceTest {
                     .thenThrow(new ResourceNotFoundException("User not found"));
 
             // when & then
-            assertThatThrownBy(() -> pointService.charge(new PointChargeRequestDto(userId, 100L)))
+            assertThatThrownBy(() -> pointService.charge(new PointChargeServiceRequest(userId, 100L)))
                     .isInstanceOf(ResourceNotFoundException.class)
                     .hasMessageContaining("User not found");
 
@@ -117,7 +117,7 @@ class PointServiceTest {
             doThrow(new RuntimeException("DB Error")).when(pointRepository).saveHistory(any());
 
             // when & then
-            assertThatThrownBy(() -> pointService.charge(new PointChargeRequestDto(userId, chargeAmount)))
+            assertThatThrownBy(() -> pointService.charge(new PointChargeServiceRequest(userId, chargeAmount)))
                     .isInstanceOf(RuntimeException.class)
                     .hasMessageContaining("DB Error");
 
@@ -146,8 +146,8 @@ class PointServiceTest {
             when(pointRepository.getHistory(any())).thenReturn(mockHistories);
 
             // when
-            List<PointHistoryResponseDto> result = pointService.getHistory(
-                    new PointHistoryRequestDto(userId, page, size, sort)
+            List<PointHistoryServiceResponse> result = pointService.getHistory(
+                    new PointHistoryServiceRequest(userId, page, size, sort)
             );
 
             // then
@@ -168,8 +168,8 @@ class PointServiceTest {
             when(pointRepository.getHistory(any())).thenReturn(Collections.emptyList());
 
             // when
-            List<PointHistoryResponseDto> result = pointService.getHistory(
-                    new PointHistoryRequestDto(userId, page, size, sort)
+            List<PointHistoryServiceResponse> result = pointService.getHistory(
+                    new PointHistoryServiceRequest(userId, page, size, sort)
             );
 
             // then
@@ -191,7 +191,7 @@ class PointServiceTest {
 
             // when & then
             assertThatThrownBy(() -> pointService.getHistory(
-                    new PointHistoryRequestDto(userId, page, size, sort)))
+                    new PointHistoryServiceRequest(userId, page, size, sort)))
                     .isInstanceOf(ResourceNotFoundException.class)
                     .hasMessageContaining("User not found");
 
@@ -212,7 +212,7 @@ class PointServiceTest {
 
             // when & then
             assertThatThrownBy(() -> pointService.getHistory(
-                    new PointHistoryRequestDto(userId, page, size, sort)))
+                    new PointHistoryServiceRequest(userId, page, size, sort)))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("Invalid sort field");
 

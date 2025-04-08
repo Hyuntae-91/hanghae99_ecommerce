@@ -26,7 +26,7 @@ public class PointController implements PointApi {
                     .body(new ErrorResponse(404, "User Not Found"));
         }
 
-        UserPointResponseDto result = pointService.getUserPoint(new UserPointRequestDto(userId));
+        UserPointServiceResponse result = pointService.getUserPoint(new UserPointServiceRequest(userId));
         PointResponse response = PointResponse.from(result);
         return ResponseEntity.ok(response);
     }
@@ -37,7 +37,7 @@ public class PointController implements PointApi {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(new ErrorResponse(404, "User Not Found"));
         }
-        List<PointHistoryResponseDto> result = pointService.getHistory(new PointHistoryRequestDto(
+        List<PointHistoryServiceResponse> result = pointService.getHistory(new PointHistoryServiceRequest(
                 userId, request.page(), request.size(), request.sort()
         ));
 
@@ -55,7 +55,7 @@ public class PointController implements PointApi {
                     .body(new ErrorResponse(400, "Missing userId header"));
         }
         request.validate();
-        PointChargeResponseDto result = pointService.charge(new PointChargeRequestDto(userId, request.point()));
+        PointChargeServiceResponse result = pointService.charge(new PointChargeServiceRequest(userId, request.point()));
 
         PointChargeResponse response = new PointChargeResponse(userId, result.point());
         return ResponseEntity.ok(response);

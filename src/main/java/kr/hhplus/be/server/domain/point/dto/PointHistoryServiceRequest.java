@@ -1,12 +1,12 @@
 package kr.hhplus.be.server.domain.point.dto;
 
-public record PointHistoryRequestDto (
+public record PointHistoryServiceRequest(
         Long userId,
         int page,
         int size,
         String sort
 ) {
-    public PointHistoryRequestDto {
+    public PointHistoryServiceRequest {
         if (userId == null || userId < 1) {
             throw new IllegalArgumentException("userId는 1 이상이어야 합니다.");
         }

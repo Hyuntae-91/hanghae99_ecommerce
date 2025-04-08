@@ -17,25 +17,25 @@ public class PointService {
 
     private final PointRepository pointRepository;
 
-    public UserPointResponseDto getUserPoint(UserPointRequestDto reqService) {
+    public UserPointServiceResponse getUserPoint(UserPointServiceRequest reqService) {
         GetPointRepositoryRequestDto reqRepository = new GetPointRepositoryRequestDto(reqService.userId());
         UserPoint userPoint = pointRepository.get(reqRepository);
-        return UserPointResponseDto.from(userPoint);
+        return UserPointServiceResponse.from(userPoint);
     }
 
-    public List<PointHistoryResponseDto> getHistory(PointHistoryRequestDto reqService) {
+    public List<PointHistoryServiceResponse> getHistory(PointHistoryServiceRequest reqService) {
         GetHistoryRepositoryRequestDto reqRepository = new GetHistoryRepositoryRequestDto(
                 reqService.userId(), reqService.page(), reqService.size(), reqService.sort()
         );
         List<PointHistory> historyList = pointRepository.getHistory(reqRepository);
 
         return historyList.stream()
-            .map(PointHistoryResponseDto::from)
+            .map(PointHistoryServiceResponse::from)
             .toList();
     }
 
     @Transactional
-    public PointChargeResponseDto charge(PointChargeRequestDto reqService) {
+    public PointChargeServiceResponse charge(PointChargeServiceRequest reqService) {
         GetPointRepositoryRequestDto requestDto = new GetPointRepositoryRequestDto(reqService.userId());
         UserPoint userPoint = pointRepository.get(requestDto);
         userPoint.charge(reqService.point());
@@ -48,6 +48,6 @@ public class PointService {
         );
         pointRepository.saveHistory(reqRepository);
 
-        return new PointChargeResponseDto(userPoint.getPoint());
+        return new PointChargeServiceResponse(userPoint.getPoint());
     }
 }

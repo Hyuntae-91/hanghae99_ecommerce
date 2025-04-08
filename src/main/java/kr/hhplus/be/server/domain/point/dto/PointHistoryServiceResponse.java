@@ -2,13 +2,13 @@ package kr.hhplus.be.server.domain.point.dto;
 
 import kr.hhplus.be.server.domain.point.model.PointHistory;
 
-public record PointHistoryResponseDto(
+public record PointHistoryServiceResponse(
         Long userId,
         Long point,
         String type,
         String createdAt
 ) {
-    public PointHistoryResponseDto {
+    public PointHistoryServiceResponse {
         if (userId == null || userId < 1) {
             throw new IllegalArgumentException("userId는 1 이상이어야 합니다.");
         }
@@ -23,8 +23,8 @@ public record PointHistoryResponseDto(
         }
     }
 
-    public static PointHistoryResponseDto from(PointHistory entity) {
-        return new PointHistoryResponseDto(
+    public static PointHistoryServiceResponse from(PointHistory entity) {
+        return new PointHistoryServiceResponse(
                 entity.getUserId(),
                 entity.getPoint(),
                 entity.getType().name(),
