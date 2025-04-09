@@ -1,5 +1,6 @@
 package kr.hhplus.be.server.interfaces.api.product;
 
+import jakarta.validation.Valid;
 import kr.hhplus.be.server.domain.product.ProductService;
 import kr.hhplus.be.server.domain.product.dto.ProductListServiceResponse;
 import kr.hhplus.be.server.domain.product.dto.ProductListServiceRequest;
@@ -34,7 +35,7 @@ public class ProductController implements ProductApi {
     }
 
     @Override
-    public ResponseEntity<?> getProducts(@RequestBody ProductsRequest request) {
+    public ResponseEntity<?> getProducts(@RequestBody @Valid ProductsRequest request) {
         ProductListServiceRequest reqController = new ProductListServiceRequest(
                 request.page(), request.size(), request.sort()
         );
