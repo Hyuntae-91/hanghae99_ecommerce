@@ -18,8 +18,7 @@ public class ProductService {
     private final ProductRepository productRepository;
 
     public ProductServiceResponse getProductById(ProductServiceRequest requestDto) {
-        Product product = productRepository.findById(requestDto.productId())
-                .orElseThrow(() -> new IllegalArgumentException("Product Not Found"));
+        Product product = productRepository.findById(requestDto.productId());
         return ProductServiceResponse.from(product);
     }
 

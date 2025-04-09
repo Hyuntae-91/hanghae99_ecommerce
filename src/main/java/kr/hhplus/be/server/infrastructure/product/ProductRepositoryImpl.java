@@ -1,11 +1,11 @@
 package kr.hhplus.be.server.infrastructure.product;
 
+import kr.hhplus.be.server.domain.common.exception.ResourceNotFoundException;
 import kr.hhplus.be.server.domain.product.ProductRepository;
 import kr.hhplus.be.server.domain.product.model.Product;
 import kr.hhplus.be.server.infrastructure.product.dto.GetProductsRepositoryRequestDto;
 import kr.hhplus.be.server.infrastructure.product.repository.ProductJpaRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -18,8 +18,9 @@ public class ProductRepositoryImpl implements ProductRepository {
     private final ProductJpaRepository productJpaRepository;
 
     @Override
-    public Optional<Product> findById(Long id) {
-        return productJpaRepository.findById(id);
+    public Product findById(Long id) {
+        return productJpaRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Product Not Found"));
     }
 
     @Override
