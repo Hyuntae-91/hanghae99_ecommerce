@@ -2,6 +2,7 @@ package kr.hhplus.be.server.infrastructure.product;
 
 import kr.hhplus.be.server.domain.product.ProductRepository;
 import kr.hhplus.be.server.domain.product.model.Product;
+import kr.hhplus.be.server.infrastructure.product.dto.GetProductsRepositoryRequestDto;
 import kr.hhplus.be.server.infrastructure.product.repository.ProductJpaRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
@@ -22,13 +23,14 @@ public class ProductRepositoryImpl implements ProductRepository {
     }
 
     @Override
-    public List<Product> findAll(Pageable pageable) {
-        return productJpaRepository.findAll(pageable).getContent();
+    public List<Product> findAll(GetProductsRepositoryRequestDto reqRepository) {
+        return productJpaRepository.findAll(reqRepository.getPageable()).getContent();
     }
 
     @Override
     public List<Product> findPopularTop5() {
-        return productJpaRepository.findTop5ByOrderByScoreDesc(); // 가정: score 필드가 있음
+        //return productJpaRepository.findTop5ByOrderByScoreDesc(); // 가정: score 필드가 있음
+        return null;
     }
 
     @Override

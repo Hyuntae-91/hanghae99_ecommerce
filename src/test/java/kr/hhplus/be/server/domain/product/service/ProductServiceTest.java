@@ -1,5 +1,9 @@
-package kr.hhplus.be.server.domain.product;
+package kr.hhplus.be.server.domain.product.service;
 
+import kr.hhplus.be.server.domain.product.ProductRepository;
+import kr.hhplus.be.server.domain.product.ProductService;
+import kr.hhplus.be.server.domain.product.dto.ProductListServiceRequest;
+import kr.hhplus.be.server.domain.product.dto.ProductServiceRequest;
 import kr.hhplus.be.server.domain.product.model.Product;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -38,7 +42,7 @@ class ProductServiceTest {
         when(productRepository.findById(1L)).thenReturn(Optional.of(product));
 
         // when
-        var dto = productService.getProductById(1L);
+        var dto = productService.getProductById(new ProductServiceRequest(1L));
 
         // then
         assertThat(dto.id()).isEqualTo(1L);
@@ -55,11 +59,11 @@ class ProductServiceTest {
         when(productRepository.findAll(any())).thenReturn(List.of(product1, product2));
 
         // when
-        var result = productService.getProductList(1, 10, "createdAt");
+        var result = productService.getProductList(new ProductListServiceRequest(1, 10, "createdAt"));
 
         // then
-        assertThat(result).hasSize(2);
-        assertThat(result.get(0).name()).isEqualTo("상품1");
+        assertThat(result.products()).hasSize(2);
+        assertThat(result.products().get(0).name()).isEqualTo("상품1");
     }
 
     @Test
@@ -73,8 +77,8 @@ class ProductServiceTest {
         var result = productService.getBestProducts();
 
         // then
-        assertThat(result).hasSize(1);
-        assertThat(result.get(0).name()).isEqualTo("인기상품");
+        assertThat(result.products()).hasSize(1);
+        assertThat(result.products().get(0).name()).isEqualTo("인기상품");
     }
 
     @Test
@@ -95,7 +99,8 @@ class ProductServiceTest {
                 .thenThrow(new IllegalArgumentException("Invalid sort parameter"));
 
         // then
-        assertThrows(IllegalArgumentException.class, () -> productService.getProductList(1, 10, "invalidField"));
+        assertThrows(IllegalArgumentException.class, () ->
+                productService.getProductList(new ProductListServiceRequest(1, 10, "invalidField")));
     }
 
     @Test
@@ -108,7 +113,7 @@ class ProductServiceTest {
         var result = productService.getBestProducts();
 
         // then
-        assertThat(result).isEmpty();
+        assertThat(result.products()).isEmpty();
     }
 
     @Test
@@ -128,7 +133,8 @@ class ProductServiceTest {
         when(productRepository.findById(99L)).thenReturn(Optional.empty());
 
         // then
-        assertThrows(IllegalArgumentException.class, () -> productService.getProductById(99L));
+        assertThrows(IllegalArgumentException.class, () ->
+                productService.getProductById(new ProductServiceRequest(99L)));
     }
 
 }

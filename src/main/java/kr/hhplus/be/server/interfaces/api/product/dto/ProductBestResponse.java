@@ -1,4 +1,4 @@
-package kr.hhplus.be.server.application.product.dto;
+package kr.hhplus.be.server.interfaces.api.product.dto;
 
 import kr.hhplus.be.server.domain.product.model.Product;
 

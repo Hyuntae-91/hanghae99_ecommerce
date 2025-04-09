@@ -1,16 +1,16 @@
 package kr.hhplus.be.server.interfaces.api.product;
 
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import kr.hhplus.be.server.application.product.dto.ProductListResponse;
-import kr.hhplus.be.server.application.product.dto.ProductResponse;
 import kr.hhplus.be.server.exception.ErrorResponse;
-import kr.hhplus.be.server.application.product.dto.ProductBestResponse;
+import kr.hhplus.be.server.interfaces.api.product.dto.ProductBestResponse;
+import kr.hhplus.be.server.interfaces.api.product.dto.ProductListResponse;
+import kr.hhplus.be.server.interfaces.api.product.dto.ProductResponse;
+import kr.hhplus.be.server.interfaces.api.product.dto.ProductsRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -36,9 +36,7 @@ public interface ProductApi {
     })
     @GetMapping
     ResponseEntity<?> getProducts(
-            @Parameter(description = "페이지 번호", example = "1") @RequestParam(defaultValue = "1") int page,
-            @Parameter(description = "페이지 크기", example = "10") @RequestParam(defaultValue = "10") int size,
-            @Parameter(description = "정렬 기준", example = "createdAt/name/price") @RequestParam(defaultValue = "createdAt") String sort
+            @RequestBody ProductsRequest request
     );
 
     @Operation(summary = "인기 상품 조회", description = "최근 3일 이내에 인기 상품 Top 5 조회 (매 시간마다 갱신)")

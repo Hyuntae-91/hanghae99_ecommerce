@@ -1,11 +1,12 @@
 package kr.hhplus.be.server.domain.product;
 
-import kr.hhplus.be.server.application.product.dto.ProductDto;
+import kr.hhplus.be.server.domain.product.dto.ProductListServiceRequest;
+import kr.hhplus.be.server.domain.product.dto.ProductListServiceResponse;
+import kr.hhplus.be.server.domain.product.dto.ProductServiceRequest;
+import kr.hhplus.be.server.domain.product.dto.ProductServiceResponse;
 import kr.hhplus.be.server.domain.product.model.Product;
+import kr.hhplus.be.server.infrastructure.product.dto.GetProductsRepositoryRequestDto;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -16,26 +17,30 @@ public class ProductService {
 
     private final ProductRepository productRepository;
 
-    public ProductDto getProductById(Long productId) {
-        Product product = productRepository.findById(productId)
+    public ProductServiceResponse getProductById(ProductServiceRequest requestDto) {
+        Product product = productRepository.findById(requestDto.productId())
                 .orElseThrow(() -> new IllegalArgumentException("Product Not Found"));
-        return ProductDto.from(product);
+        return ProductServiceResponse.from(product);
     }
 
-    public List<ProductDto> getProductList(int page, int size, String sort) {
-        Pageable pageable = PageRequest.of(page - 1, size, Sort.by(Sort.Direction.DESC, sort));
-        List<Product> productList = productRepository.findAll(pageable);
+    public ProductListServiceResponse getProductList(ProductListServiceRequest requestDto) {
+        GetProductsRepositoryRequestDto reqRepository = new GetProductsRepositoryRequestDto(
+                requestDto.page(), requestDto.size(), requestDto.sort()
+        );
+        List<Product> productList = productRepository.findAll(reqRepository);
 
-        return productList.stream()
-                .map(ProductDto::from)
+        List<ProductServiceResponse> dtoList = productList.stream()
+                .map(ProductServiceResponse::from)
                 .toList();
+        return new ProductListServiceResponse(dtoList);
     }
 
-    public List<ProductDto> getBestProducts() {
+    public ProductListServiceResponse getBestProducts() {
         List<Product> bestProducts = productRepository.findPopularTop5();
-        return bestProducts.stream()
-                .map(ProductDto::from)
+        List<ProductServiceResponse> dtoList = bestProducts.stream()
+                .map(ProductServiceResponse::from)
                 .toList();
+        return new ProductListServiceResponse(dtoList);
     }
 
     public void calculateBestProducts() {

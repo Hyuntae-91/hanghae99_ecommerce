@@ -10,6 +10,6 @@ import java.util.List;
 public interface ProductJpaRepository extends JpaRepository<Product, Long> {
 
     // TODO: 관련 동작 쿼리 수정 예정
-    List<Product> findTop5ByOrderByScoreDesc();
+    //List<Product> findTop5ByOrderByScoreDesc();
 
 }
