@@ -46,8 +46,6 @@ Table PRODUCT {
   id int [pk]
   name varchar
   price int
-  total_stock int
-  current_stock int
   state tinyint
   created_at timestamp
   updated_at timestamp
@@ -56,7 +54,7 @@ Table PRODUCT {
 Table ORDER {
   id int [pk]
   user_id int [ref: > USER.id]
-  coupon_issue_id int [ref: > COUPON_ISSUE.id]
+  coupon_issue_id int [ref: - COUPON_ISSUE.id]
   total_price bigint
   state tinyint
   created_at timestamp
@@ -65,11 +63,20 @@ Table ORDER {
 
 Table ORDER_ITEM {
   id int [pk]
-  user_id int [ref: > USER.id]
   order_id int [ref: > ORDER.id]
-  product_id int [ref: > PRODUCT.id]
-  each_price bigint
+  order_option_id int [ref: < ORDER_OPTION.id]
+  product_id int [REF: > PRODUCT.id]
   quantity int
+  each_price bigint
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table ORDER_OPTION {
+  id int [pk]
+  product_id int [ref: > PRODUCT.id]
+  size int
+  stock_quantity int
   created_at timestamp
   updated_at timestamp
 }
@@ -81,7 +88,6 @@ Table PAYMENT {
   created_at timestamp
   updated_at timestamp
 }
-
 ```
 
 ## 설계 내용
@@ -139,7 +145,6 @@ Table PAYMENT {
 | id            | INT       | PK                             | 기본 키                                   |
 | name          | VARCHAR   | NOT NULL                      | 상품 이름                                  |
 | price         | INT       | NOT NULL                      | 상품 가격 (단위: 원)                          |
-| current_stock | INT       | NOT NULL                      | 현재 재고                                 |
 | state         | TINYINT   | NOT NULL                      | 상품 상태 (-1: 삭제, 1: 판매중, 2: 품절, 3: 숨김 등) |
 | created_at    | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP     | 생성 일시                                  |
 | updated_at    | TIMESTAMP | ON UPDATE CURRENT_TIMESTAMP   | 수정 일시                                  |
@@ -157,17 +162,27 @@ Table PAYMENT {
 | updated_at       | TIMESTAMP | ON UPDATE CURRENT_TIMESTAMP | 수정 일시                                 |
 
 ### ORDER ITEM
-| 컬럼 이름      | 타입      | 제약 조건                       | 설명              |
-|------------|-----------|-----------------------------|-----------------|
-| id         | INT       | PK                          | 기본 키            |
-| user_id   | INT       | FK                          | 사용자 ID (외래 키)     |
-| order_id   | INT       | FK, NULL                        | 주문 ID (외래 키)    |
-| product_id | INT       | FK                          | 상품 ID (외래 키)    |
-| each_price | BIGINT    | NOT NULL                    | 상품 1개에 대한 단위 가격 |
-| quantity   | INT   | NOT NULL                    | 주문 수량           |
-| created_at | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP   | 생성 일시           |
-| updated_at | TIMESTAMP | ON UPDATE CURRENT_TIMESTAMP | 수정 일시           |
+| 컬럼 이름           | 타입      | 제약 조건                     | 설명              |
+|-----------------|-----------|---------------------------|-----------------|
+| id              | INT       | PK                        | 기본 키            |
+| order_id        | INT       | FK, NULL                      | 주문 ID (외래 키)    |
+| order_option_id | INT       | FK                        | 주문 옵션 ID (외래 키) |
+| product_id      | INT       | FK                        | 상품 ID (외래 키)    |
+| quantity        | INT   | NOT NULL                  | 주문 수량           |
+| each_price      | BIGINT    | NOT NULL                  | 상품 1개에 대한 단위 가격 |
+| created_at      | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP | 생성 일시           |
+| updated_at      | TIMESTAMP | ON UPDATE CURRENT_TIMESTAMP | 수정 일시           |
 설명 : 장바구니 역할. 주문 상태에 들어가면 그 때, order_id 를 update 시켜준다.
+
+### ORDER OPTION
+| 컬럼 이름       | 타입      | 제약 조건                     | 설명                  |
+|--------------|-----------|---------------------------|---------------------|
+| id           | INT       | PK                        | 기본 키                |
+| product_id   | INT       | FK                        | 상품 ID (외래 키)        |
+| size         | INT       |                           | 사이즈 번호             |
+| stock_quantity | INT     |                           | 재고 수량               |
+| created_at   | TIMESTAMP |                           | 생성 일시               |
+| updated_at   | TIMESTAMP |                           | 수정 일시               |
 
 ### PAYMENT
 | 컬럼 이름     | 타입      | 제약 조건                    | 설명                                    |

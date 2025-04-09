@@ -1,7 +1,7 @@
 plugins {
 	java
-	id("org.springframework.boot") version "3.4.1"
-	id("io.spring.dependency-management") version "1.1.7"
+	id("org.springframework.boot") version "3.3.3"
+	id("io.spring.dependency-management") version "1.1.4"
 }
 
 fun getGitHash(): String {
@@ -48,7 +48,7 @@ dependencies {
 
 
 	// Swagger
-	implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.0.2")
+	implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.2.0")
 
 	// lombok
 	compileOnly("org.projectlombok:lombok:1.18.30")
