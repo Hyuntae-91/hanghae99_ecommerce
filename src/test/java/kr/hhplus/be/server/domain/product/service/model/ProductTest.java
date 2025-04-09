@@ -13,8 +13,6 @@ class ProductTest {
                 .id(1L)
                 .name("테스트 상품")
                 .price(1000L)
-                .totalStock(10)
-                .currentStock(5)
                 .state(state)
                 .createdAt("2024-04-01 12:00:00")
                 .updatedAt("2024-04-01 12:00:00")

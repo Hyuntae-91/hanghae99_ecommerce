@@ -29,8 +29,15 @@ public class ProductService {
         List<Product> productList = productRepository.findAll(reqRepository);
 
         List<ProductServiceResponse> dtoList = productList.stream()
-                .map(ProductServiceResponse::from)
+                .map(product -> {
+                    if (product.getOrderOptions() == null) {
+                        // orderOptions가 null이면 빈 리스트로 초기화
+                        product.setOrderOptions(List.of());
+                    }
+                    return ProductServiceResponse.from(product);
+                })
                 .toList();
+
         return new ProductListServiceResponse(dtoList);
     }
 

@@ -1,8 +1,12 @@
 package kr.hhplus.be.server.domain.product.model;
 
 import jakarta.persistence.*;
+import kr.hhplus.be.server.domain.order.model.OrderItem;
+import kr.hhplus.be.server.domain.order.model.OrderOption;
 import lombok.*;
 
+import java.util.ArrayList;
+import java.util.List;
 
 @Getter
 @Entity
@@ -20,12 +24,6 @@ public class Product {
 
     private Long price;
 
-    @Column(name = "total_stock")
-    private Integer totalStock;
-
-    @Column(name = "current_stock")
-    private Integer currentStock;
-
     /**
      * 상품 상태 코드
      * -1: 삭제
@@ -41,6 +39,16 @@ public class Product {
 
     @Column(name = "updated_at")
     private String updatedAt;
+
+    @OneToMany(mappedBy = "productId", fetch = FetchType.LAZY)
+    private List<OrderItem> orderItems = new ArrayList<>();
+
+    @OneToMany(mappedBy = "productId", fetch = FetchType.LAZY)
+    private List<OrderOption> orderOptions = new ArrayList<>();
+
+    public void setOrderOptions(List<OrderOption> orderOptions) {
+        this.orderOptions = orderOptions != null ? orderOptions : new ArrayList<>();
+    }
 
     public boolean isDeleted() {
         return state == -1;

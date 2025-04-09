@@ -1,5 +1,6 @@
 package kr.hhplus.be.server.domain.product.service;
 
+import kr.hhplus.be.server.domain.common.exception.ResourceNotFoundException;
 import kr.hhplus.be.server.domain.product.ProductRepository;
 import kr.hhplus.be.server.domain.product.ProductService;
 import kr.hhplus.be.server.domain.product.dto.ProductListServiceRequest;
@@ -10,7 +11,6 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
-import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -37,9 +37,10 @@ class ProductServiceTest {
                 .price(1000L)
                 .state(1)
                 .createdAt("2025-04-01 12:00:00")
+                .orderOptions(List.of())
                 .build();
 
-        when(productRepository.findById(1L)).thenReturn(Optional.of(product));
+        when(productRepository.findById(1L)).thenReturn(product);
 
         // when
         var dto = productService.getProductById(new ProductServiceRequest(1L));
@@ -53,8 +54,8 @@ class ProductServiceTest {
     @DisplayName("성공: 상품 리스트 조회")
     void get_product_list_success() {
         // given
-        Product product1 = Product.builder().id(1L).name("상품1").price(1000L).state(1).createdAt("2025-04-01 12:00:00").build();
-        Product product2 = Product.builder().id(2L).name("상품2").price(2000L).state(1).createdAt("2025-04-01 12:00:00").build();
+        Product product1 = Product.builder().id(1L).name("상품1").price(1000L).state(1).orderOptions(List.of()).createdAt("2025-04-01 12:00:00").build();
+        Product product2 = Product.builder().id(2L).name("상품2").price(2000L).state(1).orderOptions(List.of()).createdAt("2025-04-01 12:00:00").build();
 
         when(productRepository.findAll(any())).thenReturn(List.of(product1, product2));
 
@@ -70,7 +71,7 @@ class ProductServiceTest {
     @DisplayName("성공: 인기 상품 조회")
     void get_best_products_success() {
         // given
-        Product product = Product.builder().id(1L).name("인기상품").price(3000L).state(1).createdAt("2025-04-01 12:00:00").build();
+        Product product = Product.builder().id(1L).name("인기상품").price(3000L).state(1).orderOptions(List.of()).createdAt("2025-04-01 12:00:00").build();
         when(productRepository.findPopularTop5()).thenReturn(List.of(product));
 
         // when
@@ -130,10 +131,10 @@ class ProductServiceTest {
     @DisplayName("실패: 상품 단건 조회 - 존재하지 않는 ID")
     void get_product_by_id_fail_when_not_found() {
         // given
-        when(productRepository.findById(99L)).thenReturn(Optional.empty());
+        when(productRepository.findById(99L)).thenThrow(new ResourceNotFoundException("Product Not Found"));
 
         // then
-        assertThrows(IllegalArgumentException.class, () ->
+        assertThrows(ResourceNotFoundException.class, () ->
                 productService.getProductById(new ProductServiceRequest(99L)));
     }
 

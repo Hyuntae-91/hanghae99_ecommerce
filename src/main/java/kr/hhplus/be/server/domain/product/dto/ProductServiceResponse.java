@@ -1,13 +1,15 @@
 package kr.hhplus.be.server.domain.product.dto;
 
 import kr.hhplus.be.server.domain.product.model.Product;
+import java.util.List;
 
 public record ProductServiceResponse(
         Long id,
         String name,
         Long price,
         int state,
-        String createdAt
+        String createdAt,
+        List<ProductOptionResponse> options
 ) {
     public ProductServiceResponse {
         if (id == null || id < 1) {
@@ -22,15 +24,23 @@ public record ProductServiceResponse(
         if (createdAt == null || createdAt.isBlank()) {
             throw new IllegalArgumentException("createdAt은 null이거나 빈 값일 수 없습니다.");
         }
+        if (options == null) {
+            throw new IllegalArgumentException("options는 null이 될 수 없습니다.");
+        }
     }
 
     public static ProductServiceResponse from(Product product) {
+        List<ProductOptionResponse> optionList = product.getOrderOptions().stream()
+                .map(ProductOptionResponse::from)
+                .toList();
+
         return new ProductServiceResponse(
                 product.getId(),
                 product.getName(),
                 product.getPrice(),
                 product.getState(),
-                product.getCreatedAt()
+                product.getCreatedAt(),
+                optionList
         );
     }
 }

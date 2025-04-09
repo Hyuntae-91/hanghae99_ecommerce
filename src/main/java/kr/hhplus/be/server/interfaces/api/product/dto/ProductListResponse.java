@@ -14,7 +14,7 @@ public record ProductListResponse(
         }
 
         List<ProductResponse> mapped = serviceResponses.products().stream()
-                .map(ProductResponse::from)
+                .flatMap(dto -> ProductResponse.from(dto).stream())
                 .toList();
 
         return new ProductListResponse(mapped);
