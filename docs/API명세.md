@@ -113,12 +113,17 @@
 {
     "id": 1,
     "name": "상품상세",
-    "optionId": 1,
-    "size": 100,
-    "stock": 10,
     "price": 1000,
     "state": 1,
-    "createdAt": "2025-04-03T09:00:00"
+    "createdAt": "2025-04-03T09:00:00",
+    "options": [
+    {
+      "optionId": 1,
+      "size": 100,
+      "stock": 10
+    },
+    ...
+  ]
 }
 ```
 
@@ -137,41 +142,30 @@
 
 #### Response
 ```
+GET /v1/products?page=1&size=10&sort=createdAt
+
+Response:
 {
-    "products": [
+  "products": [
+    {
+      "id": 1,
+      "name": "상품상세",
+      "price": 1000,
+      "state": 1,
+      "createdAt": "2025-04-03T09:00:00",
+      "options": [
         {
-            "id": 1,
-            "name": "상품상세",
-            "optionId": 1,
-            "size": 100,
-            "stock": 10,
-            "price": 1000,
-            "state": 1,
-            "createdAt": "2025-04-03T09:00:00"
-        },
-        {
-            "id": 2,
-            "name": "상품상세",
-            "optionId": 1,
-            "size": 100,
-            "stock": 10,
-            "price": 1000,
-            "state": 1,
-            "createdAt": "2025-04-03T09:00:00"
-        },
-        {
-            "id": 3,
-            "name": "상품상세",
-            "optionId": 1,
-            "size": 100,
-            "stock": 10,
-            "price": 1000,
-            "state": 1,
-            "createdAt": "2025-04-03T09:00:00"
+          "optionId": 1,
+          "size": 100,
+          "stock": 10
         },
         ...
-    ]
+      ]
+    },
+    ...
+  ]
 }
+
 ```
 
 ### GET Product popular 
@@ -182,39 +176,23 @@
 #### Response
 ```
 {
-    "products": [
+  "products": [
+    {
+      "id": 1,
+      "name": "상품상세",
+      "price": 1000,
+      "state": 1,
+      "createdAt": "2025-04-03T09:00:00",
+      "options": [
         {
-            "id": 1,
-            "name": "상품상세",
-            "optionId": 1,
-            "price": 1000,
-            "size": 100,
-            "stock": 10,
-            "state": 1,
-            "createdAt": "2025-04-03T09:00:00"
-        },
-        {
-            "id": 2,
-            "name": "상품상세",
-            "optionId": 1,
-            "price": 1000,
-            "size": 100,
-            "stock": 10,
-            "state": 1,
-            "createdAt": "2025-04-03T09:00:00"
-        },
-        {
-            "id": 3,
-            "name": "상품상세",
-            "optionId": 1,
-            "price": 1000,
-            "size": 100,
-            "stock": 10,
-            "state": 1,
-            "createdAt": "2025-04-03T09:00:00"
-        },
-        ...
-    ]
+          "optionId": 1,
+          "size": 100,
+          "stock": 10
+        }
+      ]
+    },
+    ...
+  ]
 }
 ```
 
