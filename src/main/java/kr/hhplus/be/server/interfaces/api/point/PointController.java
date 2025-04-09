@@ -27,8 +27,7 @@ public class PointController implements PointApi {
         }
 
         UserPointServiceResponse result = pointService.getUserPoint(new UserPointServiceRequest(userId));
-        PointResponse response = PointResponse.from(result);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(PointResponse.from(result));
     }
 
     @Override
@@ -41,8 +40,7 @@ public class PointController implements PointApi {
                 userId, request.page(), request.size(), request.sort()
         ));
 
-        PointHistoryResponse response = new PointHistoryResponse(result);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(PointHistoryResponse.from(result));
     }
 
     @Override
@@ -57,7 +55,6 @@ public class PointController implements PointApi {
         request.validate();
         PointChargeServiceResponse result = pointService.charge(new PointChargeServiceRequest(userId, request.point()));
 
-        PointChargeResponse response = new PointChargeResponse(userId, result.point());
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(new PointChargeResponse(userId, result.point()));
     }
 }
