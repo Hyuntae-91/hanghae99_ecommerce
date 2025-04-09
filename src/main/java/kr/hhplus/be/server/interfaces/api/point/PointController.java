@@ -1,5 +1,6 @@
 package kr.hhplus.be.server.interfaces.api.point;
 
+import jakarta.validation.Valid;
 import kr.hhplus.be.server.domain.point.dto.*;
 import kr.hhplus.be.server.interfaces.api.point.dto.*;
 import kr.hhplus.be.server.domain.point.PointService;
@@ -31,7 +32,10 @@ public class PointController implements PointApi {
     }
 
     @Override
-    public ResponseEntity<?> getHistory(@RequestHeader("userId") Long userId, @RequestBody PointHistoryRequest request) {
+    public ResponseEntity<?> getHistory(
+            @RequestHeader("userId") Long userId,
+            @RequestBody @Valid PointHistoryRequest request
+    ) {
         if (userId == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(new ErrorResponse(404, "User Not Found"));
@@ -46,13 +50,12 @@ public class PointController implements PointApi {
     @Override
     public ResponseEntity<?> chargePoint(
             @RequestHeader("userId") Long userId,
-            @RequestBody PointChargeRequest request
+            @RequestBody @Valid PointChargeRequest request
     ) {
         if (userId == null) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(new ErrorResponse(400, "Missing userId header"));
         }
-        request.validate();
         PointChargeServiceResponse result = pointService.charge(new PointChargeServiceRequest(userId, request.point()));
 
         return ResponseEntity.ok(new PointChargeResponse(userId, result.point()));
