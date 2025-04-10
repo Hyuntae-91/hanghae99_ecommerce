@@ -61,8 +61,15 @@ public class ProductService {
         List<Product> productList = productRepository.findByIds(productIds);
 
         // 2. 총 금액 계산
-        long total = productList.stream()
-                .flatMap(product -> product.getOrderItems().stream())
+        long total = requestDto.items().stream()
+                .flatMap(optionKey -> productList.stream()
+                        .filter(p -> p.getId().equals(optionKey.productId()))
+                        .flatMap(p -> p.getOrderItems().stream())
+                        .filter(item ->
+                                item.getProductId().equals(optionKey.productId()) &&
+                                        item.getOptionId().equals(optionKey.optionId())
+                        )
+                )
                 .mapToLong(OrderItem::calculateTotalPrice)
                 .sum();
 

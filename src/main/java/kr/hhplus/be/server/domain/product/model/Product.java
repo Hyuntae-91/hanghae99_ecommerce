@@ -67,4 +67,8 @@ public class Product {
     public boolean isHidden() {
         return state == 3;
     }
+
+    public void setOrderItems(List<OrderItem> orderItems) {
+        this.orderItems = orderItems != null ? orderItems : new ArrayList<>();
+    }
 }

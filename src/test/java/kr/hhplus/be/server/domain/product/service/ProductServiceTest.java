@@ -182,8 +182,8 @@ class ProductServiceTest {
     @DisplayName("성공: ProductListSvcByIdsRequest로 ProductListServiceDto 응답 받기 - mock 방식")
     void getProductByIds_success() {
         // given
-        ProductOptionKeyDto item1 = new ProductOptionKeyDto(1L, 1L, 1);
-        ProductOptionKeyDto item2 = new ProductOptionKeyDto(2L, 2L, 1);
+        ProductOptionKeyDto item1 = new ProductOptionKeyDto(1L, 1L, 1L);
+        ProductOptionKeyDto item2 = new ProductOptionKeyDto(2L, 2L, 1L);
         ProductListSvcByIdsRequest request = new ProductListSvcByIdsRequest(List.of(item1, item2));
 
         Product product1 = Product.builder().id(1L).name("상품1").price(1000L).state(1).createdAt("2025-04-10T12:00:00").build();
@@ -210,8 +210,8 @@ class ProductServiceTest {
     @DisplayName("성공: ProductListSvcByIdsRequest로 총 금액 계산 - mock 방식")
     void calculateTotalPrice_success() {
         // given
-        ProductOptionKeyDto item1 = new ProductOptionKeyDto(1L, 1L, 1);
-        ProductOptionKeyDto item2 = new ProductOptionKeyDto(2L, 2L, 1);
+        ProductOptionKeyDto item1 = new ProductOptionKeyDto(1L, 1L, 1L);
+        ProductOptionKeyDto item2 = new ProductOptionKeyDto(2L, 2L, 1L);
         ProductListSvcByIdsRequest request = new ProductListSvcByIdsRequest(List.of(item1, item2));
 
         OrderItem orderItem1 = OrderItem.of(1L, null, 1L, 1L, 1000L, 2); // 1000 * 2 = 2000
@@ -263,7 +263,7 @@ class ProductServiceTest {
     @DisplayName("성공: 상품은 조회됐지만 OrderItem이 없으면 총합은 0")
     void calculateTotalPrice_when_no_orderItems() {
         // given
-        ProductOptionKeyDto item = new ProductOptionKeyDto(1L, 1L, 1);
+        ProductOptionKeyDto item = new ProductOptionKeyDto(1L, 1L, 1L);
         ProductListSvcByIdsRequest request = new ProductListSvcByIdsRequest(List.of(item));
 
         Product product = Product.builder()
@@ -287,7 +287,7 @@ class ProductServiceTest {
     @DisplayName("성공: 조회된 Product가 하나도 없으면 총합은 0")
     void calculateTotalPrice_when_productList_is_empty() {
         // given
-        ProductOptionKeyDto item = new ProductOptionKeyDto(99L, 1L, 1);
+        ProductOptionKeyDto item = new ProductOptionKeyDto(99L, 1L, 1L);
         ProductListSvcByIdsRequest request = new ProductListSvcByIdsRequest(List.of(item));
 
         when(productRepository.findByIds(List.of(99L)))
@@ -304,28 +304,28 @@ class ProductServiceTest {
     @DisplayName("실패: ProductOptionKeyDto - productId가 null이면 예외 발생")
     void productOptionKeyDto_fail_productId_null() {
         assertThrows(IllegalArgumentException.class, () ->
-                new ProductOptionKeyDto(null, 1L, 1));
+                new ProductOptionKeyDto(null, 1L, 1L));
     }
 
     @Test
     @DisplayName("실패: ProductOptionKeyDto - productId가 1 미만이면 예외 발생")
     void productOptionKeyDto_fail_productId_invalid() {
         assertThrows(IllegalArgumentException.class, () ->
-                new ProductOptionKeyDto(0L, 1L, 1));
+                new ProductOptionKeyDto(0L, 1L, 1L));
     }
 
     @Test
     @DisplayName("실패: ProductOptionKeyDto - optionId가 null이면 예외 발생")
     void productOptionKeyDto_fail_optionId_null() {
         assertThrows(IllegalArgumentException.class, () ->
-                new ProductOptionKeyDto(1L, null, 1));
+                new ProductOptionKeyDto(1L, null, 1L));
     }
 
     @Test
     @DisplayName("실패: ProductOptionKeyDto - optionId가 1 미만이면 예외 발생")
     void productOptionKeyDto_fail_optionId_invalid() {
         assertThrows(IllegalArgumentException.class, () ->
-                new ProductOptionKeyDto(1L, 0L, 1));
+                new ProductOptionKeyDto(1L, 0L, 1L));
     }
 
     @Test
@@ -339,6 +339,40 @@ class ProductServiceTest {
     @DisplayName("실패: ProductOptionKeyDto - quantity가 1 미만이면 예외 발생")
     void productOptionKeyDto_fail_quantity_invalid() {
         assertThrows(IllegalArgumentException.class, () ->
-                new ProductOptionKeyDto(1L, 1L, 0));
+                new ProductOptionKeyDto(1L, 1L, 0L));
     }
+
+    @Test
+    @DisplayName("성공: 요청된 item(productId + optionId)만 총합 계산")
+    void calculateTotalPrice_with_selected_items_only() {
+        // given
+        Product product = Product.builder()
+                .id(1L)
+                .price(1000L)
+                .createdAt("2025-04-10T12:00:00")
+                .build();
+
+        OrderItem item1 = OrderItem.of(1L, null, 1L, 11L, 100L, 1); // 총 100
+        OrderItem item2 = OrderItem.of(1L, null, 1L, 12L, 200L, 1); // 총 200
+        OrderItem item3 = OrderItem.of(1L, null, 1L, 13L, 300L, 1); // 총 300
+        OrderItem item4 = OrderItem.of(1L, null, 1L, 14L, 400L, 1); // 총 400
+        OrderItem item5 = OrderItem.of(1L, null, 1L, 15L, 500L, 1); // 총 500
+        OrderItem item6 = OrderItem.of(1L, null, 1L, 16L, 600L, 1); // 총 600
+
+        product.setOrderItems(List.of(item1, item2, item3, item4, item5, item6));
+
+        ProductListSvcByIdsRequest request = new ProductListSvcByIdsRequest(List.of(
+                new ProductOptionKeyDto(1L, 11L, 100L),  // item1
+                new ProductOptionKeyDto(1L, 13L, 300L)   // item3
+        ));
+
+        when(productRepository.findByIds(List.of(1L))).thenReturn(List.of(product));
+
+        // when
+        ProductTotalPriceResponse result = productService.calculateTotalPrice(request);
+
+        // then
+        assertThat(result.totalPrice()).isEqualTo(100L + 300L); // 400
+    }
+
 }
