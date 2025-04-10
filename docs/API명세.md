@@ -115,7 +115,15 @@
     "name": "상품상세",
     "price": 1000,
     "state": 1,
-    "createdAt": "2025-04-03T09:00:00"
+    "createdAt": "2025-04-03T09:00:00",
+    "options": [
+    {
+      "optionId": 1,
+      "size": 100,
+      "stock": 10
+    },
+    ...
+  ]
 }
 ```
 
@@ -134,32 +142,30 @@
 
 #### Response
 ```
+GET /v1/products?page=1&size=10&sort=createdAt
+
+Response:
 {
-    "products": [
+  "products": [
+    {
+      "id": 1,
+      "name": "상품상세",
+      "price": 1000,
+      "state": 1,
+      "createdAt": "2025-04-03T09:00:00",
+      "options": [
         {
-            "id": 1,
-            "name": "상품상세",
-            "price": 1000,
-            "state": 1,
-            "createdAt": "2025-04-03T09:00:00"
-        },
-        {
-            "id": 2,
-            "name": "상품상세",
-            "price": 1000,
-            "state": 1,
-            "createdAt": "2025-04-03T09:00:00"
-        },
-        {
-            "id": 3,
-            "name": "상품상세",
-            "price": 1000,
-            "state": 1,
-            "createdAt": "2025-04-03T09:00:00"
+          "optionId": 1,
+          "size": 100,
+          "stock": 10
         },
         ...
-    ]
+      ]
+    },
+    ...
+  ]
 }
+
 ```
 
 ### GET Product popular 
@@ -170,30 +176,23 @@
 #### Response
 ```
 {
-    "products": [
+  "products": [
+    {
+      "id": 1,
+      "name": "상품상세",
+      "price": 1000,
+      "state": 1,
+      "createdAt": "2025-04-03T09:00:00",
+      "options": [
         {
-            "id": 1,
-            "name": "상품상세",
-            "price": 1000,
-            "state": 1,
-            "createdAt": "2025-04-03T09:00:00"
-        },
-        {
-            "id": 2,
-            "name": "상품상세",
-            "price": 1000,
-            "state": 1,
-            "createdAt": "2025-04-03T09:00:00"
-        },
-        {
-            "id": 3,
-            "name": "상품상세",
-            "price": 1000,
-            "state": 1,
-            "createdAt": "2025-04-03T09:00:00"
-        },
-        ...
-    ]
+          "optionId": 1,
+          "size": 100,
+          "stock": 10
+        }
+      ]
+    },
+    ...
+  ]
 }
 ```
 
@@ -202,6 +201,7 @@
 - endpoint : /v1/products/best/calculate
 - method : POST
 
+요청/응답 객체 없음
 
 ## Coupon API
 ### GET Coupon
@@ -296,102 +296,38 @@
 - method: POST
 - header : userId
 
-### Post Order
-- 설명 : 주문 생성 요청하는 API
-- endpoint : /v1/order
-- method : POST
-- header : userId
-
 #### Request
 ```
 {
-    "products1": [
+    "productId": 1,
+    "quantity": 1,
+    "optionId": 1
+}
+```
+
+#### Response
+```
+{
+    "cartList": [
         {
-            "product_id": 1,
-            "quantity": 1
+            "productId": 1,
+            "quantity": 1,
+            "optionId": 1,
+            "eachPrice": 1000,
+            "productStock": 10,
+            "size": 100
         },
         {
-            "product_id": 2,
-            "quantity": 1
+            "productId": 1,
+            "quantity": 1,
+            "optionId": 1,
+            "eachPrice": 1000,
+            "productStock": 10,
+            "size": 100
         },
         ...
     ],
-    "couponIssueId": 0 or null
-}
-```
-#### Response
-```
-{
-    "orderId": 1,
-    "status": 0,
-    "total_price": 10000,
-    "quantity": 10,
-    "coupon_issue_id": 0 or null
-    "createdAt": "2025-04-03T09:00:00"
-}
-```
-
-```
-{
-    "code": 400,
-    "message": "Invalid Reqeust"
-}
-```
-
-```
-{
-    "code": 404,
-    "message": "User Not Found"
-}
-```
-
-```
-{
-    "code": 404,
-    "message": "Coupon Not Found"
-}
-```
-
-```
-{
-    "code": 404,
-    "message": "Order Not Found"
-}
-```
-
-```
-{
-    "code": 409,
-    "message": "Product Out of Stock"
-}
-```
-
-
-### DELETE Order
-- 설명 : 주문 취소 요청하는 API
-- endpoint : /v1/order/{orderId:int}/cancel
-- method : DELETE
-- header : userId
-
-#### Response
-```
-{
-    "orderId": 1,
-    "status": -1
-}
-```
-
-```
-{
-    "code": 404,
-    "message": "User Not Found"
-}
-```
-
-```
-{
-    "code": 404,
-    "message": "Order Not Found"
+    "total_price": 1000
 }
 ```
 
@@ -405,9 +341,39 @@
 #### Request
 ```
 {
-    "orderId": 1
+    "products": [
+        {
+            "id": 1,
+            "name": "상품상세",
+            "optionId": 1,
+            "quantity": 10,
+            "state": 1
+        },
+        {
+            "id": 2,
+            "name": "상품상세",
+            "optionId": 1,
+            "quantity": 10,
+            "state": 1
+        },
+        {
+            "id": 3,
+            "name": "상품상세",
+            "optionId": 1,
+            "quantity": 10,
+            "state": 1
+        },
+        ...
+    ],
+    "couponIssueId": 0 or null
 }
 ```
+
+### Post Payment Continue
+- 설명 : 결제 요청하는 API. 주문은 생성됐지만, 결제가 취소된 경우, 이어서 다시 결제 시도 가능한 endpoint
+- endpoint : /v1/payment/{orderId:int}
+- method : POST
+- header : userId
 
 #### Response
 ```
@@ -444,14 +410,10 @@
 #### Response
 ```
 {
+    "paymentId": 1,
     "orderId": 1,
     "status": -1
 }
-```
-
-```
-    "code": 400,
-    "message": "Not enough points"
 ```
 
 ```
