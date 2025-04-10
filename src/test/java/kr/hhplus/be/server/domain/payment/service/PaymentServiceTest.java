@@ -4,6 +4,7 @@ import kr.hhplus.be.server.domain.coupon.CouponIssueRepository;
 import kr.hhplus.be.server.domain.coupon.model.CouponIssue;
 import kr.hhplus.be.server.domain.order.OrderItemRepository;
 import kr.hhplus.be.server.domain.order.OrderOptionRepository;
+import kr.hhplus.be.server.domain.order.model.Order;
 import kr.hhplus.be.server.domain.order.model.OrderItem;
 import kr.hhplus.be.server.domain.order.model.OrderOption;
 import kr.hhplus.be.server.domain.payment.PaymentRepository;
@@ -60,10 +61,12 @@ class PaymentServiceTest {
         long totalPrice = 5000L;
 
         OrderItem item = mock(OrderItem.class);
+        Order order = mock(Order.class);
+        when(item.getOrder()).thenReturn(order);
         when(item.getId()).thenReturn(orderItemId);
         when(item.getOptionId()).thenReturn(optionId);
         when(item.getQuantity()).thenReturn(2);
-        when(item.getOrderId()).thenReturn(orderId);
+        when(item.getOrder().getId()).thenReturn(orderId);
 
         OrderOption option = mock(OrderOption.class);
         when(option.getStockQuantity()).thenReturn(10);
@@ -103,10 +106,12 @@ class PaymentServiceTest {
         Long orderId = 99L;
 
         OrderItem item = mock(OrderItem.class);
+        Order order = mock(Order.class);
+        when(item.getOrder()).thenReturn(order);
         when(item.getId()).thenReturn(orderItemId);
         when(item.getOptionId()).thenReturn(optionId);
         when(item.getQuantity()).thenReturn(5);
-        when(item.getOrderId()).thenReturn(orderId);
+        when(item.getOrder().getId()).thenReturn(orderId);
 
         OrderOption option = mock(OrderOption.class);
         when(option.getStockQuantity()).thenReturn(2); // 재고 부족
@@ -143,10 +148,12 @@ class PaymentServiceTest {
         Long optionId = 2L;
 
         OrderItem item = mock(OrderItem.class);
+        Order order = mock(Order.class);
+        when(item.getOrder()).thenReturn(order);
         when(item.getId()).thenReturn(orderItemId);
         when(item.getOptionId()).thenReturn(optionId);
         when(item.getQuantity()).thenReturn(1);
-        when(item.getOrderId()).thenReturn(123L);
+        when(item.getOrder().getId()).thenReturn(123L);
 
         OrderOption option = mock(OrderOption.class);
         when(option.getStockQuantity()).thenReturn(10);
@@ -207,10 +214,12 @@ class PaymentServiceTest {
         long totalPrice = 5000L;
 
         OrderItem item = mock(OrderItem.class);
+        Order order = mock(Order.class);
+        when(item.getOrder()).thenReturn(order);
         when(item.getId()).thenReturn(orderItemId);
         when(item.getOptionId()).thenReturn(optionId);
         when(item.getQuantity()).thenReturn(1);
-        when(item.getOrderId()).thenReturn(orderId);
+        when(item.getOrder().getId()).thenReturn(orderId);
 
         OrderOption option = mock(OrderOption.class);
         when(option.getStockQuantity()).thenReturn(10);
@@ -250,10 +259,12 @@ class PaymentServiceTest {
         long totalPrice = 5000L;
 
         OrderItem item = mock(OrderItem.class);
+        Order order = mock(Order.class);
+        when(item.getOrder()).thenReturn(order);
         when(item.getId()).thenReturn(orderItemId);
         when(item.getOptionId()).thenReturn(optionId);
         when(item.getQuantity()).thenReturn(1);
-        when(item.getOrderId()).thenReturn(orderId);
+        when(item.getOrder().getId()).thenReturn(orderId);
 
         OrderOption option = mock(OrderOption.class);
         when(option.getStockQuantity()).thenReturn(10);
@@ -292,10 +303,12 @@ class PaymentServiceTest {
         long totalPrice = 5000L;
 
         OrderItem item = mock(OrderItem.class);
+        Order order = mock(Order.class);
+        when(item.getOrder()).thenReturn(order);
         when(item.getId()).thenReturn(orderItemId);
         when(item.getOptionId()).thenReturn(optionId);
         when(item.getQuantity()).thenReturn(1);
-        when(item.getOrderId()).thenReturn(orderId);
+        when(item.getOrder().getId()).thenReturn(orderId);
 
         OrderOption option = mock(OrderOption.class);
         when(option.getStockQuantity()).thenReturn(10);
