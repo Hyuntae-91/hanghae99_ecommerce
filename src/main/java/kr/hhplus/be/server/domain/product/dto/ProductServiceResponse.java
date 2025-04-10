@@ -28,19 +28,4 @@ public record ProductServiceResponse(
             throw new IllegalArgumentException("options는 null이 될 수 없습니다.");
         }
     }
-
-    public static ProductServiceResponse from(Product product) {
-        List<ProductOptionResponse> optionList = product.getOrderOptions().stream()
-                .map(ProductOptionResponse::from)
-                .toList();
-
-        return new ProductServiceResponse(
-                product.getId(),
-                product.getName(),
-                product.getPrice(),
-                product.getState(),
-                product.getCreatedAt(),
-                optionList
-        );
-    }
 }

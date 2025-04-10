@@ -1,9 +1,7 @@
 package kr.hhplus.be.server.domain.product;
 
-import kr.hhplus.be.server.domain.product.dto.ProductListServiceRequest;
-import kr.hhplus.be.server.domain.product.dto.ProductListServiceResponse;
-import kr.hhplus.be.server.domain.product.dto.ProductServiceRequest;
-import kr.hhplus.be.server.domain.product.dto.ProductServiceResponse;
+import kr.hhplus.be.server.domain.order.model.OrderItem;
+import kr.hhplus.be.server.domain.product.dto.*;
 import kr.hhplus.be.server.domain.product.model.Product;
 import kr.hhplus.be.server.infrastructure.product.dto.GetProductsRepositoryRequestDto;
 import lombok.RequiredArgsConstructor;
@@ -16,40 +14,58 @@ import java.util.List;
 public class ProductService {
 
     private final ProductRepository productRepository;
+    private final ProductMapper productMapper;
 
     public ProductServiceResponse getProductById(ProductServiceRequest requestDto) {
         Product product = productRepository.findById(requestDto.productId());
-        return ProductServiceResponse.from(product);
+        return productMapper.productToProductServiceResponse(product);
     }
 
-    public ProductListServiceResponse getProductList(ProductListServiceRequest requestDto) {
+    public ProductListServiceDto getProductByIds(ProductListSvcByIdsRequest requestDto) {
+        List<Long> productIds = requestDto.items().stream()
+                .map(ProductOptionKeyDto::productId)
+                .distinct()
+                .toList();
+        List<Product> productList = productRepository.findByIds(productIds);
+        List<ProductServiceResponse> dtoList = productMapper.productsToProductServiceResponses(productList);
+        return new ProductListServiceDto(dtoList);
+    }
+
+    public ProductListServiceDto getProductList(ProductListServiceRequest requestDto) {
         GetProductsRepositoryRequestDto reqRepository = new GetProductsRepositoryRequestDto(
                 requestDto.page(), requestDto.size(), requestDto.sort()
         );
         List<Product> productList = productRepository.findAll(reqRepository);
+        List<ProductServiceResponse> dtoList = productMapper.productsToProductServiceResponses(productList);
 
-        List<ProductServiceResponse> dtoList = productList.stream()
-                .map(product -> {
-                    if (product.getOrderOptions() == null) {
-                        // orderOptions가 null이면 빈 리스트로 초기화
-                        product.setOrderOptions(List.of());
-                    }
-                    return ProductServiceResponse.from(product);
-                })
-                .toList();
-
-        return new ProductListServiceResponse(dtoList);
+        return new ProductListServiceDto(dtoList);
     }
 
-    public ProductListServiceResponse getBestProducts() {
+    public ProductListServiceDto getBestProducts() {
         List<Product> bestProducts = productRepository.findPopularTop5();
-        List<ProductServiceResponse> dtoList = bestProducts.stream()
-                .map(ProductServiceResponse::from)
-                .toList();
-        return new ProductListServiceResponse(dtoList);
+        List<ProductServiceResponse> dtoList = productMapper.productsToProductServiceResponses(bestProducts);
+        return new ProductListServiceDto(dtoList);
     }
 
     public void calculateBestProducts() {
         productRepository.recalculateBestProducts();
+    }
+
+    public ProductTotalPriceResponse calculateTotalPrice(ProductListSvcByIdsRequest requestDto) {
+        // 1. 필요한 productId 추출 후 조회
+        List<Long> productIds = requestDto.items().stream()
+                .map(ProductOptionKeyDto::productId)
+                .distinct()
+                .toList();
+
+        List<Product> productList = productRepository.findByIds(productIds);
+
+        // 2. 총 금액 계산
+        long total = productList.stream()
+                .flatMap(product -> product.getOrderItems().stream())
+                .mapToLong(OrderItem::calculateTotalPrice)
+                .sum();
+
+        return new ProductTotalPriceResponse(total);
     }
 }

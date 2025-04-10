@@ -2,7 +2,7 @@ package kr.hhplus.be.server.interfaces.api.product;
 
 import jakarta.validation.Valid;
 import kr.hhplus.be.server.domain.product.ProductService;
-import kr.hhplus.be.server.domain.product.dto.ProductListServiceResponse;
+import kr.hhplus.be.server.domain.product.dto.ProductListServiceDto;
 import kr.hhplus.be.server.domain.product.dto.ProductListServiceRequest;
 import kr.hhplus.be.server.domain.product.dto.ProductServiceRequest;
 import kr.hhplus.be.server.domain.product.dto.ProductServiceResponse;
@@ -39,13 +39,13 @@ public class ProductController implements ProductApi {
         ProductListServiceRequest reqController = new ProductListServiceRequest(
                 request.page(), request.size(), request.sort()
         );
-        ProductListServiceResponse result = productService.getProductList(reqController);
+        ProductListServiceDto result = productService.getProductList(reqController);
         return ResponseEntity.ok(ProductListResponse.from(result));
     }
 
     @Override
     public ResponseEntity<?> getBestProducts() {
-        ProductListServiceResponse result = productService.getBestProducts();
+        ProductListServiceDto result = productService.getBestProducts();
         return ResponseEntity.ok(ProductListResponse.from(result));
     }
 

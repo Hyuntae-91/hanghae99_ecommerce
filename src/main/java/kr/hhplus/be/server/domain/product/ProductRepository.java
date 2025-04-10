@@ -11,6 +11,8 @@ public interface ProductRepository {
 
     Product findById(Long id);
 
+    List<Product> findByIds(List<Long> ids);
+
     List<Product> findAll(GetProductsRepositoryRequestDto reqRepository);
 
     List<Product> findPopularTop5();

@@ -1,10 +1,10 @@
 package kr.hhplus.be.server.domain.product.service;
 
 import kr.hhplus.be.server.domain.common.exception.ResourceNotFoundException;
+import kr.hhplus.be.server.domain.order.model.OrderItem;
 import kr.hhplus.be.server.domain.product.ProductRepository;
 import kr.hhplus.be.server.domain.product.ProductService;
-import kr.hhplus.be.server.domain.product.dto.ProductListServiceRequest;
-import kr.hhplus.be.server.domain.product.dto.ProductServiceRequest;
+import kr.hhplus.be.server.domain.product.dto.*;
 import kr.hhplus.be.server.domain.product.model.Product;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -20,11 +20,13 @@ class ProductServiceTest {
 
     private ProductRepository productRepository;
     private ProductService productService;
+    private ProductMapper productMapper;
 
     @BeforeEach
     void setUp() {
         productRepository = mock(ProductRepository.class);
-        productService = new ProductService(productRepository);
+        productMapper = mock(ProductMapper.class);
+        productService = new ProductService(productRepository, productMapper);
     }
 
     @Test
@@ -138,4 +140,125 @@ class ProductServiceTest {
                 productService.getProductById(new ProductServiceRequest(99L)));
     }
 
+    @Test
+    @DisplayName("성공: ProductListSvcByIdsRequest로 ProductListServiceDto 응답 받기 - mock 방식")
+    void getProductByIds_success() {
+        // given
+        ProductOptionKeyDto item1 = new ProductOptionKeyDto(1L, 1L);
+        ProductOptionKeyDto item2 = new ProductOptionKeyDto(2L, 2L);
+        ProductListSvcByIdsRequest request = new ProductListSvcByIdsRequest(List.of(item1, item2));
+
+        Product product1 = Product.builder().id(1L).name("상품1").price(1000L).state(1).createdAt("2025-04-10T12:00:00").build();
+        Product product2 = Product.builder().id(2L).name("상품2").price(2000L).state(1).createdAt("2025-04-10T12:00:00").build();
+
+        ProductServiceResponse dto1 = new ProductServiceResponse(1L, "상품1", 1000L, 1, "2025-04-10T12:00:00", List.of());
+        ProductServiceResponse dto2 = new ProductServiceResponse(2L, "상품2", 2000L, 1, "2025-04-10T12:00:00", List.of());
+
+        when(productRepository.findByIds(List.of(1L, 2L)))
+                .thenReturn(List.of(product1, product2));
+        when(productMapper.productsToProductServiceResponses(List.of(product1, product2)))
+                .thenReturn(List.of(dto1, dto2));
+
+        // when
+        ProductListServiceDto result = productService.getProductByIds(request);
+
+        // then
+        assertThat(result.products()).hasSize(2);
+        assertThat(result.products().get(0).name()).isEqualTo("상품1");
+        assertThat(result.products().get(1).price()).isEqualTo(2000L);
+    }
+
+    @Test
+    @DisplayName("성공: ProductListSvcByIdsRequest로 총 금액 계산 - mock 방식")
+    void calculateTotalPrice_success() {
+        // given
+        ProductOptionKeyDto item1 = new ProductOptionKeyDto(1L, 1L);
+        ProductOptionKeyDto item2 = new ProductOptionKeyDto(2L, 2L);
+        ProductListSvcByIdsRequest request = new ProductListSvcByIdsRequest(List.of(item1, item2));
+
+        OrderItem orderItem1 = OrderItem.of(1L, null, 1L, 1L, 1000L, 2); // 1000 * 2 = 2000
+        OrderItem orderItem2 = OrderItem.of(1L, null, 2L, 2L, 2000L, 3); // 2000 * 3 = 6000
+
+        Product product1 = Product.builder()
+                .id(1L)
+                .price(1000L)
+                .orderItems(List.of(orderItem1))
+                .createdAt("2025-04-10T12:00:00")
+                .build();
+
+        Product product2 = Product.builder()
+                .id(2L)
+                .price(2000L)
+                .orderItems(List.of(orderItem2))
+                .createdAt("2025-04-10T12:00:00")
+                .build();
+
+        when(productRepository.findByIds(List.of(1L, 2L)))
+                .thenReturn(List.of(product1, product2));
+
+        // when
+        ProductTotalPriceResponse result = productService.calculateTotalPrice(request);
+
+        // then
+        assertThat(result.totalPrice()).isEqualTo(2000 + 6000);
+    }
+
+    @Test
+    @DisplayName("실패: ProductListSvcByIdsRequest가 null 리스트를 가지면 예외 발생")
+    void getProductByIds_fail_null_list() {
+        // expect
+        assertThatThrownBy(() -> new ProductListSvcByIdsRequest(null))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("상품 목록은 비어 있을 수 없습니다.");
+    }
+
+    @Test
+    @DisplayName("실패: ProductListSvcByIdsRequest가 빈 리스트면 예외 발생")
+    void getProductByIds_fail_empty_list() {
+        // expect
+        assertThatThrownBy(() -> new ProductListSvcByIdsRequest(List.of()))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("상품 목록은 비어 있을 수 없습니다.");
+    }
+
+    @Test
+    @DisplayName("성공: 상품은 조회됐지만 OrderItem이 없으면 총합은 0")
+    void calculateTotalPrice_when_no_orderItems() {
+        // given
+        ProductOptionKeyDto item = new ProductOptionKeyDto(1L, 1L);
+        ProductListSvcByIdsRequest request = new ProductListSvcByIdsRequest(List.of(item));
+
+        Product product = Product.builder()
+                .id(1L)
+                .price(1000L)
+                .orderItems(List.of())  // orderItems 비어 있음
+                .createdAt("2025-04-10T12:00:00")
+                .build();
+
+        when(productRepository.findByIds(List.of(1L)))
+                .thenReturn(List.of(product));
+
+        // when
+        ProductTotalPriceResponse response = productService.calculateTotalPrice(request);
+
+        // then
+        assertThat(response.totalPrice()).isEqualTo(0L);
+    }
+
+    @Test
+    @DisplayName("성공: 조회된 Product가 하나도 없으면 총합은 0")
+    void calculateTotalPrice_when_productList_is_empty() {
+        // given
+        ProductOptionKeyDto item = new ProductOptionKeyDto(99L, 1L);
+        ProductListSvcByIdsRequest request = new ProductListSvcByIdsRequest(List.of(item));
+
+        when(productRepository.findByIds(List.of(99L)))
+                .thenReturn(List.of());  // 빈 productList
+
+        // when
+        ProductTotalPriceResponse response = productService.calculateTotalPrice(request);
+
+        // then
+        assertThat(response.totalPrice()).isEqualTo(0L);
+    }
 }

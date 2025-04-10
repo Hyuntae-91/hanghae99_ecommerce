@@ -41,9 +41,11 @@ public class Product {
     private String updatedAt;
 
     @OneToMany(mappedBy = "productId", fetch = FetchType.LAZY)
+    @Builder.Default
     private List<OrderItem> orderItems = new ArrayList<>();
 
     @OneToMany(mappedBy = "productId", fetch = FetchType.LAZY)
+    @Builder.Default
     private List<OrderOption> orderOptions = new ArrayList<>();
 
     public void setOrderOptions(List<OrderOption> orderOptions) {
