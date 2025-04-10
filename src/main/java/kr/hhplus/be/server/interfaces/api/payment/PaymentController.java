@@ -1,9 +1,14 @@
 package kr.hhplus.be.server.interfaces.api.payment;
 
+import kr.hhplus.be.server.application.payment.PaymentFacade;
+import kr.hhplus.be.server.application.payment.dto.PaymentFacadeMapper;
+import kr.hhplus.be.server.application.payment.dto.PaymentFacadeRequest;
+import kr.hhplus.be.server.domain.payment.dto.PaymentServiceResponse;
 import kr.hhplus.be.server.exception.ErrorResponse;
-import kr.hhplus.be.server.application.payment.PaymentCancelResponse;
-import kr.hhplus.be.server.application.payment.PaymentRequest;
-import kr.hhplus.be.server.application.payment.PaymentResponse;
+import kr.hhplus.be.server.interfaces.api.payment.dto.PaymentCancelResponse;
+import kr.hhplus.be.server.interfaces.api.payment.dto.PaymentRequest;
+import kr.hhplus.be.server.interfaces.api.payment.dto.PaymentResponse;
+import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -13,7 +18,11 @@ import org.springframework.http.ResponseEntity;
 
 
 @RestController
+@RequiredArgsConstructor
 public class PaymentController implements PaymentApi {
+
+    private final PaymentFacade paymentFacade;
+    private final PaymentFacadeMapper paymentFacadeMapper;
 
     @Override
     public ResponseEntity<?> requestPayment(
@@ -25,44 +34,10 @@ public class PaymentController implements PaymentApi {
                     .body(new ErrorResponse(400, "Missing userId header"));
         }
 
-        if (request.orderId() == null || request.orderId() == 404L) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(new ErrorResponse(404, "Order Not Found"));
-        }
-
-        PaymentResponse response = new PaymentResponse(
-                1L,
-                request.orderId(),
-                1,
-                10000L,
-                "2025-04-03T09:00:00"
-        );
-
-        return ResponseEntity.ok(response);
+        PaymentFacadeRequest facadeRequest = paymentFacadeMapper.toFacadeRequest(request);
+        facadeRequest = new PaymentFacadeRequest(userId, facadeRequest.products(), facadeRequest.couponIssueId());
+        PaymentServiceResponse result = paymentFacade.pay(facadeRequest);
+        return ResponseEntity.ok(PaymentResponse.from(result));
     }
-
-    @Override
-    public ResponseEntity<?> cancelPayment(
-            @RequestHeader("userId") Long userId,
-            @PathVariable("paymentId") Long paymentId
-    ) {
-        if (userId == null) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(new ErrorResponse(400, "Missing userId header"));
-        }
-
-        if (paymentId == null) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(new ErrorResponse(400, "Not enough points"));
-        }
-
-        if (paymentId == null) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(new ErrorResponse(404, "Order Not Found"));
-        }
-
-        return ResponseEntity.ok(new PaymentCancelResponse(1L, -1));
-    }
-
 }
 
