@@ -7,9 +7,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import kr.hhplus.be.server.exception.ErrorResponse;
-import kr.hhplus.be.server.application.order.OrderCancelResponse;
-import kr.hhplus.be.server.application.order.OrderRequest;
-import kr.hhplus.be.server.application.order.OrderResponse;
+import kr.hhplus.be.server.interfaces.api.order.dto.AddCartRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -17,34 +15,16 @@ import org.springframework.web.bind.annotation.*;
 @Tag(name = "Order", description = "주문 관련 API")
 public interface OrderApi {
 
-    @Operation(summary = "주문 생성", description = "상품을 주문하는 API")
+    @Operation(summary = "장바구니 추가", description = "상품을 장바구니에 담는 API")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "주문 성공",
-                    content = @Content(schema = @Schema(implementation = OrderResponse.class))),
+            @ApiResponse(responseCode = "200", description = "장바구니 추가 성공"),
             @ApiResponse(responseCode = "400", description = "Invalid Request",
-                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
-            @ApiResponse(responseCode = "404", description = "User Not Found / Coupon Not Found / Order Not Found",
-                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
-            @ApiResponse(responseCode = "409", description = "Product Out of Stock",
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
-    @PostMapping
-    ResponseEntity<?> createOrder(
+    @PostMapping("/cart")
+    ResponseEntity<?> addToCart(
             @RequestHeader("userId") Long userId,
-            @RequestBody OrderRequest request
-    );
-
-    @Operation(summary = "주문 취소", description = "주문 ID를 기반으로 주문을 취소하는 API")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "취소 성공",
-                    content = @Content(schema = @Schema(implementation = OrderCancelResponse.class))),
-            @ApiResponse(responseCode = "404", description = "User Not Found / Order Not Found",
-                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
-    })
-    @DeleteMapping("/{orderId}/cancel")
-    ResponseEntity<?> cancelOrder(
-            @RequestHeader("userId") Long userId,
-            @PathVariable("orderId") Long orderId
+            @RequestBody AddCartRequest request
     );
 }
 
