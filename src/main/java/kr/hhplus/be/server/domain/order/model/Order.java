@@ -5,6 +5,7 @@ import lombok.*;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 
 @Getter
 @Table(name = "`order`")
@@ -32,6 +33,9 @@ public class Order {
 
     private String updatedAt;
 
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JoinColumn(name = "order_id")
+    private List<OrderItem> orderItems;
 
     public static Order create(Long userId, Long totalPrice, int quantity, Long couponIssueId) {
         if (userId == null || totalPrice == null) {
@@ -60,5 +64,16 @@ public class Order {
         this.couponIssueId = couponIssueId;
     }
 
+    public static Order of(Long userId, Long couponIssueId, Long totalPrice, int state) {
+        String now = LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+        return Order.builder()
+                .userId(userId)
+                .couponIssueId(couponIssueId)
+                .totalPrice(totalPrice)
+                .state(state)
+                .createdAt(now)
+                .updatedAt(now)
+                .build();
+    }
 
 }

@@ -28,4 +28,9 @@ public class OrderItemRepositoryImpl implements OrderItemRepository {
     public List<OrderItem> findCartByUserId(Long userId) {
         return orderItemJpaRepository.findCartByUserId(userId);
     }
+
+    @Override
+    public void saveAll(List<OrderItem> orderItems) {
+        orderItemJpaRepository.saveAll(orderItems);
+    }
 }

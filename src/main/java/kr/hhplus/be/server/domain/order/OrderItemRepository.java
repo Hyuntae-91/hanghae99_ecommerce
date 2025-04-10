@@ -10,4 +10,6 @@ public interface OrderItemRepository {
     List<OrderItem> findAllByOrderId(Long orderId);
 
     List<OrderItem> findCartByUserId(Long userId);
+
+    void saveAll(List<OrderItem> orderItems);
 }

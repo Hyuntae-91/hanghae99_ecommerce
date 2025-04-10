@@ -42,6 +42,10 @@ public class OrderItem {
     @JoinColumn(name = "product_id", insertable = false, updatable = false)
     private Product product;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "order_id", insertable = false, updatable = false)
+    private Order order;
+
     @Setter
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "option_id")

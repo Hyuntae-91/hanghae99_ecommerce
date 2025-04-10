@@ -1,8 +1,7 @@
 package kr.hhplus.be.server.domain.order;
 
-import kr.hhplus.be.server.domain.order.dto.AddCartServiceRequest;
-import kr.hhplus.be.server.domain.order.dto.AddCartServiceResponse;
-import kr.hhplus.be.server.domain.order.dto.CartItemResponse;
+import kr.hhplus.be.server.domain.order.dto.*;
+import kr.hhplus.be.server.domain.order.model.Order;
 import kr.hhplus.be.server.domain.order.model.OrderItem;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -17,7 +16,7 @@ public class OrderService {
     private final OrderRepository orderRepository;
     private final OrderItemRepository orderItemRepository;
 
-    public AddCartServiceResponse AddCartService(AddCartServiceRequest request) {
+    public AddCartServiceResponse addCartService(AddCartServiceRequest request) {
         OrderItem item = OrderItem.of(
                 request.userId(),
                 null,
@@ -40,5 +39,27 @@ public class OrderService {
                 .sum();
 
         return new AddCartServiceResponse(cartList, totalPrice);
+    }
+
+    public CreateOrderServiceResponse createOrder(CreateOrderServiceRequest requestDto) {
+        Order order = Order.of(requestDto.userId(), requestDto.couponIssueId(), requestDto.totalPrice(), 0);
+        Order saved = orderRepository.save(order);
+        if (saved.getOrderItems().isEmpty()) {
+            throw new IllegalStateException("주문 항목이 존재하지 않습니다.");
+        }
+        Long orderId = saved.getId();
+
+        List<OrderItem> updatedItems = saved.getOrderItems().stream()
+                .map(item -> OrderItem.of(
+                        item.getUserId(),
+                        orderId,
+                        item.getProductId(),
+                        item.getOptionId(),
+                        item.getEachPrice(),
+                        item.getQuantity()
+                ))
+                .toList();
+        orderItemRepository.saveAll(updatedItems);
+        return new CreateOrderServiceResponse(orderId);
     }
 }

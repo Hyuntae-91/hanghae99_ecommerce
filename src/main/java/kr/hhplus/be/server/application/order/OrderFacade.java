@@ -35,7 +35,7 @@ public class OrderFacade {
                 product.price(),
                 request.quantity()
         );
-        return orderService.AddCartService(addCartServiceRequest);
+        return orderService.addCartService(addCartServiceRequest);
     }
 
     public void createOrder(AddCartRequest request) {}
