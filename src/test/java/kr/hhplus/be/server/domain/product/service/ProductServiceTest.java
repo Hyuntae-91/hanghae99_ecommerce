@@ -42,7 +42,17 @@ class ProductServiceTest {
                 .orderOptions(List.of())
                 .build();
 
+        ProductServiceResponse response = new ProductServiceResponse(
+                1L,
+                "테스트상품",
+                1000L,
+                1,
+                "2025-04-01 12:00:00",
+                List.of() // options
+        );
+
         when(productRepository.findById(1L)).thenReturn(product);
+        when(productMapper.productToProductServiceResponse(product)).thenReturn(response);
 
         // when
         var dto = productService.getProductById(new ProductServiceRequest(1L));
@@ -61,6 +71,12 @@ class ProductServiceTest {
 
         when(productRepository.findAll(any())).thenReturn(List.of(product1, product2));
 
+        ProductServiceResponse dto1 = new ProductServiceResponse(1L, "상품1", 1000L, 1, "2025-04-01 12:00:00", List.of());
+        ProductServiceResponse dto2 = new ProductServiceResponse(2L, "상품2", 2000L, 1, "2025-04-01 12:00:00", List.of());
+
+        when(productMapper.productsToProductServiceResponses(List.of(product1, product2)))
+                .thenReturn(List.of(dto1, dto2));
+
         // when
         var result = productService.getProductList(new ProductListServiceRequest(1, 10, "createdAt"));
 
@@ -69,12 +85,33 @@ class ProductServiceTest {
         assertThat(result.products().get(0).name()).isEqualTo("상품1");
     }
 
+
     @Test
     @DisplayName("성공: 인기 상품 조회")
     void get_best_products_success() {
         // given
-        Product product = Product.builder().id(1L).name("인기상품").price(3000L).state(1).orderOptions(List.of()).createdAt("2025-04-01 12:00:00").build();
+        Product product = Product.builder()
+                .id(1L)
+                .name("인기상품")
+                .price(3000L)
+                .state(1)
+                .orderOptions(List.of())
+                .createdAt("2025-04-01 12:00:00")
+                .build();
+
         when(productRepository.findPopularTop5()).thenReturn(List.of(product));
+
+        ProductServiceResponse dto = new ProductServiceResponse(
+                1L,
+                "인기상품",
+                3000L,
+                1,
+                "2025-04-01 12:00:00",
+                List.of() // options
+        );
+
+        when(productMapper.productsToProductServiceResponses(List.of(product)))
+                .thenReturn(List.of(dto));
 
         // when
         var result = productService.getBestProducts();
@@ -83,6 +120,7 @@ class ProductServiceTest {
         assertThat(result.products()).hasSize(1);
         assertThat(result.products().get(0).name()).isEqualTo("인기상품");
     }
+
 
     @Test
     @DisplayName("성공: 인기 상품 점수 재계산")
