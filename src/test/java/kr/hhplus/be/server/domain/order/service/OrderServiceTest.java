@@ -6,6 +6,7 @@ import kr.hhplus.be.server.domain.order.OrderService;
 import kr.hhplus.be.server.domain.order.dto.AddCartServiceRequest;
 import kr.hhplus.be.server.domain.order.dto.AddCartServiceResponse;
 import kr.hhplus.be.server.domain.order.dto.CreateOrderServiceRequest;
+import kr.hhplus.be.server.domain.order.dto.GetCartServiceRequest;
 import kr.hhplus.be.server.domain.order.model.Order;
 import kr.hhplus.be.server.domain.order.model.OrderItem;
 import kr.hhplus.be.server.domain.order.model.OrderOption;
@@ -195,6 +196,79 @@ class OrderServiceTest {
 
         // then
         assertThrows(IllegalStateException.class, () -> orderService.createOrder(request));
+    }
+
+    @Test
+    @DisplayName("성공: 장바구니 조회")
+    void get_cart_success() {
+        // given
+        Long userId = 1L;
+
+        OrderItem item = OrderItem.of(
+                userId,
+                null,
+                100L,
+                10L,
+                1500L,
+                2
+        );
+        item.setOrderOption(OrderOption.builder()
+                .id(10L)
+                .productId(100L)
+                .stockQuantity(99)
+                .size(270)
+                .createdAt("2025-04-10T12:00:00")
+                .updatedAt("2025-04-10T12:00:00")
+                .build()
+        );
+
+        when(orderItemRepository.findCartByUserId(userId)).thenReturn(List.of(item));
+
+        // when
+        var result = orderService.getCart(new GetCartServiceRequest(userId));
+
+        // then
+        assertThat(result).isNotNull();
+        assertThat(result.cartList()).hasSize(1);
+        assertThat(result.totalPrice()).isEqualTo(1500L);
+        assertThat(result.cartList().get(0).productId()).isEqualTo(100L);
+        assertThat(result.cartList().get(0).eachPrice()).isEqualTo(1500L);
+    }
+
+    @Test
+    @DisplayName("실패: 장바구니가 비어있을 경우 예외 발생")
+    void get_cart_fail_when_empty() {
+        // given
+        Long userId = 2L;
+        when(orderItemRepository.findCartByUserId(userId)).thenReturn(List.of());
+
+        // expect
+        assertThrows(IllegalArgumentException.class, () -> orderService.getCart(new GetCartServiceRequest(userId)));
+    }
+
+    @Test
+    @DisplayName("실패: findCartByUserId()가 null을 반환하면 NPE 발생")
+    void get_cart_fail_when_repository_returns_null() {
+        // given
+        Long userId = 3L;
+        when(orderItemRepository.findCartByUserId(userId)).thenReturn(null);
+
+        // then
+        assertThrows(NullPointerException.class, () -> orderService.getCart(new GetCartServiceRequest(userId)));
+    }
+
+    @Test
+    @DisplayName("실패: OrderItem의 OrderOption이 null일 경우 IllegalStateException")
+    void get_cart_fail_order_option_null() {
+        // given
+        Long userId = 4L;
+
+        OrderItem item = OrderItem.of(userId, null, 100L, 10L, 2000L, 1);
+
+        when(orderItemRepository.findCartByUserId(userId)).thenReturn(List.of(item));
+
+        // then
+        assertThrows(IllegalStateException.class, () -> orderService.getCart(new GetCartServiceRequest(userId)));
     }
 
 }

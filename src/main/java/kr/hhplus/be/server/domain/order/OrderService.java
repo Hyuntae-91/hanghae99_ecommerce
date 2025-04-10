@@ -16,6 +16,20 @@ public class OrderService {
     private final OrderRepository orderRepository;
     private final OrderItemRepository orderItemRepository;
 
+    public CartItemServiceResponse getCart(GetCartServiceRequest request) {
+        List<OrderItem> cartItems = orderItemRepository.findCartByUserId(request.userId());
+
+        List<CartItemResponse> cartList = cartItems.stream()
+                .map(OrderItem::toCartItemResponse)
+                .toList();
+
+        long totalPrice = cartList.stream()
+                .mapToLong(CartItemResponse::eachPrice)
+                .sum();
+
+        return new CartItemServiceResponse(cartList, totalPrice);
+    }
+
     public AddCartServiceResponse addCartService(AddCartServiceRequest request) {
         OrderItem item = OrderItem.of(
                 request.userId(),
