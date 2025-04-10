@@ -7,6 +7,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 
 @Service
@@ -56,12 +58,15 @@ public class OrderService {
     }
 
     public CreateOrderServiceResponse createOrder(CreateOrderServiceRequest requestDto) {
-        Order order = Order.of(requestDto.userId(), requestDto.couponIssueId(), requestDto.totalPrice(), 0);
+        Order order = Order.of(requestDto.userId(), requestDto.couponIssueId(), 0L, 0);
         Order saved = orderRepository.save(order);
         if (saved.getOrderItems().isEmpty()) {
             throw new IllegalStateException("주문 항목이 존재하지 않습니다.");
         }
         Long orderId = saved.getId();
+
+        Map<Long, Integer> quantityMap = requestDto.items().stream()
+                .collect(Collectors.toMap(CreateOrderItemDto::itemId, CreateOrderItemDto::quantity));
 
         List<OrderItem> updatedItems = saved.getOrderItems().stream()
                 .map(item -> OrderItem.of(
@@ -70,10 +75,16 @@ public class OrderService {
                         item.getProductId(),
                         item.getOptionId(),
                         item.getEachPrice(),
-                        item.getQuantity()
+                        quantityMap.getOrDefault(item.getId(), item.getQuantity())
                 ))
                 .toList();
+
         orderItemRepository.saveAll(updatedItems);
         return new CreateOrderServiceResponse(orderId);
+    }
+
+    public void updateTotalPrice(UpdateOrderServiceRequest request) {
+        Order order = orderRepository.getById(request.orderId());
+        order.applyTotalPrice(request.totalPrice());
     }
 }

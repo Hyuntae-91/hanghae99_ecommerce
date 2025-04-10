@@ -3,10 +3,7 @@ package kr.hhplus.be.server.domain.order.service;
 import kr.hhplus.be.server.domain.order.OrderItemRepository;
 import kr.hhplus.be.server.domain.order.OrderRepository;
 import kr.hhplus.be.server.domain.order.OrderService;
-import kr.hhplus.be.server.domain.order.dto.AddCartServiceRequest;
-import kr.hhplus.be.server.domain.order.dto.AddCartServiceResponse;
-import kr.hhplus.be.server.domain.order.dto.CreateOrderServiceRequest;
-import kr.hhplus.be.server.domain.order.dto.GetCartServiceRequest;
+import kr.hhplus.be.server.domain.order.dto.*;
 import kr.hhplus.be.server.domain.order.model.Order;
 import kr.hhplus.be.server.domain.order.model.OrderItem;
 import kr.hhplus.be.server.domain.order.model.OrderOption;
@@ -84,7 +81,8 @@ class OrderServiceTest {
         Long couponIssueId = 5L;
         Long totalPrice = 5000L;
 
-        CreateOrderServiceRequest request = new CreateOrderServiceRequest(userId, couponIssueId, totalPrice);
+        List<CreateOrderItemDto> items = List.of(new CreateOrderItemDto(1L, 1));
+        CreateOrderServiceRequest request = new CreateOrderServiceRequest(userId, couponIssueId, items);
 
         Order orderToSave = Order.of(userId, couponIssueId, totalPrice, 0);
 
@@ -118,9 +116,10 @@ class OrderServiceTest {
     @DisplayName("실패: 주문 생성 - orderRepository.save()가 null을 반환")
     void create_order_fail_save_null() {
         // given
-        CreateOrderServiceRequest request = new CreateOrderServiceRequest(1L, 1L, 3000L);
+        List<CreateOrderItemDto> items = List.of(new CreateOrderItemDto(1L, 1));
+        CreateOrderServiceRequest request = new CreateOrderServiceRequest(1L, 1L, items);
 
-        when(orderRepository.save(any())).thenReturn(null); // save 결과 null
+        when(orderRepository.save(any())).thenReturn(null);
 
         // then
         assertThrows(NullPointerException.class, () -> orderService.createOrder(request));
@@ -134,7 +133,8 @@ class OrderServiceTest {
         Long couponIssueId = 5L;
         Long totalPrice = 5000L;
 
-        CreateOrderServiceRequest request = new CreateOrderServiceRequest(userId, couponIssueId, totalPrice);
+        List<CreateOrderItemDto> items = List.of(new CreateOrderItemDto(1L, 1));
+        CreateOrderServiceRequest request = new CreateOrderServiceRequest(userId, couponIssueId, items);
 
         Order savedOrder = Order.builder()
                 .id(101L)
@@ -160,7 +160,8 @@ class OrderServiceTest {
     @DisplayName("실패: 주문 생성 - 저장된 주문의 orderItems가 null인 경우")
     void create_order_fail_orderItems_null() {
         // given
-        CreateOrderServiceRequest request = new CreateOrderServiceRequest(1L, 1L, 3000L);
+        List<CreateOrderItemDto> items = List.of(new CreateOrderItemDto(1L, 1));
+        CreateOrderServiceRequest request = new CreateOrderServiceRequest(1L, 1L, items);
 
         Order saved = Order.builder()
                 .id(10L)
@@ -181,7 +182,8 @@ class OrderServiceTest {
     @DisplayName("실패: 주문 생성 - 주문 항목이 비어있는 경우")
     void create_order_fail_empty_orderItems() {
         // given
-        CreateOrderServiceRequest request = new CreateOrderServiceRequest(1L, 1L, 3000L);
+        List<CreateOrderItemDto> items = List.of(new CreateOrderItemDto(1L, 1));
+        CreateOrderServiceRequest request = new CreateOrderServiceRequest(1L, 1L, items);
 
         Order saved = Order.builder()
                 .id(10L)
@@ -269,6 +271,26 @@ class OrderServiceTest {
 
         // then
         assertThrows(IllegalStateException.class, () -> orderService.getCart(new GetCartServiceRequest(userId)));
+    }
+
+    @Test
+    @DisplayName("성공: 주문 총액 업데이트")
+    void update_total_price_success() {
+        // given
+        Long orderId = 1L;
+        long newTotalPrice = 9999L;
+
+        Order order = mock(Order.class);
+        when(orderRepository.getById(orderId)).thenReturn(order);
+
+        UpdateOrderServiceRequest request = new UpdateOrderServiceRequest(orderId, newTotalPrice);
+
+        // when
+        orderService.updateTotalPrice(request);
+
+        // then
+        verify(orderRepository, times(1)).getById(orderId);
+        verify(order, times(1)).applyTotalPrice(newTotalPrice);
     }
 
 }
