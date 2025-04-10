@@ -7,6 +7,8 @@ import java.util.List;
 public interface OrderItemRepository {
     OrderItem save(OrderItem orderItem);
 
+    List<OrderItem> findByIds(List<Long> orderItemIds);
+
     List<OrderItem> findAllByOrderId(Long orderId);
 
     List<OrderItem> findCartByUserId(Long userId);

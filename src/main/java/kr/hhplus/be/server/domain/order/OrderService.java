@@ -69,6 +69,7 @@ public class OrderService {
                 .collect(Collectors.toMap(CreateOrderItemDto::itemId, CreateOrderItemDto::quantity));
 
         List<OrderItem> updatedItems = saved.getOrderItems().stream()
+                .filter(item -> quantityMap.containsKey(item.getId()))
                 .map(item -> OrderItem.of(
                         item.getUserId(),
                         orderId,
