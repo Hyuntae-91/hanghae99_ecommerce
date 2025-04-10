@@ -25,8 +25,6 @@ public class Order {
 
     private Long totalPrice;
 
-    private Integer quantity;
-
     private Long couponIssueId;
 
     private String createdAt;
@@ -37,7 +35,7 @@ public class Order {
     @JoinColumn(name = "order_id")
     private List<OrderItem> orderItems;
 
-    public static Order create(Long userId, Long totalPrice, int quantity, Long couponIssueId) {
+    public static Order create(Long userId, Long totalPrice, Long couponIssueId) {
         if (userId == null || totalPrice == null) {
             throw new IllegalArgumentException("userId와 totalPrice는 필수 값입니다.");
         }
@@ -45,7 +43,6 @@ public class Order {
         return Order.builder()
                 .userId(userId)
                 .totalPrice(totalPrice)
-                .quantity(quantity)
                 .couponIssueId(couponIssueId)
                 .state(0)
                 .createdAt(LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME))
