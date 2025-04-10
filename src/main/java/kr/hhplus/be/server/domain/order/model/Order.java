@@ -32,7 +32,6 @@ public class Order {
     private String updatedAt;
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    @JoinColumn(name = "order_id")
     private List<OrderItem> orderItems;
 
     public static Order create(Long userId, Long totalPrice, Long couponIssueId) {
