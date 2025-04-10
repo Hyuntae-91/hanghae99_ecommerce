@@ -36,4 +36,10 @@ public class UserPoint {
         }
         this.point -= amount;
     }
+
+    public void validateUsableBalance(long amount) {
+        if (this.point < amount) {
+            throw new IllegalStateException("포인트가 부족합니다.");
+        }
+    }
 }
