@@ -15,7 +15,7 @@ class ProductListSvcByIdsRequestTest {
     @DisplayName("성공: 유효한 items 리스트로 생성된다")
     void create_success() {
         // given
-        ProductOptionKeyDto item = new ProductOptionKeyDto(1L, 1L);
+        ProductOptionKeyDto item = new ProductOptionKeyDto(1L, 1L, 1);
 
         // when
         ProductListSvcByIdsRequest request = new ProductListSvcByIdsRequest(List.of(item));
