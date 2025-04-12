@@ -1,12 +1,13 @@
-package kr.hhplus.be.server.application.coupon;
+package kr.hhplus.be.server.interfaces.api.coupon.dto;
 
-public record CouponIssueResponse(
+public record CouponResponse(
         Long couponId,
         String type,
         String description,
-        Long discount,
+        Integer discount,
         int state,
         String start_at,
         String end_at,
         String createdAt
 ) {}
+

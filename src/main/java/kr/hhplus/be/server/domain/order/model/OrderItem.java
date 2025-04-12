@@ -23,9 +23,7 @@ public class OrderItem {
 
     private Long userId;
 
-    @Column(nullable = true)
-    private Long orderId;
-
+    @Column(name = "product_id")
     private Long productId;
 
     private Long optionId;
@@ -48,7 +46,6 @@ public class OrderItem {
 
     @Setter
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "option_id")
     private OrderOption orderOption;
 
     public Long calculateTotalPrice() {
@@ -81,7 +78,6 @@ public class OrderItem {
         String now = LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
         return OrderItem.builder()
                 .userId(userId)
-                .orderId(orderId)
                 .productId(productId)
                 .optionId(optionId)
                 .eachPrice(eachPrice)

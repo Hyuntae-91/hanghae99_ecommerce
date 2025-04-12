@@ -9,7 +9,7 @@ import org.mapstruct.Mapping;
 
 import java.util.List;
 
-@Mapper(componentModel = "default")
+@Mapper(componentModel = "spring")
 public interface PaymentFacadeMapper {
 
     @Mapping(source = "id", target = "productId")

@@ -52,7 +52,7 @@ public class PaymentService {
                     .toList();
 
             orderItems = orderItemRepository.findByIds(orderItemIds);
-            orderId = orderItems.get(0).getOrderId();
+            orderId = orderItems.get(0).getOrder().getId();
 
             for (OrderItem item : orderItems) {
                 OrderOption option = orderOptionRepository.getById(item.getOptionId());
@@ -84,7 +84,7 @@ public class PaymentService {
             userPointRepository.saveHistory(historyDto);
 
             Payment payment = Payment.of(
-                    orderItems.get(0).getOrderId(),
+                    orderItems.get(0).getOrder().getId(),
                     1,
                     totalPrice
             );
