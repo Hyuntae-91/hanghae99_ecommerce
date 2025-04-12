@@ -1,13 +1,16 @@
 package kr.hhplus.be.server.domain.point;
 
-import jakarta.transaction.Transactional;
-import kr.hhplus.be.server.domain.point.dto.*;
+import kr.hhplus.be.server.domain.point.dto.UserPointMapper;
+import kr.hhplus.be.server.domain.point.dto.request.PointChargeServiceRequest;
+import kr.hhplus.be.server.domain.point.dto.request.PointHistoryServiceRequest;
+import kr.hhplus.be.server.domain.point.dto.request.UserPointServiceRequest;
+import kr.hhplus.be.server.domain.point.dto.response.PointChargeServiceResponse;
+import kr.hhplus.be.server.domain.point.dto.response.PointHistoryServiceResponse;
+import kr.hhplus.be.server.domain.point.dto.response.UserPointServiceResponse;
 import kr.hhplus.be.server.domain.point.model.*;
-import kr.hhplus.be.server.infrastructure.point.dto.GetHistoryRepositoryRequestDto;
-import kr.hhplus.be.server.infrastructure.point.dto.GetPointRepositoryRequestDto;
-import kr.hhplus.be.server.infrastructure.point.dto.SavePointHistoryRepoRequestDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -16,38 +19,32 @@ import java.util.List;
 public class PointService {
 
     private final PointRepository pointRepository;
+    private final UserPointMapper userPointMapper;
 
+    @Transactional(readOnly = true)
     public UserPointServiceResponse getUserPoint(UserPointServiceRequest reqService) {
-        GetPointRepositoryRequestDto reqRepository = new GetPointRepositoryRequestDto(reqService.userId());
-        UserPoint userPoint = pointRepository.get(reqRepository);
-        return UserPointServiceResponse.from(userPoint);
-    }
-
-    public List<PointHistoryServiceResponse> getHistory(PointHistoryServiceRequest reqService) {
-        GetHistoryRepositoryRequestDto reqRepository = new GetHistoryRepositoryRequestDto(
-                reqService.userId(), reqService.page(), reqService.size(), reqService.sort()
-        );
-        List<PointHistory> historyList = pointRepository.getHistory(reqRepository);
-
-        return historyList.stream()
-            .map(PointHistoryServiceResponse::from)
-            .toList();
+        return userPointMapper.toUserPointResponse(pointRepository.get(reqService.userId()));
     }
 
     @Transactional
     public PointChargeServiceResponse charge(PointChargeServiceRequest reqService) {
-        GetPointRepositoryRequestDto requestDto = new GetPointRepositoryRequestDto(reqService.userId());
-        UserPoint userPoint = pointRepository.get(requestDto);
+        UserPoint userPoint = pointRepository.get(reqService.userId());
         userPoint.charge(reqService.point());
         pointRepository.savePoint(userPoint);
+        pointRepository.saveHistory(reqService.userId(), reqService.point(), PointHistoryType.CHARGE);
 
-        SavePointHistoryRepoRequestDto reqRepository = new SavePointHistoryRepoRequestDto(
-                reqService.userId(),
-                reqService.point(),
-                PointHistoryType.CHARGE
+        return userPointMapper.toUserPointChargeResponse(userPoint);
+    }
+
+    @Transactional(readOnly = true)
+    public List<PointHistoryServiceResponse> getHistory(PointHistoryServiceRequest reqService) {
+        return userPointMapper.toHistoryListResponse(
+                pointRepository.getHistory(
+                        reqService.userId(),
+                        reqService.page(),
+                        reqService.size(),
+                        reqService.sort()
+                )
         );
-        pointRepository.saveHistory(reqRepository);
-
-        return new PointChargeServiceResponse(userPoint.getPoint());
     }
 }

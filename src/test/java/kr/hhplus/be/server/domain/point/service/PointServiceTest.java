@@ -3,7 +3,13 @@ package kr.hhplus.be.server.domain.point.service;
 import kr.hhplus.be.server.domain.common.exception.ResourceNotFoundException;
 import kr.hhplus.be.server.domain.point.PointRepository;
 import kr.hhplus.be.server.domain.point.PointService;
-import kr.hhplus.be.server.domain.point.dto.*;
+import kr.hhplus.be.server.domain.point.dto.UserPointMapper;
+import kr.hhplus.be.server.domain.point.dto.request.PointChargeServiceRequest;
+import kr.hhplus.be.server.domain.point.dto.request.PointHistoryServiceRequest;
+import kr.hhplus.be.server.domain.point.dto.request.UserPointServiceRequest;
+import kr.hhplus.be.server.domain.point.dto.response.PointChargeServiceResponse;
+import kr.hhplus.be.server.domain.point.dto.response.PointHistoryServiceResponse;
+import kr.hhplus.be.server.domain.point.dto.response.UserPointServiceResponse;
 import kr.hhplus.be.server.domain.point.model.PointHistory;
 import kr.hhplus.be.server.domain.point.model.PointHistoryType;
 import kr.hhplus.be.server.domain.point.model.UserPoint;
@@ -22,11 +28,13 @@ class PointServiceTest {
 
     private PointService pointService;
     private PointRepository pointRepository;
+    private UserPointMapper userPointMapper;
 
     @BeforeEach
     void setUp() {
         pointRepository = mock(PointRepository.class);
-        pointService = new PointService(pointRepository);
+        userPointMapper = mock(UserPointMapper.class);
+        pointService = new PointService(pointRepository, userPointMapper);
     }
 
     @Nested
@@ -39,6 +47,9 @@ class PointServiceTest {
             Long userId = 1L;
             UserPoint userPoint = new UserPoint(userId, 500L);
             when(pointRepository.get(any())).thenReturn(userPoint);
+            when(userPointMapper.toUserPointResponse(userPoint)).thenReturn(
+                    UserPointMapper.INSTANCE.toUserPointResponse(userPoint)
+            );
 
             // when
             UserPointServiceResponse result = pointService.getUserPoint(new UserPointServiceRequest(userId));
@@ -79,14 +90,19 @@ class PointServiceTest {
 
             UserPoint userPoint = new UserPoint(userId, currentPoint);
             when(pointRepository.get(any())).thenReturn(userPoint);
+            when(userPointMapper.toUserPointChargeResponse(userPoint)).thenReturn(
+                    UserPointMapper.INSTANCE.toUserPointChargeResponse(
+                            new UserPoint(userId, currentPoint + chargeAmount)
+                    )
+            );
 
             // when
             PointChargeServiceResponse result = pointService.charge(new PointChargeServiceRequest(userId, chargeAmount));
 
             // then
-            assertThat(result.point()).isEqualTo(300L);
+            assertThat(result.point()).isEqualTo(currentPoint + chargeAmount);
             verify(pointRepository).savePoint(userPoint);
-            verify(pointRepository).saveHistory(any());
+            verify(pointRepository).saveHistory(userId, chargeAmount, PointHistoryType.CHARGE);
         }
 
         @Test
@@ -114,7 +130,9 @@ class PointServiceTest {
             Long chargeAmount = 100L;
             UserPoint userPoint = new UserPoint(userId, 100L);
             when(pointRepository.get(any())).thenReturn(userPoint);
-            doThrow(new RuntimeException("DB Error")).when(pointRepository).saveHistory(any());
+            doThrow(new RuntimeException("DB Error")).when(pointRepository).saveHistory(
+                    userId, chargeAmount, PointHistoryType.CHARGE
+            );
 
             // when & then
             assertThatThrownBy(() -> pointService.charge(new PointChargeServiceRequest(userId, chargeAmount)))
@@ -123,7 +141,7 @@ class PointServiceTest {
 
             verify(pointRepository).get(any());
             verify(pointRepository).savePoint(userPoint);
-            verify(pointRepository).saveHistory(any());
+            verify(pointRepository).saveHistory(userId, chargeAmount, PointHistoryType.CHARGE);
         }
     }
 
@@ -143,7 +161,10 @@ class PointServiceTest {
                     new PointHistory(1L, userId, 100L, PointHistoryType.CHARGE, "2024-04-01 12:00:00"),
                     new PointHistory(2L, userId, 50L, PointHistoryType.USE, "2024-04-02 13:00:00")
             );
-            when(pointRepository.getHistory(any())).thenReturn(mockHistories);
+            when(pointRepository.getHistory(userId, page, size, sort)).thenReturn(mockHistories);
+            when(userPointMapper.toHistoryListResponse(mockHistories)).thenReturn(
+                    UserPointMapper.INSTANCE.toHistoryListResponse(mockHistories)
+            );
 
             // when
             List<PointHistoryServiceResponse> result = pointService.getHistory(
@@ -153,7 +174,7 @@ class PointServiceTest {
             // then
             assertThat(result).hasSize(2);
             assertThat(result.get(0).type()).isEqualTo(PointHistoryType.CHARGE.name());
-            verify(pointRepository).getHistory(any());
+            verify(pointRepository).getHistory(userId, page, size, sort);
         }
 
         @Test
@@ -165,7 +186,7 @@ class PointServiceTest {
             int size = 10;
             String sort = "createdAt";
 
-            when(pointRepository.getHistory(any())).thenReturn(Collections.emptyList());
+            when(pointRepository.getHistory(userId, page, size, sort)).thenReturn(Collections.emptyList());
 
             // when
             List<PointHistoryServiceResponse> result = pointService.getHistory(
@@ -174,7 +195,7 @@ class PointServiceTest {
 
             // then
             assertThat(result).isEmpty();
-            verify(pointRepository).getHistory(any());
+            verify(pointRepository).getHistory(userId, page, size, sort);
         }
 
         @Test
@@ -186,7 +207,7 @@ class PointServiceTest {
             int size = 10;
             String sort = "createdAt";
 
-            when(pointRepository.getHistory(any()))
+            when(pointRepository.getHistory(userId, page, size, sort))
                     .thenThrow(new ResourceNotFoundException("User not found"));
 
             // when & then
@@ -195,7 +216,7 @@ class PointServiceTest {
                     .isInstanceOf(ResourceNotFoundException.class)
                     .hasMessageContaining("User not found");
 
-            verify(pointRepository).getHistory(any());
+            verify(pointRepository).getHistory(userId, page, size, sort);
         }
 
         @Test
@@ -207,7 +228,7 @@ class PointServiceTest {
             int size = 10;
             String sort = "invalidField";
 
-            when(pointRepository.getHistory(any()))
+            when(pointRepository.getHistory(userId, page, size, sort))
                     .thenThrow(new IllegalArgumentException("Invalid sort field"));
 
             // when & then
@@ -216,7 +237,7 @@ class PointServiceTest {
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("Invalid sort field");
 
-            verify(pointRepository).getHistory(any());
+            verify(pointRepository).getHistory(userId, page, size, sort);
         }
     }
 }

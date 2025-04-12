@@ -1,6 +1,6 @@
 package kr.hhplus.be.server.domain.point.service.dto;
 
-import kr.hhplus.be.server.domain.point.dto.UserPointServiceResponse;
+import kr.hhplus.be.server.domain.point.dto.response.UserPointServiceResponse;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.*;

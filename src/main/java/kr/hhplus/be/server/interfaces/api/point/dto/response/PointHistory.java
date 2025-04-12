@@ -1,6 +1,6 @@
-package kr.hhplus.be.server.interfaces.api.point.dto;
+package kr.hhplus.be.server.interfaces.api.point.dto.response;
 
-import kr.hhplus.be.server.domain.point.dto.PointHistoryServiceResponse;
+import kr.hhplus.be.server.domain.point.dto.response.PointHistoryServiceResponse;
 
 public record PointHistory (
         Long userId,

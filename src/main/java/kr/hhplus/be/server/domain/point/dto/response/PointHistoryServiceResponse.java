@@ -1,6 +1,4 @@
-package kr.hhplus.be.server.domain.point.dto;
-
-import kr.hhplus.be.server.domain.point.model.PointHistory;
+package kr.hhplus.be.server.domain.point.dto.response;
 
 public record PointHistoryServiceResponse(
         Long userId,
@@ -21,14 +19,5 @@ public record PointHistoryServiceResponse(
         if (createdAt == null || createdAt.isBlank()) {
             throw new IllegalArgumentException("createdAt은 null이거나 빈 값이 될 수 없습니다.");
         }
-    }
-
-    public static PointHistoryServiceResponse from(PointHistory entity) {
-        return new PointHistoryServiceResponse(
-                entity.getUserId(),
-                entity.getPoint(),
-                entity.getType().name(),
-                entity.getCreatedAt()
-        );
     }
 }

@@ -1,4 +1,4 @@
-package kr.hhplus.be.server.domain.point.dto;
+package kr.hhplus.be.server.domain.point.dto.request;
 
 public record UserPointServiceRequest(
         Long userId

@@ -1,6 +1,6 @@
 package kr.hhplus.be.server.domain.point.service.dto;
 
-import kr.hhplus.be.server.domain.point.dto.PointHistoryServiceRequest;
+import kr.hhplus.be.server.domain.point.dto.request.PointHistoryServiceRequest;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.*;

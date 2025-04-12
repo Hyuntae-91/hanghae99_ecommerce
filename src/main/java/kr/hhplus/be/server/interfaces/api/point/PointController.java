@@ -1,10 +1,18 @@
 package kr.hhplus.be.server.interfaces.api.point;
 
 import jakarta.validation.Valid;
-import kr.hhplus.be.server.domain.point.dto.*;
-import kr.hhplus.be.server.interfaces.api.point.dto.*;
 import kr.hhplus.be.server.domain.point.PointService;
+import kr.hhplus.be.server.domain.point.dto.request.PointChargeServiceRequest;
+import kr.hhplus.be.server.domain.point.dto.request.PointHistoryServiceRequest;
+import kr.hhplus.be.server.domain.point.dto.request.UserPointServiceRequest;
+import kr.hhplus.be.server.domain.point.dto.response.PointChargeServiceResponse;
+import kr.hhplus.be.server.domain.point.dto.response.PointHistoryServiceResponse;
 import kr.hhplus.be.server.exception.ErrorResponse;
+import kr.hhplus.be.server.interfaces.api.point.dto.request.PointChargeRequest;
+import kr.hhplus.be.server.interfaces.api.point.dto.request.PointHistoryRequest;
+import kr.hhplus.be.server.interfaces.api.point.dto.response.PointChargeResponse;
+import kr.hhplus.be.server.interfaces.api.point.dto.response.PointHistoryResponse;
+import kr.hhplus.be.server.interfaces.api.point.dto.response.PointResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -26,9 +34,7 @@ public class PointController implements PointApi {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(new ErrorResponse(404, "User Not Found"));
         }
-
-        UserPointServiceResponse result = pointService.getUserPoint(new UserPointServiceRequest(userId));
-        return ResponseEntity.ok(PointResponse.from(result));
+        return ResponseEntity.ok(PointResponse.from(pointService.getUserPoint(new UserPointServiceRequest(userId))));
     }
 
     @Override

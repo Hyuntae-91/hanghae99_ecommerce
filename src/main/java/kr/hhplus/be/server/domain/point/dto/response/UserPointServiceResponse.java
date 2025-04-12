@@ -1,4 +1,4 @@
-package kr.hhplus.be.server.domain.point.dto;
+package kr.hhplus.be.server.domain.point.dto.response;
 
 import kr.hhplus.be.server.domain.point.model.UserPoint;
 import lombok.Builder;

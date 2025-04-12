@@ -5,12 +5,12 @@ import kr.hhplus.be.server.domain.point.PointRepository;
 import kr.hhplus.be.server.domain.point.model.PointHistory;
 import kr.hhplus.be.server.domain.point.model.PointHistoryType;
 import kr.hhplus.be.server.domain.point.model.UserPoint;
-import kr.hhplus.be.server.infrastructure.point.dto.GetHistoryRepositoryRequestDto;
-import kr.hhplus.be.server.infrastructure.point.dto.GetPointRepositoryRequestDto;
-import kr.hhplus.be.server.infrastructure.point.dto.SavePointHistoryRepoRequestDto;
 import kr.hhplus.be.server.infrastructure.point.repository.PointHistoryJpaRepository;
 import kr.hhplus.be.server.infrastructure.point.repository.UserPointJpaRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
@@ -24,8 +24,8 @@ public class PointRepositoryImpl implements PointRepository {
     private final PointHistoryJpaRepository pointHistoryJpaRepository;
 
     @Override
-    public UserPoint get(GetPointRepositoryRequestDto dto) {
-        return userPointJpaRepository.findById(dto.userId())
+    public UserPoint get(Long userId) {
+        return userPointJpaRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
     }
 
@@ -35,17 +35,18 @@ public class PointRepositoryImpl implements PointRepository {
     }
 
     @Override
-    public void saveHistory(SavePointHistoryRepoRequestDto reqRepository) {
+    public void saveHistory(Long userId, Long point, PointHistoryType historyType) {
         PointHistory history = PointHistory.builder()
-                .userId(reqRepository.userId())
-                .point(reqRepository.point())
-                .type(reqRepository.type())
+                .userId(userId)
+                .point(point)
+                .type(historyType)
                 .build();
         pointHistoryJpaRepository.save(history);
     }
 
     @Override
-    public List<PointHistory> getHistory(GetHistoryRepositoryRequestDto repositoryRequest) {
-        return pointHistoryJpaRepository.findByUserId(repositoryRequest.userId(), repositoryRequest.getPageable());
+    public List<PointHistory> getHistory(Long userId, int page, int size, String sort) {
+        Pageable pageable = PageRequest.of(page - 1, size, Sort.by(Sort.Direction.DESC, sort));
+        return pointHistoryJpaRepository.findByUserId(userId, pageable);
     }
 }

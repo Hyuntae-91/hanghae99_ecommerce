@@ -15,7 +15,6 @@ import kr.hhplus.be.server.domain.payment.dto.PaymentServiceResponse;
 import kr.hhplus.be.server.domain.payment.model.Payment;
 import kr.hhplus.be.server.domain.point.PointRepository;
 import kr.hhplus.be.server.domain.point.model.UserPoint;
-import kr.hhplus.be.server.infrastructure.point.dto.GetPointRepositoryRequestDto;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -77,7 +76,7 @@ class PaymentServiceTest {
         Payment payment = Payment.of(orderId, 1, totalPrice);
         when(orderItemRepository.findByIds(List.of(orderItemId))).thenReturn(List.of(item));
         when(orderOptionRepository.getById(optionId)).thenReturn(option);
-        when(userPointRepository.get(new GetPointRepositoryRequestDto(userId))).thenReturn(userPoint);
+        when(userPointRepository.get(userId)).thenReturn(userPoint);
         when(paymentRepository.save(any(Payment.class))).thenReturn(payment);
 
         PaymentServiceRequest request = new PaymentServiceRequest(
@@ -164,7 +163,7 @@ class PaymentServiceTest {
 
         when(orderItemRepository.findByIds(List.of(orderItemId))).thenReturn(List.of(item));
         when(orderOptionRepository.getById(optionId)).thenReturn(option);
-        when(userPointRepository.get(new GetPointRepositoryRequestDto(userId))).thenReturn(userPoint);
+        when(userPointRepository.get(userId)).thenReturn(userPoint);
         when(paymentRepository.save(any())).thenReturn(Payment.of(123L, -1, 1000L));
 
         PaymentServiceRequest request = new PaymentServiceRequest(
