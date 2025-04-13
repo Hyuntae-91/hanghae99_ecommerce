@@ -1,6 +1,6 @@
 package kr.hhplus.be.server.domain.product.service.dto;
 
-import kr.hhplus.be.server.domain.product.dto.ProductServiceRequest;
+import kr.hhplus.be.server.domain.product.dto.request.ProductServiceRequest;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 

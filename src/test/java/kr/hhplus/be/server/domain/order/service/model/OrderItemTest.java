@@ -26,7 +26,7 @@ class OrderItemTest {
         orderOption = mock(OrderOption.class);
 
         // Create OrderItem with mock data
-        orderItem = OrderItem.of(1L, 1L, 1L, 1L, 1000L, 2);
+        orderItem = OrderItem.of(1L, 1L, 1L, 1000L, 2);
     }
 
     @Test
@@ -108,7 +108,7 @@ class OrderItemTest {
         when(orderOption.getSize()).thenReturn(100);
 
         List<OrderOption> options = List.of(orderOption);
-        OrderItem orderItem = OrderItem.of(1L, null, 1L, 1L, 1000L, 2); // Create OrderItem
+        OrderItem orderItem = OrderItem.of(1L, 1L, 1L, 1000L, 2); // Create OrderItem
 
         // Set the orderOption for the OrderItem
         orderItem.setOrderOption(orderOption);

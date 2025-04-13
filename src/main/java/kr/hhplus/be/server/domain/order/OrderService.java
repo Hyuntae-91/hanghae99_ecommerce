@@ -35,7 +35,6 @@ public class OrderService {
     public AddCartServiceResponse addCartService(AddCartServiceRequest request) {
         OrderItem item = OrderItem.of(
                 request.userId(),
-                null,
                 request.productId(),
                 request.optionId(),
                 request.eachPrice(),
@@ -72,7 +71,6 @@ public class OrderService {
                 .filter(item -> quantityMap.containsKey(item.getId()))
                 .map(item -> OrderItem.of(
                         item.getUserId(),
-                        orderId,
                         item.getProductId(),
                         item.getOptionId(),
                         item.getEachPrice(),

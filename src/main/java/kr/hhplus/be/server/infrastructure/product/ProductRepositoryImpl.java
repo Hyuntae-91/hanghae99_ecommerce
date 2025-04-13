@@ -29,8 +29,13 @@ public class ProductRepositoryImpl implements ProductRepository {
     }
 
     @Override
-    public List<Product> findAll(GetProductsRepositoryRequestDto reqRepository) {
-        return productJpaRepository.findAll(reqRepository.getPageable()).getContent();
+    public List<Product> findByStateNotIn(int page, int size, String sort, List<Integer> excludeStates) {
+        return null;  // TODO : 추후 구현
+    }
+
+    @Override
+    public List<Product> findAll() {
+        return productJpaRepository.findAll();
     }
 
     @Override

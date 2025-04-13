@@ -19,8 +19,7 @@ import kr.hhplus.be.server.domain.point.dto.request.UserPointServiceRequest;
 import kr.hhplus.be.server.domain.point.dto.response.UserPointServiceResponse;
 import kr.hhplus.be.server.domain.product.ProductService;
 import kr.hhplus.be.server.application.payment.dto.PaymentFacadeMapper;
-import kr.hhplus.be.server.domain.product.dto.ProductListSvcByIdsRequest;
-import kr.hhplus.be.server.domain.product.dto.ProductTotalPriceResponse;
+import kr.hhplus.be.server.domain.product.dto.response.ProductTotalPriceResponse;
 import kr.hhplus.be.server.domain.payment.PaymentService;
 import kr.hhplus.be.server.domain.order.OrderService;
 import lombok.RequiredArgsConstructor;
@@ -54,8 +53,9 @@ public class PaymentFacade {
         );
         CreateOrderServiceResponse orderIdDto = orderService.createOrder(createOrderRequest);
 
-        ProductListSvcByIdsRequest productListSvcReq = paymentMapper.toProductListSvcByIdsRequest(request.products());
-        ProductTotalPriceResponse totalPrice = productService.calculateTotalPrice(productListSvcReq);
+        ProductTotalPriceResponse totalPrice = productService.calculateTotalPrice(
+                paymentMapper.toProductOptionKeyList(request.products())
+        );
 
         long finalTotalPrice = totalPrice.totalPrice();
         if (request.couponIssueId() != null && request.couponIssueId() > 0) {

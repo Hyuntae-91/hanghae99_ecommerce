@@ -1,7 +1,7 @@
 package kr.hhplus.be.server.domain.product.service.dto;
 
-import kr.hhplus.be.server.domain.product.dto.ProductOptionResponse;
-import kr.hhplus.be.server.domain.product.dto.ProductServiceResponse;
+import kr.hhplus.be.server.domain.product.dto.response.ProductOptionResponse;
+import kr.hhplus.be.server.domain.product.dto.response.ProductServiceResponse;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 

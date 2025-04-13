@@ -13,7 +13,9 @@ public interface ProductRepository {
 
     List<Product> findByIds(List<Long> ids);
 
-    List<Product> findAll(GetProductsRepositoryRequestDto reqRepository);
+    List<Product> findByStateNotIn(int page, int size, String sort, List<Integer> excludeStates);
+
+    List<Product> findAll();
 
     List<Product> findPopularTop5();
 

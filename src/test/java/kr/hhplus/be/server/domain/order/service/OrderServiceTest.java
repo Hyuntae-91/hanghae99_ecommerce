@@ -44,7 +44,6 @@ class OrderServiceTest {
 
         OrderItem mockItem = OrderItem.of(
                 request.userId(),
-                null,
                 request.productId(),
                 request.optionId(),
                 request.eachPrice(),
@@ -93,8 +92,8 @@ class OrderServiceTest {
                 .totalPrice(totalPrice)
                 .state(0)
                 .orderItems(List.of(
-                        OrderItem.of(userId, null, 10L, 1L, 2000L, 1),
-                        OrderItem.of(userId, null, 11L, 2L, 3000L, 1)
+                        OrderItem.of(userId, 10L, 1L, 2000L, 1),
+                        OrderItem.of(userId, 11L, 2L, 3000L, 1)
                 ))
                 .createdAt("2025-04-10T12:00:00")
                 .build();
@@ -143,8 +142,8 @@ class OrderServiceTest {
                 .totalPrice(totalPrice)
                 .state(0)
                 .orderItems(List.of(
-                        OrderItem.of(userId, null, 10L, 1L, 2000L, 1),
-                        OrderItem.of(userId, null, 11L, 2L, 3000L, 1)
+                        OrderItem.of(userId, 10L, 1L, 2000L, 1),
+                        OrderItem.of(userId, 11L, 2L, 3000L, 1)
                 ))
                 .createdAt("2025-04-10T12:00:00")
                 .build();
@@ -208,7 +207,6 @@ class OrderServiceTest {
 
         OrderItem item = OrderItem.of(
                 userId,
-                null,
                 100L,
                 10L,
                 1500L,
@@ -265,7 +263,7 @@ class OrderServiceTest {
         // given
         Long userId = 4L;
 
-        OrderItem item = OrderItem.of(userId, null, 100L, 10L, 2000L, 1);
+        OrderItem item = OrderItem.of(userId, 100L, 10L, 2000L, 1);
 
         when(orderItemRepository.findCartByUserId(userId)).thenReturn(List.of(item));
 

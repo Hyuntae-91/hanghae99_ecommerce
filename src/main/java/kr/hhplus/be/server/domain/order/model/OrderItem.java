@@ -69,7 +69,6 @@ public class OrderItem {
 
     public static OrderItem of(
             Long userId,
-            Long orderId,
             Long productId,
             Long optionId,
             Long eachPrice,

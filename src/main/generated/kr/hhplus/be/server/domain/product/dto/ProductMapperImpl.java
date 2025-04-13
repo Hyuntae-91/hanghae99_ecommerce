@@ -4,12 +4,14 @@ import java.util.ArrayList;
 import java.util.List;
 import javax.annotation.processing.Generated;
 import kr.hhplus.be.server.domain.order.model.OrderOption;
+import kr.hhplus.be.server.domain.product.dto.response.ProductOptionResponse;
+import kr.hhplus.be.server.domain.product.dto.response.ProductServiceResponse;
 import kr.hhplus.be.server.domain.product.model.Product;
 import org.springframework.stereotype.Component;
 
 @Generated(
     value = "org.mapstruct.ap.MappingProcessor",
-    date = "2025-04-12T22:14:16+0900",
+    date = "2025-04-13T20:16:02+0900",
     comments = "version: 1.5.2.Final, compiler: javac, environment: Java 17.0.12 (Oracle Corporation)"
 )
 @Component

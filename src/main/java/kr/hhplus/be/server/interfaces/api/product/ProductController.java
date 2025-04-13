@@ -2,14 +2,11 @@ package kr.hhplus.be.server.interfaces.api.product;
 
 import jakarta.validation.Valid;
 import kr.hhplus.be.server.domain.product.ProductService;
-import kr.hhplus.be.server.domain.product.dto.ProductListServiceDto;
-import kr.hhplus.be.server.domain.product.dto.ProductListServiceRequest;
-import kr.hhplus.be.server.domain.product.dto.ProductServiceRequest;
-import kr.hhplus.be.server.domain.product.dto.ProductServiceResponse;
+import kr.hhplus.be.server.domain.product.dto.request.ProductListServiceRequest;
+import kr.hhplus.be.server.domain.product.dto.request.ProductServiceRequest;
 import kr.hhplus.be.server.exception.ErrorResponse;
-import kr.hhplus.be.server.interfaces.api.product.dto.ProductListResponse;
-import kr.hhplus.be.server.interfaces.api.product.dto.ProductResponse;
-import kr.hhplus.be.server.interfaces.api.product.dto.ProductsRequest;
+import kr.hhplus.be.server.interfaces.api.product.dto.response.ProductResponse;
+import kr.hhplus.be.server.interfaces.api.product.dto.request.ProductsRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -29,9 +26,9 @@ public class ProductController implements ProductApi {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(new ErrorResponse(400, "Missing productId"));
         }
-        ProductServiceRequest reqController = new ProductServiceRequest(productId);
-        ProductServiceResponse result = productService.getProductById(reqController);
-        return ResponseEntity.ok(ProductResponse.from(result));
+        return ResponseEntity.ok(ProductResponse.from(
+                productService.getProductById(new ProductServiceRequest(productId)))
+        );
     }
 
     @Override
@@ -39,14 +36,12 @@ public class ProductController implements ProductApi {
         ProductListServiceRequest reqController = new ProductListServiceRequest(
                 request.page(), request.size(), request.sort()
         );
-        ProductListServiceDto result = productService.getProductList(reqController);
-        return ResponseEntity.ok(ProductListResponse.from(result));
+        return ResponseEntity.ok(ProductResponse.fromList(productService.getProductList(reqController)));
     }
 
     @Override
     public ResponseEntity<?> getBestProducts() {
-        ProductListServiceDto result = productService.getBestProducts();
-        return ResponseEntity.ok(ProductListResponse.from(result));
+        return ResponseEntity.ok(ProductResponse.fromList(productService.getBestProducts()));
     }
 
     @Override

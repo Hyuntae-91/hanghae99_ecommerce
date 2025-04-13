@@ -1,7 +1,6 @@
 package kr.hhplus.be.server.application.payment.dto;
 
-import kr.hhplus.be.server.domain.product.dto.ProductListSvcByIdsRequest;
-import kr.hhplus.be.server.domain.product.dto.ProductOptionKeyDto;
+import kr.hhplus.be.server.domain.product.dto.request.ProductOptionKeyDto;
 import kr.hhplus.be.server.interfaces.api.payment.dto.PaymentProductDto;
 import kr.hhplus.be.server.interfaces.api.payment.dto.PaymentRequest;
 import org.mapstruct.Mapper;
@@ -27,8 +26,4 @@ public interface PaymentFacadeMapper {
     ProductOptionKeyDto toProductOptionKey(PaymentProductFacadeDto dto);
 
     List<ProductOptionKeyDto> toProductOptionKeyList(List<PaymentProductFacadeDto> dtoList);
-
-    default ProductListSvcByIdsRequest toProductListSvcByIdsRequest(List<PaymentProductFacadeDto> products) {
-        return new ProductListSvcByIdsRequest(toProductOptionKeyList(products));
-    }
 }

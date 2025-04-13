@@ -1,10 +1,18 @@
 package kr.hhplus.be.server.domain.product.service.model;
 
+import kr.hhplus.be.server.domain.order.model.OrderItem;
+import kr.hhplus.be.server.domain.order.model.OrderOption;
 import kr.hhplus.be.server.domain.product.model.Product;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
+
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class ProductTest {
 
@@ -56,5 +64,68 @@ class ProductTest {
         assertThat(product.isSoldOut()).isFalse();
         assertThat(product.isHidden()).isFalse();
     }
+
+    @Test
+    @DisplayName("calculateTotalPrice: OrderItem들의 가격을 합산한다.")
+    void calculateTotalPrice_success() {
+        // given
+        Product product = createProductWithState(1);
+
+        // mock OrderItem
+        OrderItem orderItem1 = mock(OrderItem.class);
+        when(orderItem1.calculateTotalPrice()).thenReturn(1000L);
+
+        OrderItem orderItem2 = mock(OrderItem.class);
+        when(orderItem2.calculateTotalPrice()).thenReturn(2000L);
+
+        product.setOrderItems(List.of(orderItem1, orderItem2));
+
+        // when
+        long totalPrice = product.getOrderItems().stream()
+                .mapToLong(OrderItem::calculateTotalPrice)
+                .sum();
+
+        // then
+        assertThat(totalPrice).isEqualTo(3000L);  // 1000L + 2000L
+    }
+
+    @Test
+    @DisplayName("calculateTotalPrice: 상품에 주문 항목이 없으면 0을 반환한다.")
+    void calculateTotalPrice_emptyOrderItems() {
+        // given
+        Product product = createProductWithState(1);
+
+        // 주문 항목 없음
+        product.setOrderItems(List.of());
+
+        // when
+        long totalPrice = product.getOrderItems().stream()
+                .mapToLong(OrderItem::calculateTotalPrice)
+                .sum();
+
+        // then
+        assertThat(totalPrice).isEqualTo(0L);
+    }
+
+    @Test
+    @DisplayName("calculateTotalPrice: 옵션이 없는 주문 항목을 처리할 때 예외가 발생한다.")
+    void calculateTotalPrice_noOption_throwsException() {
+        // given
+        Product product = createProductWithState(1);
+
+        // mock OrderItem
+        OrderItem orderItem = mock(OrderItem.class);
+        // 옵션이 없어서 getOption 호출 시 예외 발생
+        when(orderItem.getOption(any())).thenThrow(new IllegalStateException("옵션 정보를 찾을 수 없습니다."));
+
+        product.setOrderItems(List.of(orderItem));
+
+        // when / then
+        assertThatThrownBy(() -> orderItem.getOption(product.getOrderOptions()))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("옵션 정보를 찾을 수 없습니다.");
+    }
+
+
 }
 

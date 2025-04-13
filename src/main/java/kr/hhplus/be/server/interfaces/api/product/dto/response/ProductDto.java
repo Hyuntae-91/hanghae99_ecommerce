@@ -1,4 +1,4 @@
-package kr.hhplus.be.server.interfaces.api.product.dto;
+package kr.hhplus.be.server.interfaces.api.product.dto.response;
 
 import kr.hhplus.be.server.domain.product.model.Product;
 import lombok.Builder;
