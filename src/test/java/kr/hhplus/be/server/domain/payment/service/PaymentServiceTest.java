@@ -1,19 +1,19 @@
 package kr.hhplus.be.server.domain.payment.service;
 
-import kr.hhplus.be.server.domain.coupon.CouponIssueRepository;
+import kr.hhplus.be.server.domain.coupon.repository.CouponIssueRepository;
 import kr.hhplus.be.server.domain.coupon.model.CouponIssue;
-import kr.hhplus.be.server.domain.order.OrderItemRepository;
-import kr.hhplus.be.server.domain.order.OrderOptionRepository;
+import kr.hhplus.be.server.domain.order.repository.OrderItemRepository;
+import kr.hhplus.be.server.domain.order.repository.OrderOptionRepository;
 import kr.hhplus.be.server.domain.order.model.Order;
 import kr.hhplus.be.server.domain.order.model.OrderItem;
 import kr.hhplus.be.server.domain.order.model.OrderOption;
-import kr.hhplus.be.server.domain.payment.PaymentRepository;
-import kr.hhplus.be.server.domain.payment.PaymentService;
+import kr.hhplus.be.server.domain.payment.repository.PaymentRepository;
 import kr.hhplus.be.server.domain.payment.dto.PaymentOrderItemDto;
 import kr.hhplus.be.server.domain.payment.dto.PaymentServiceRequest;
 import kr.hhplus.be.server.domain.payment.dto.PaymentServiceResponse;
 import kr.hhplus.be.server.domain.payment.model.Payment;
-import kr.hhplus.be.server.domain.point.PointRepository;
+import kr.hhplus.be.server.domain.point.repository.PointHistoryRepository;
+import kr.hhplus.be.server.domain.point.repository.PointRepository;
 import kr.hhplus.be.server.domain.point.model.UserPoint;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -31,6 +31,7 @@ class PaymentServiceTest {
     private OrderOptionRepository orderOptionRepository;
     private PaymentRepository paymentRepository;
     private PointRepository userPointRepository;
+    private PointHistoryRepository pointHistoryRepository;
     private CouponIssueRepository couponIssueRepository;
 
     @BeforeEach
@@ -39,12 +40,14 @@ class PaymentServiceTest {
         orderOptionRepository = mock(OrderOptionRepository.class);
         paymentRepository = mock(PaymentRepository.class);
         userPointRepository = mock(PointRepository.class);
+        pointHistoryRepository = mock(PointHistoryRepository.class);
         couponIssueRepository = mock(CouponIssueRepository.class);
         paymentService = new PaymentService(
                 orderItemRepository,
                 orderOptionRepository,
                 paymentRepository,
                 userPointRepository,
+                pointHistoryRepository,
                 couponIssueRepository
         );
     }

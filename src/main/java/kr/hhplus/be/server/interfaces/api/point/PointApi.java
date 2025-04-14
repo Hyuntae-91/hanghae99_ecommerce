@@ -6,6 +6,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import kr.hhplus.be.server.exception.ErrorResponse;
 import kr.hhplus.be.server.interfaces.api.point.dto.request.PointChargeRequest;
 import kr.hhplus.be.server.interfaces.api.point.dto.request.PointHistoryRequest;
@@ -40,7 +41,7 @@ public interface PointApi {
     @GetMapping("/history")
     ResponseEntity<?> getHistory(
             @RequestHeader("userId") Long userId,
-            @RequestBody PointHistoryRequest request
+            @ModelAttribute @Valid PointHistoryRequest request
     );
 
     @Operation(summary = "포인트 충전", description = "유저의 포인트를 충전하는 API")

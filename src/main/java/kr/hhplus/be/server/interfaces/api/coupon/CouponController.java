@@ -1,6 +1,6 @@
 package kr.hhplus.be.server.interfaces.api.coupon;
 
-import kr.hhplus.be.server.domain.coupon.CouponService;
+import kr.hhplus.be.server.domain.coupon.service.CouponService;
 import kr.hhplus.be.server.domain.coupon.dto.GetCouponsServiceRequest;
 import kr.hhplus.be.server.domain.coupon.dto.GetCouponsServiceResponse;
 import kr.hhplus.be.server.domain.coupon.dto.IssueNewCouponServiceRequest;

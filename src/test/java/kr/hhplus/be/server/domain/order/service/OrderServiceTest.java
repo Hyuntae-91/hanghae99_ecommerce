@@ -1,8 +1,7 @@
 package kr.hhplus.be.server.domain.order.service;
 
-import kr.hhplus.be.server.domain.order.OrderItemRepository;
-import kr.hhplus.be.server.domain.order.OrderRepository;
-import kr.hhplus.be.server.domain.order.OrderService;
+import kr.hhplus.be.server.domain.order.repository.OrderItemRepository;
+import kr.hhplus.be.server.domain.order.repository.OrderRepository;
 import kr.hhplus.be.server.domain.order.dto.*;
 import kr.hhplus.be.server.domain.order.model.Order;
 import kr.hhplus.be.server.domain.order.model.OrderItem;

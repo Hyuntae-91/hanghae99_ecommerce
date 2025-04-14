@@ -1,7 +1,8 @@
 package kr.hhplus.be.server.interfaces.api.point;
 
 import jakarta.validation.Valid;
-import kr.hhplus.be.server.domain.point.PointService;
+import kr.hhplus.be.server.domain.point.service.PointHistoryService;
+import kr.hhplus.be.server.domain.point.service.PointService;
 import kr.hhplus.be.server.domain.point.dto.request.PointChargeServiceRequest;
 import kr.hhplus.be.server.domain.point.dto.request.PointHistoryServiceRequest;
 import kr.hhplus.be.server.domain.point.dto.request.UserPointServiceRequest;
@@ -27,6 +28,7 @@ import java.util.List;
 public class PointController implements PointApi {
 
     private final PointService pointService;
+    private final PointHistoryService pointHistoryService;
 
     @Override
     public ResponseEntity<?> getPoint(@RequestHeader("userId") Long userId) {
@@ -46,7 +48,7 @@ public class PointController implements PointApi {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(new ErrorResponse(404, "User Not Found"));
         }
-        List<PointHistoryServiceResponse> result = pointService.getHistory(new PointHistoryServiceRequest(
+        List<PointHistoryServiceResponse> result = pointHistoryService.getHistory(new PointHistoryServiceRequest(
                 userId, request.page(), request.size(), request.sort()
         ));
 

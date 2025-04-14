@@ -2,8 +2,7 @@ package kr.hhplus.be.server.domain.product.service;
 
 import kr.hhplus.be.server.domain.common.exception.ResourceNotFoundException;
 import kr.hhplus.be.server.domain.order.model.OrderItem;
-import kr.hhplus.be.server.domain.product.ProductRepository;
-import kr.hhplus.be.server.domain.product.ProductService;
+import kr.hhplus.be.server.domain.product.repository.ProductRepository;
 import kr.hhplus.be.server.domain.product.ProductStates;
 import kr.hhplus.be.server.domain.product.dto.*;
 import kr.hhplus.be.server.domain.product.dto.request.ProductListServiceRequest;

@@ -1,16 +1,13 @@
 package kr.hhplus.be.server.domain.point.service;
 
 import kr.hhplus.be.server.domain.common.exception.ResourceNotFoundException;
-import kr.hhplus.be.server.domain.point.PointRepository;
-import kr.hhplus.be.server.domain.point.PointService;
+import kr.hhplus.be.server.domain.point.repository.PointHistoryRepository;
+import kr.hhplus.be.server.domain.point.repository.PointRepository;
 import kr.hhplus.be.server.domain.point.dto.UserPointMapper;
 import kr.hhplus.be.server.domain.point.dto.request.PointChargeServiceRequest;
-import kr.hhplus.be.server.domain.point.dto.request.PointHistoryServiceRequest;
 import kr.hhplus.be.server.domain.point.dto.request.UserPointServiceRequest;
 import kr.hhplus.be.server.domain.point.dto.response.PointChargeServiceResponse;
-import kr.hhplus.be.server.domain.point.dto.response.PointHistoryServiceResponse;
 import kr.hhplus.be.server.domain.point.dto.response.UserPointServiceResponse;
-import kr.hhplus.be.server.domain.point.model.PointHistory;
 import kr.hhplus.be.server.domain.point.model.PointHistoryType;
 import kr.hhplus.be.server.domain.point.model.UserPoint;
 import org.junit.jupiter.api.BeforeEach;
@@ -18,8 +15,6 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-import java.util.Collections;
-import java.util.List;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -28,13 +23,15 @@ class PointServiceTest {
 
     private PointService pointService;
     private PointRepository pointRepository;
+    private PointHistoryRepository pointHistoryRepository;
     private UserPointMapper userPointMapper;
 
     @BeforeEach
     void setUp() {
         pointRepository = mock(PointRepository.class);
+        pointHistoryRepository = mock(PointHistoryRepository.class); // <-- 이 줄 추가
         userPointMapper = mock(UserPointMapper.class);
-        pointService = new PointService(pointRepository, userPointMapper);
+        pointService = new PointService(pointRepository, pointHistoryRepository, userPointMapper);
     }
 
     @Nested
@@ -89,7 +86,10 @@ class PointServiceTest {
             Long chargeAmount = 200L;
 
             UserPoint userPoint = new UserPoint(userId, currentPoint);
+
             when(pointRepository.get(any())).thenReturn(userPoint);
+            doNothing().when(pointHistoryRepository)
+                    .saveHistory(eq(userId), eq(chargeAmount), eq(PointHistoryType.CHARGE));
             when(userPointMapper.toUserPointChargeResponse(userPoint)).thenReturn(
                     UserPointMapper.INSTANCE.toUserPointChargeResponse(
                             new UserPoint(userId, currentPoint + chargeAmount)
@@ -97,12 +97,14 @@ class PointServiceTest {
             );
 
             // when
-            PointChargeServiceResponse result = pointService.charge(new PointChargeServiceRequest(userId, chargeAmount));
+            PointChargeServiceResponse result = pointService.charge(
+                    new PointChargeServiceRequest(userId, chargeAmount)
+            );
 
             // then
             assertThat(result.point()).isEqualTo(currentPoint + chargeAmount);
             verify(pointRepository).savePoint(userPoint);
-            verify(pointRepository).saveHistory(userId, chargeAmount, PointHistoryType.CHARGE);
+            verify(pointHistoryRepository).saveHistory(userId, chargeAmount, PointHistoryType.CHARGE);
         }
 
         @Test
@@ -130,7 +132,7 @@ class PointServiceTest {
             Long chargeAmount = 100L;
             UserPoint userPoint = new UserPoint(userId, 100L);
             when(pointRepository.get(any())).thenReturn(userPoint);
-            doThrow(new RuntimeException("DB Error")).when(pointRepository).saveHistory(
+            doThrow(new RuntimeException("DB Error")).when(pointHistoryRepository).saveHistory(
                     userId, chargeAmount, PointHistoryType.CHARGE
             );
 
@@ -141,103 +143,7 @@ class PointServiceTest {
 
             verify(pointRepository).get(any());
             verify(pointRepository).savePoint(userPoint);
-            verify(pointRepository).saveHistory(userId, chargeAmount, PointHistoryType.CHARGE);
-        }
-    }
-
-    @Nested
-    class GetHistoryTest {
-
-        @Test
-        @DisplayName("성공: 포인트 히스토리 조회")
-        void getHistory_success() {
-            // given
-            Long userId = 1L;
-            int page = 1;
-            int size = 10;
-            String sort = "createdAt";
-
-            List<PointHistory> mockHistories = List.of(
-                    new PointHistory(1L, userId, 100L, PointHistoryType.CHARGE, "2024-04-01 12:00:00"),
-                    new PointHistory(2L, userId, 50L, PointHistoryType.USE, "2024-04-02 13:00:00")
-            );
-            when(pointRepository.getHistory(userId, page, size, sort)).thenReturn(mockHistories);
-            when(userPointMapper.toHistoryListResponse(mockHistories)).thenReturn(
-                    UserPointMapper.INSTANCE.toHistoryListResponse(mockHistories)
-            );
-
-            // when
-            List<PointHistoryServiceResponse> result = pointService.getHistory(
-                    new PointHistoryServiceRequest(userId, page, size, sort)
-            );
-
-            // then
-            assertThat(result).hasSize(2);
-            assertThat(result.get(0).type()).isEqualTo(PointHistoryType.CHARGE.name());
-            verify(pointRepository).getHistory(userId, page, size, sort);
-        }
-
-        @Test
-        @DisplayName("성공: 포인트 히스토리가 비어있을 경우")
-        void getHistory_empty() {
-            // given
-            Long userId = 1L;
-            int page = 1;
-            int size = 10;
-            String sort = "createdAt";
-
-            when(pointRepository.getHistory(userId, page, size, sort)).thenReturn(Collections.emptyList());
-
-            // when
-            List<PointHistoryServiceResponse> result = pointService.getHistory(
-                    new PointHistoryServiceRequest(userId, page, size, sort)
-            );
-
-            // then
-            assertThat(result).isEmpty();
-            verify(pointRepository).getHistory(userId, page, size, sort);
-        }
-
-        @Test
-        @DisplayName("실패: 유저가 존재하지 않으면 예외 발생")
-        void getHistory_userNotFound() {
-            // given
-            Long userId = 999L;
-            int page = 1;
-            int size = 10;
-            String sort = "createdAt";
-
-            when(pointRepository.getHistory(userId, page, size, sort))
-                    .thenThrow(new ResourceNotFoundException("User not found"));
-
-            // when & then
-            assertThatThrownBy(() -> pointService.getHistory(
-                    new PointHistoryServiceRequest(userId, page, size, sort)))
-                    .isInstanceOf(ResourceNotFoundException.class)
-                    .hasMessageContaining("User not found");
-
-            verify(pointRepository).getHistory(userId, page, size, sort);
-        }
-
-        @Test
-        @DisplayName("실패: 존재하지 않는 필드로 정렬 시 예외 발생")
-        void getHistory_invalidSortField() {
-            // given
-            Long userId = 1L;
-            int page = 1;
-            int size = 10;
-            String sort = "invalidField";
-
-            when(pointRepository.getHistory(userId, page, size, sort))
-                    .thenThrow(new IllegalArgumentException("Invalid sort field"));
-
-            // when & then
-            assertThatThrownBy(() -> pointService.getHistory(
-                    new PointHistoryServiceRequest(userId, page, size, sort)))
-                    .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessageContaining("Invalid sort field");
-
-            verify(pointRepository).getHistory(userId, page, size, sort);
+            verify(pointHistoryRepository).saveHistory(userId, chargeAmount, PointHistoryType.CHARGE);
         }
     }
 }

@@ -1,8 +1,7 @@
 package kr.hhplus.be.server.domain.coupon.service;
 
-import kr.hhplus.be.server.domain.coupon.CouponIssueRepository;
-import kr.hhplus.be.server.domain.coupon.CouponRepository;
-import kr.hhplus.be.server.domain.coupon.CouponService;
+import kr.hhplus.be.server.domain.coupon.repository.CouponIssueRepository;
+import kr.hhplus.be.server.domain.coupon.repository.CouponRepository;
 import kr.hhplus.be.server.domain.coupon.dto.*;
 import kr.hhplus.be.server.domain.coupon.model.Coupon;
 import kr.hhplus.be.server.domain.coupon.model.CouponIssue;
