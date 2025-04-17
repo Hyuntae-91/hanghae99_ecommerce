@@ -1,8 +1,8 @@
 package kr.hhplus.be.server.application.payment.dto;
 
 import kr.hhplus.be.server.domain.product.dto.request.ProductOptionKeyDto;
-import kr.hhplus.be.server.interfaces.api.payment.dto.PaymentProductDto;
-import kr.hhplus.be.server.interfaces.api.payment.dto.PaymentRequest;
+import kr.hhplus.be.server.interfaces.api.payment.dto.request.PaymentProductDto;
+import kr.hhplus.be.server.interfaces.api.payment.dto.request.PaymentRequest;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 

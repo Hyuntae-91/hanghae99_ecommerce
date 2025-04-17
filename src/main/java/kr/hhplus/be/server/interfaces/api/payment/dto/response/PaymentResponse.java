@@ -1,6 +1,6 @@
-package kr.hhplus.be.server.interfaces.api.payment.dto;
+package kr.hhplus.be.server.interfaces.api.payment.dto.response;
 
-import kr.hhplus.be.server.domain.payment.dto.PaymentServiceResponse;
+import kr.hhplus.be.server.domain.payment.dto.response.PaymentServiceResponse;
 
 public record PaymentResponse(
         Long paymentId,

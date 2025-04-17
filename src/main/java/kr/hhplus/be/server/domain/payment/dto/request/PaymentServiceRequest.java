@@ -1,4 +1,4 @@
-package kr.hhplus.be.server.domain.payment.dto;
+package kr.hhplus.be.server.domain.payment.dto.request;
 
 import java.util.List;
 

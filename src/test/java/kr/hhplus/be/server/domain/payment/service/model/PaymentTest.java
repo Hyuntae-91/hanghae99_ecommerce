@@ -18,7 +18,7 @@ class PaymentTest {
         Payment payment = Payment.of(orderId, status, totalPrice);
 
         assertThat(payment.getOrderId()).isEqualTo(orderId);
-        assertThat(payment.getStatus()).isEqualTo(status);
+        assertThat(payment.getState()).isEqualTo(status);
         assertThat(payment.getTotalPrice()).isEqualTo(totalPrice);
         assertThat(payment.getCreatedAt()).isNotNull();
         assertThat(payment.getUpdatedAt()).isNotNull();
@@ -39,7 +39,7 @@ class PaymentTest {
 
         payment.cancel();
 
-        assertThat(payment.getStatus()).isEqualTo(-1);
+        assertThat(payment.getState()).isEqualTo(-1);
         assertThat(payment.getUpdatedAt()).isNotEqualTo(oldUpdatedAt);
     }
 
