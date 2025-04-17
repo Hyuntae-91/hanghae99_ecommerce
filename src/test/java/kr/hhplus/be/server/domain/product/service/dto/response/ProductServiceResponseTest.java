@@ -1,4 +1,4 @@
-package kr.hhplus.be.server.domain.product.service.dto;
+package kr.hhplus.be.server.domain.product.service.dto.response;
 
 import kr.hhplus.be.server.domain.product.dto.response.ProductOptionResponse;
 import kr.hhplus.be.server.domain.product.dto.response.ProductServiceResponse;
@@ -66,9 +66,17 @@ class ProductServiceResponseTest {
     }
 
     @Test
-    @DisplayName("실패: options가 null이면 예외 발생")
-    void nullOptions_throwsException() {
-        assertThatThrownBy(() -> new ProductServiceResponse(1L, "상품", 1000L, 1, "2025-04-01", null))
-                .isInstanceOf(IllegalArgumentException.class);
+    @DisplayName("성공: withOptions로 새로운 옵션 리스트 적용")
+    void withOptions_setsOptionsCorrectly() {
+        ProductServiceResponse base = new ProductServiceResponse(1L, "상품", 1000L, 1, "2025-04-01", List.of());
+        List<ProductOptionResponse> newOptions = List.of(
+                new ProductOptionResponse(2L, 260, 5)
+        );
+
+        ProductServiceResponse updated = base.withOptions(newOptions);
+        assertThat(updated.options()).hasSize(1);
+        assertThat(updated.options().get(0).optionId()).isEqualTo(2L);
     }
+
+
 }

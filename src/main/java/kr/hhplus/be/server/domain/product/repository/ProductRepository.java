@@ -1,11 +1,9 @@
-package kr.hhplus.be.server.domain.product;
+package kr.hhplus.be.server.domain.product.repository;
 
 import kr.hhplus.be.server.domain.product.model.Product;
-import kr.hhplus.be.server.infrastructure.product.dto.GetProductsRepositoryRequestDto;
-import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 
 import java.util.List;
-import java.util.Optional;
 
 public interface ProductRepository {
 

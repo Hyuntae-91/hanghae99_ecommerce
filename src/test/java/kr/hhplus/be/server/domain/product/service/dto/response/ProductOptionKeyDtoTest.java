@@ -1,4 +1,4 @@
-package kr.hhplus.be.server.domain.product.service.dto;
+package kr.hhplus.be.server.domain.product.service.dto.response;
 
 import kr.hhplus.be.server.domain.product.dto.request.ProductOptionKeyDto;
 import org.junit.jupiter.api.DisplayName;
@@ -50,4 +50,21 @@ class ProductOptionKeyDtoTest {
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("optionId는 1 이상이어야 합니다.");
     }
+
+    @Test
+    @DisplayName("실패: itemId가 null이면 예외 발생")
+    void fail_when_itemId_is_null() {
+        assertThatThrownBy(() -> new ProductOptionKeyDto(1L, 2L, null))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("itemId는 1 이상이어야 합니다.");
+    }
+
+    @Test
+    @DisplayName("실패: itemId가 1 미만이면 예외 발생")
+    void fail_when_itemId_less_than_1() {
+        assertThatThrownBy(() -> new ProductOptionKeyDto(1L, 2L, 0L))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("itemId는 1 이상이어야 합니다.");
+    }
+
 }

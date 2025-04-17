@@ -11,7 +11,7 @@ import org.springframework.stereotype.Component;
 
 @Generated(
     value = "org.mapstruct.ap.MappingProcessor",
-    date = "2025-04-13T20:16:02+0900",
+    date = "2025-04-17T15:01:22+0900",
     comments = "version: 1.5.2.Final, compiler: javac, environment: Java 17.0.12 (Oracle Corporation)"
 )
 @Component
@@ -23,14 +23,12 @@ public class ProductMapperImpl implements ProductMapper {
             return null;
         }
 
-        List<ProductOptionResponse> options = null;
         Long id = null;
         String name = null;
         Long price = null;
         int state = 0;
         String createdAt = null;
 
-        options = toProductOptionResponseList( product.getOrderOptions() );
         id = product.getId();
         name = product.getName();
         price = product.getPrice();
@@ -38,6 +36,8 @@ public class ProductMapperImpl implements ProductMapper {
             state = product.getState();
         }
         createdAt = product.getCreatedAt();
+
+        List<ProductOptionResponse> options = null;
 
         ProductServiceResponse productServiceResponse = new ProductServiceResponse( id, name, price, state, createdAt, options );
 

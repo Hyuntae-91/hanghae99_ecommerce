@@ -1,5 +1,6 @@
-package kr.hhplus.be.server.domain.product.service.dto;
+package kr.hhplus.be.server.domain.product.service.dto.response;
 
+import kr.hhplus.be.server.domain.order.model.OrderOption;
 import kr.hhplus.be.server.domain.product.dto.response.ProductOptionResponse;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -45,5 +46,21 @@ class ProductOptionResponseTest {
         assertThatThrownBy(() -> new ProductOptionResponse(1L, 250, -5))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("stock은 0 이상이어야 합니다.");
+    }
+
+    @Test
+    @DisplayName("성공: OrderOption으로부터 from() 변환 정상 작동")
+    void fromOrderOption_shouldConvertCorrectly() {
+        OrderOption option = OrderOption.builder()
+                .id(100L)
+                .size(275)
+                .stockQuantity(12)
+                .build();
+
+        ProductOptionResponse response = ProductOptionResponse.from(option);
+
+        assertThat(response.optionId()).isEqualTo(100L);
+        assertThat(response.size()).isEqualTo(275);
+        assertThat(response.stock()).isEqualTo(12);
     }
 }
