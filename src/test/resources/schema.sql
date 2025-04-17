@@ -17,7 +17,8 @@ create table point_history
     created_at timestamp default CURRENT_TIMESTAMP not null,
     updated_at timestamp default CURRENT_TIMESTAMP not null on update CURRENT_TIMESTAMP
 )
-    comment '유저 포인트 히스토리';
+comment '유저 포인트 히스토리';
+CREATE INDEX idx_point_history_user ON point_history (user_id);
 
 
 CREATE TABLE product
@@ -30,6 +31,8 @@ CREATE TABLE product
     updated_at timestamp default CURRENT_TIMESTAMP not null on update CURRENT_TIMESTAMP
 )
 comment '상품 정보';
+CREATE INDEX idx_product_state_id ON product (state, id);
+
 
 CREATE TABLE `order`
 (
@@ -42,6 +45,9 @@ CREATE TABLE `order`
     updated_at timestamp default CURRENT_TIMESTAMP not null on update CURRENT_TIMESTAMP
 )
 comment '주문 정보';
+CREATE INDEX idx_order_state_created_at ON `order` (state, created_at);
+CREATE INDEX idx_order_product_id ON `order` (id);
+
 
 CREATE TABLE order_item
 (
@@ -56,6 +62,7 @@ CREATE TABLE order_item
     updated_at timestamp default CURRENT_TIMESTAMP not null on update CURRENT_TIMESTAMP
 )
 comment '주문 상품(장바구니) 정보';
+CREATE INDEX idx_order_item_order_id_product_id_quantity ON order_item (order_id, product_id, quantity);
 
 CREATE TABLE order_option
 (
@@ -67,6 +74,8 @@ CREATE TABLE order_option
     updated_at timestamp default CURRENT_TIMESTAMP not null on update CURRENT_TIMESTAMP
 )
 comment '상품 옵션 정보';
+CREATE INDEX idx_order_option_product_id ON order_option (product_id);
+
 
 CREATE TABLE payment
 (
@@ -78,6 +87,9 @@ CREATE TABLE payment
     updated_at timestamp default CURRENT_TIMESTAMP not null on update CURRENT_TIMESTAMP
 )
 comment '결제 정보';
+CREATE INDEX idx_payment_order_id ON payment(order_id);
+CREATE INDEX idx_payment_state ON payment(state);
+
 
 CREATE TABLE coupon
 (
@@ -92,6 +104,8 @@ CREATE TABLE coupon
     updated_at timestamp default CURRENT_TIMESTAMP not null on update CURRENT_TIMESTAMP
 )
 comment '쿠폰 정보';
+CREATE INDEX idx_coupon_created_at ON coupon (created_at DESC);
+
 
 CREATE TABLE coupon_issue
 (
@@ -105,3 +119,4 @@ CREATE TABLE coupon_issue
     updated_at timestamp default CURRENT_TIMESTAMP not null on update CURRENT_TIMESTAMP
 )
 comment '쿠폰 발급 정보';
+CREATE INDEX idx_coupon_issue_user ON coupon_issue (user_id);
