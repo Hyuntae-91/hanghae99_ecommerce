@@ -1,4 +1,4 @@
-package kr.hhplus.be.server.domain.coupon.dto;
+package kr.hhplus.be.server.domain.coupon.dto.request;
 
 public record GetCouponIssueServiceRequest (
         Long couponIssueId

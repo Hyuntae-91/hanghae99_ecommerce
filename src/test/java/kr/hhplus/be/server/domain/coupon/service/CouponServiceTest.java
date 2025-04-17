@@ -1,12 +1,15 @@
 package kr.hhplus.be.server.domain.coupon.service;
 
-import kr.hhplus.be.server.domain.coupon.CouponIssueRepository;
-import kr.hhplus.be.server.domain.coupon.CouponRepository;
-import kr.hhplus.be.server.domain.coupon.CouponService;
-import kr.hhplus.be.server.domain.coupon.dto.*;
+import kr.hhplus.be.server.domain.coupon.dto.request.*;
+import kr.hhplus.be.server.domain.coupon.dto.response.CouponIssueDto;
+import kr.hhplus.be.server.domain.coupon.dto.response.GetCouponsServiceResponse;
+import kr.hhplus.be.server.domain.coupon.dto.response.IssueNewCouponServiceResponse;
+import kr.hhplus.be.server.domain.coupon.repository.CouponIssueRepository;
+import kr.hhplus.be.server.domain.coupon.repository.CouponRepository;
 import kr.hhplus.be.server.domain.coupon.model.Coupon;
 import kr.hhplus.be.server.domain.coupon.model.CouponIssue;
 import kr.hhplus.be.server.domain.coupon.model.CouponType;
+import kr.hhplus.be.server.exception.custom.InvalidCouponUseException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -39,7 +42,7 @@ class CouponServiceTest {
         CouponIssue issue = CouponIssue.builder()
                 .id(1L)
                 .userId(1L)
-                .coupon(coupon)
+                .couponId(1L)
                 .state(0)
                 .startAt(now())
                 .endAt(nowPlus(1))
@@ -48,6 +51,7 @@ class CouponServiceTest {
                 .build();
 
         when(couponIssueRepository.findById(1L)).thenReturn(issue);
+        when(couponRepository.findById(1L)).thenReturn(coupon);
 
         // when
         CouponIssueDto dto = couponService.getCouponIssueById(new GetCouponIssueServiceRequest(1L));
@@ -60,9 +64,15 @@ class CouponServiceTest {
     @Test
     @DisplayName("성공: 사용자 쿠폰 목록 조회")
     void get_coupons_success() {
-        CouponIssue issue = mock(CouponIssue.class);
-        when(issue.toDto()).thenReturn(mock(CouponIssueDto.class));
-        when(couponIssueRepository.findByUserId(1L)).thenReturn(List.of(issue));
+        Coupon coupon = new Coupon(1L, CouponType.FIXED, "desc", 1000, 10, 5, 3, nowPlus(-2), nowPlus(1));
+
+        CouponIssue issue = CouponIssue.builder()
+                .id(1L).userId(1L).couponId(1L).state(0)
+                .startAt(nowPlus(-1)).endAt(nowPlus(3))
+                .createdAt(now()).updatedAt(now()).build();
+
+        when(couponRepository.findById(1L)).thenReturn(coupon);
+        when(couponIssueRepository.findUsableByUserId(1L)).thenReturn(List.of(issue));
 
         GetCouponsServiceResponse result = couponService.getCoupons(new GetCouponsServiceRequest(1L));
 
@@ -75,17 +85,12 @@ class CouponServiceTest {
         Coupon coupon = new Coupon(1L, CouponType.FIXED, "desc", 1000, 10, 5, 3, now(), now());
         when(couponRepository.findById(1L)).thenReturn(coupon);
 
-        // 실제 저장될 CouponIssue 객체 생성
         CouponIssue newIssue = CouponIssue.builder()
-                .coupon(coupon)
-                .userId(1L)
-                .state(0)
-                .startAt(now())
-                .endAt(nowPlus(3))
-                .createdAt(now())
-                .updatedAt(now())
-                .build();
+                .couponId(1L).userId(1L).state(0)
+                .startAt(now()).endAt(nowPlus(3))
+                .createdAt(now()).updatedAt(now()).build();
 
+        // 실제 저장될 CouponIssue 객체 생성
         when(couponIssueRepository.save(any())).thenReturn(newIssue);
         when(couponRepository.save(any())).thenReturn(coupon);
 
@@ -102,7 +107,7 @@ class CouponServiceTest {
         when(couponRepository.findById(1L)).thenReturn(coupon);
 
         assertThatThrownBy(() -> couponService.issueNewCoupon(new IssueNewCouponServiceRequest(1L, 1L)))
-                .isInstanceOf(IllegalStateException.class)
+                .isInstanceOf(InvalidCouponUseException.class)
                 .hasMessageContaining("쿠폰 발급 수량을 초과했습니다");
     }
 
@@ -123,42 +128,34 @@ class CouponServiceTest {
     void apply_coupon_discount_invalid_state() {
         Coupon coupon = new Coupon(1L, CouponType.FIXED, "desc", 1000, 10, 5, 3, now(), now());
         CouponIssue issue = CouponIssue.builder()
-                .id(1L)
-                .userId(1L)
-                .coupon(coupon)
-                .state(1) // 사용 불가 상태
-                .startAt(now())
-                .endAt(nowPlus(1))
-                .createdAt(now())
-                .updatedAt(now())
-                .build();
+                .id(1L).userId(1L).couponId(1L).state(1)
+                .startAt(now()).endAt(nowPlus(1))
+                .createdAt(now()).updatedAt(now()).build();
+
         when(couponIssueRepository.findById(1L)).thenReturn(issue);
+        when(couponRepository.findById(1L)).thenReturn(coupon);
 
         assertThatThrownBy(() -> couponService.applyCouponDiscount(new ApplyCouponDiscountServiceRequest(1L, 5000L)))
-                .isInstanceOf(IllegalStateException.class)
+                .isInstanceOf(InvalidCouponUseException.class)
                 .hasMessageContaining("사용할 수 없는 쿠폰입니다");
     }
 
     @Test
     @DisplayName("실패: 쿠폰 유효기간 초과")
     void apply_coupon_discount_expired() {
-        String start = java.time.LocalDateTime.now().plusDays(1).toString();
-        String end = java.time.LocalDateTime.now().plusDays(2).toString();
+        String start = LocalDateTime.now().plusDays(1).toString();
+        String end = LocalDateTime.now().plusDays(2).toString();
         Coupon coupon = new Coupon(1L, CouponType.FIXED, "desc", 1000, 10, 5, 3, now(), now());
         CouponIssue issue = CouponIssue.builder()
-                .id(1L)
-                .userId(1L)
-                .coupon(coupon)
-                .state(0)
-                .startAt(start)
-                .endAt(end)
-                .createdAt(now())
-                .updatedAt(now())
-                .build();
+                .id(1L).userId(1L).couponId(1L).state(0)
+                .startAt(start).endAt(end)
+                .createdAt(now()).updatedAt(now()).build();
+
         when(couponIssueRepository.findById(1L)).thenReturn(issue);
+        when(couponRepository.findById(1L)).thenReturn(coupon);
 
         assertThatThrownBy(() -> couponService.applyCouponDiscount(new ApplyCouponDiscountServiceRequest(1L, 5000L)))
-                .isInstanceOf(IllegalStateException.class)
+                .isInstanceOf(InvalidCouponUseException.class)
                 .hasMessageContaining("쿠폰 사용 가능 기간이 아닙니다");
     }
 

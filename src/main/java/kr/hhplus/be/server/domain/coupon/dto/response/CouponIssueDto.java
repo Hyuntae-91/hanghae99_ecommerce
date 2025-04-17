@@ -1,4 +1,4 @@
-package kr.hhplus.be.server.domain.coupon.dto;
+package kr.hhplus.be.server.domain.coupon.dto.response;
 
 import kr.hhplus.be.server.domain.coupon.model.Coupon;
 import kr.hhplus.be.server.domain.coupon.model.CouponIssue;
@@ -43,11 +43,10 @@ public record CouponIssueDto(
         }
     }
 
-    public static CouponIssueDto from(CouponIssue issue) {
-        Coupon coupon = issue.getCoupon();
+    public static CouponIssueDto from(CouponIssue issue, Coupon coupon) {
         return new CouponIssueDto(
                 coupon.getId(),
-                coupon.getType().name(),       // Enum → String
+                coupon.getType().name(),
                 coupon.getDescription(),
                 coupon.getDiscount(),
                 issue.getState(),

@@ -1,5 +1,6 @@
-package kr.hhplus.be.server.domain.coupon.dto;
+package kr.hhplus.be.server.domain.coupon.dto.response;
 
+import kr.hhplus.be.server.domain.coupon.model.Coupon;
 import kr.hhplus.be.server.domain.coupon.model.CouponIssue;
 
 public record IssueNewCouponServiceResponse(
@@ -12,8 +13,7 @@ public record IssueNewCouponServiceResponse(
         String end_at,
         String createdAt
 ) {
-    public static IssueNewCouponServiceResponse from(CouponIssue issue) {
-        var coupon = issue.getCoupon();
+    public static IssueNewCouponServiceResponse from(CouponIssue issue, Coupon coupon) {
         return new IssueNewCouponServiceResponse(
                 coupon.getId(),
                 coupon.getType().name(),
