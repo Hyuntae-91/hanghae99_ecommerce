@@ -1,16 +1,16 @@
 package kr.hhplus.be.server.application.order;
 
 import kr.hhplus.be.server.application.order.dto.AddCartFacadeRequest;
-import kr.hhplus.be.server.domain.order.dto.AddCartServiceRequest;
-import kr.hhplus.be.server.domain.order.dto.AddCartServiceResponse;
+import kr.hhplus.be.server.domain.order.dto.request.AddCartServiceRequest;
+import kr.hhplus.be.server.domain.order.dto.response.AddCartServiceResponse;
 import kr.hhplus.be.server.domain.point.dto.request.UserPointServiceRequest;
 import kr.hhplus.be.server.domain.point.dto.response.UserPointServiceResponse;
 import kr.hhplus.be.server.domain.product.dto.request.ProductServiceRequest;
 import kr.hhplus.be.server.domain.product.dto.response.ProductServiceResponse;
-import kr.hhplus.be.server.interfaces.api.order.dto.AddCartRequest;
-import kr.hhplus.be.server.domain.order.OrderService;
-import kr.hhplus.be.server.domain.point.PointService;
-import kr.hhplus.be.server.domain.product.ProductService;
+import kr.hhplus.be.server.interfaces.api.order.dto.request.AddCartRequest;
+import kr.hhplus.be.server.domain.order.service.OrderService;
+import kr.hhplus.be.server.domain.point.service.PointService;
+import kr.hhplus.be.server.domain.product.service.ProductService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 

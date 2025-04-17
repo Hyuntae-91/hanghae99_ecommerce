@@ -1,8 +1,6 @@
-package kr.hhplus.be.server.interfaces.api.order.dto;
+package kr.hhplus.be.server.domain.order.dto.response;
 
-import kr.hhplus.be.server.domain.order.dto.CartItemResponse;
-
-public record CartItem(
+public record CartItemResponse(
         Long productId,
         int quantity,
         Long optionId,
@@ -10,7 +8,7 @@ public record CartItem(
         int stockQuantity,
         int size
 ) {
-    public CartItem {
+    public CartItemResponse {
         if (productId == null || productId < 1) {
             throw new IllegalArgumentException("productId는 1 이상이어야 합니다.");
         }
@@ -31,8 +29,8 @@ public record CartItem(
         }
     }
 
-    public static CartItem from(CartItemResponse cartItemResponse) {
-        return new CartItem(
+    public static CartItemResponse from(CartItemResponse cartItemResponse) {
+        return new CartItemResponse(
                 cartItemResponse.productId(),
                 cartItemResponse.quantity(),
                 cartItemResponse.optionId(),

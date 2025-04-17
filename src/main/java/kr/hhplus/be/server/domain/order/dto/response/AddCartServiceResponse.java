@@ -1,4 +1,4 @@
-package kr.hhplus.be.server.domain.order.dto;
+package kr.hhplus.be.server.domain.order.dto.response;
 
 import java.util.List;
 

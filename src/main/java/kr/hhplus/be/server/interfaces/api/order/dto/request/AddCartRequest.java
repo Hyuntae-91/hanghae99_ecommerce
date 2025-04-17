@@ -1,4 +1,4 @@
-package kr.hhplus.be.server.interfaces.api.order.dto;
+package kr.hhplus.be.server.interfaces.api.order.dto.request;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Min;
