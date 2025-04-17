@@ -7,11 +7,13 @@ import java.util.List;
 public interface OrderItemRepository {
     OrderItem save(OrderItem orderItem);
 
+    OrderItem findById(Long id);
+
     List<OrderItem> findByIds(List<Long> orderItemIds);
 
     List<OrderItem> findAllByOrderId(Long orderId);
 
     List<OrderItem> findCartByUserId(Long userId);
 
-    void saveAll(List<OrderItem> orderItems);
+    List<OrderItem> saveAll(List<OrderItem> orderItems);
 }

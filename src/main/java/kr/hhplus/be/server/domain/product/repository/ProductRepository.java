@@ -1,6 +1,7 @@
 package kr.hhplus.be.server.domain.product.repository;
 
 import kr.hhplus.be.server.domain.product.model.Product;
+import org.springframework.data.jpa.repository.EntityGraph;
 
 import java.util.List;
 

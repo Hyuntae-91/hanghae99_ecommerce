@@ -2,6 +2,8 @@ package kr.hhplus.be.server.infrastructure.payment;
 
 import kr.hhplus.be.server.domain.payment.repository.PaymentRepository;
 import kr.hhplus.be.server.domain.payment.model.Payment;
+import kr.hhplus.be.server.exception.custom.ResourceNotFoundException;
+import kr.hhplus.be.server.infrastructure.payment.repository.PaymentJpaRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
@@ -9,12 +11,21 @@ import org.springframework.stereotype.Repository;
 @RequiredArgsConstructor
 public class PaymentRepositoryImpl implements PaymentRepository {
 
-    @Override
-    public Payment save(Payment payment) { return null; }
+    private final PaymentJpaRepository paymentJpaRepository;
 
     @Override
-    public Payment findById(Long id) { return null; }
+    public Payment save(Payment payment) {
+        return paymentJpaRepository.save(payment);
+    }
 
     @Override
-    public void delete(Long id) {}
+    public Payment findById(Long id) {
+        return paymentJpaRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Payment not found"));
+    }
+
+    @Override
+    public void delete(Long id) {
+        paymentJpaRepository.deleteById(id);
+    }
 }

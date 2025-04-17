@@ -8,9 +8,9 @@ import kr.hhplus.be.server.domain.order.model.Order;
 import kr.hhplus.be.server.domain.order.model.OrderItem;
 import kr.hhplus.be.server.domain.order.model.OrderOption;
 import kr.hhplus.be.server.domain.payment.repository.PaymentRepository;
-import kr.hhplus.be.server.domain.payment.dto.PaymentOrderItemDto;
-import kr.hhplus.be.server.domain.payment.dto.PaymentServiceRequest;
-import kr.hhplus.be.server.domain.payment.dto.PaymentServiceResponse;
+import kr.hhplus.be.server.domain.payment.dto.request.PaymentOrderItemDto;
+import kr.hhplus.be.server.domain.payment.dto.request.PaymentServiceRequest;
+import kr.hhplus.be.server.domain.payment.dto.response.PaymentServiceResponse;
 import kr.hhplus.be.server.domain.payment.model.Payment;
 import kr.hhplus.be.server.domain.point.repository.PointHistoryRepository;
 import kr.hhplus.be.server.domain.point.repository.PointRepository;
@@ -63,12 +63,9 @@ class PaymentServiceTest {
         long totalPrice = 5000L;
 
         OrderItem item = mock(OrderItem.class);
-        Order order = mock(Order.class);
-        when(item.getOrder()).thenReturn(order);
         when(item.getId()).thenReturn(orderItemId);
         when(item.getOptionId()).thenReturn(optionId);
         when(item.getQuantity()).thenReturn(2);
-        when(item.getOrder().getId()).thenReturn(orderId);
 
         OrderOption option = mock(OrderOption.class);
         when(option.getStockQuantity()).thenReturn(10);
@@ -77,6 +74,7 @@ class PaymentServiceTest {
         when(userPoint.getPoint()).thenReturn(10000L);
 
         Payment payment = Payment.of(orderId, 1, totalPrice);
+
         when(orderItemRepository.findByIds(List.of(orderItemId))).thenReturn(List.of(item));
         when(orderOptionRepository.getById(optionId)).thenReturn(option);
         when(userPointRepository.get(userId)).thenReturn(userPoint);
@@ -86,7 +84,7 @@ class PaymentServiceTest {
                 userId,
                 totalPrice,
                 1L,
-                List.of(new PaymentOrderItemDto(orderItemId, optionId))
+                List.of(new PaymentOrderItemDto(orderId, orderItemId, optionId))
         );
 
         // when
@@ -102,34 +100,30 @@ class PaymentServiceTest {
     @DisplayName("실패: 재고 부족 시 결제 실패 처리")
     void pay_fail_due_to_stock() {
         // given
+        Long userId = 1L;
         Long orderItemId = 1L;
         Long optionId = 10L;
-        Long userId = 1L;
         Long orderId = 99L;
 
         OrderItem item = mock(OrderItem.class);
-        Order order = mock(Order.class);
-        when(item.getOrder()).thenReturn(order);
         when(item.getId()).thenReturn(orderItemId);
         when(item.getOptionId()).thenReturn(optionId);
         when(item.getQuantity()).thenReturn(5);
-        when(item.getOrder().getId()).thenReturn(orderId);
 
         OrderOption option = mock(OrderOption.class);
-        when(option.getStockQuantity()).thenReturn(2); // 재고 부족
+        when(option.getStockQuantity()).thenReturn(2);  // 재고 부족
+
+        Payment failedPayment = Payment.of(orderId, -1, 1000L);
 
         when(orderItemRepository.findByIds(List.of(orderItemId))).thenReturn(List.of(item));
         when(orderOptionRepository.getById(optionId)).thenReturn(option);
-
-        // 실패 Payment 저장 mock
-        Payment failedPayment = Payment.of(orderId, -1, 1000L);
         when(paymentRepository.save(any())).thenReturn(failedPayment);
 
         PaymentServiceRequest request = new PaymentServiceRequest(
                 userId,
                 1000L,
                 1L,
-                List.of(new PaymentOrderItemDto(orderItemId, optionId))
+                List.of(new PaymentOrderItemDto(orderId, orderItemId, optionId))
         );
 
         // when
@@ -148,14 +142,12 @@ class PaymentServiceTest {
         Long userId = 1L;
         Long orderItemId = 1L;
         Long optionId = 2L;
+        Long orderId = 123L;
 
         OrderItem item = mock(OrderItem.class);
-        Order order = mock(Order.class);
-        when(item.getOrder()).thenReturn(order);
         when(item.getId()).thenReturn(orderItemId);
         when(item.getOptionId()).thenReturn(optionId);
         when(item.getQuantity()).thenReturn(1);
-        when(item.getOrder().getId()).thenReturn(123L);
 
         OrderOption option = mock(OrderOption.class);
         when(option.getStockQuantity()).thenReturn(10);
@@ -167,11 +159,15 @@ class PaymentServiceTest {
         when(orderItemRepository.findByIds(List.of(orderItemId))).thenReturn(List.of(item));
         when(orderOptionRepository.getById(optionId)).thenReturn(option);
         when(userPointRepository.get(userId)).thenReturn(userPoint);
-        when(paymentRepository.save(any())).thenReturn(Payment.of(123L, -1, 1000L));
+        when(paymentRepository.save(any())).thenReturn(Payment.of(orderId, -1, 1000L));
 
         PaymentServiceRequest request = new PaymentServiceRequest(
-                userId, 1000L, 1L, List.of(new PaymentOrderItemDto(orderItemId, optionId))
+                userId,
+                1000L,
+                1L,
+                List.of(new PaymentOrderItemDto(orderId, orderItemId, optionId))
         );
+
 
         // when
         PaymentServiceResponse response = paymentService.pay(request);
@@ -187,13 +183,20 @@ class PaymentServiceTest {
     @DisplayName("성공: 결제 실패 시 status -1로 저장됨")
     void pay_fail_and_saves_failed_payment() {
         // given
+        Long orderId = 10L;
+        Long userId = 1L;
+        long totalPrice = 9999L;
+
         when(orderItemRepository.findByIds(any())).thenThrow(new RuntimeException("조회 실패"));
 
-        Payment failed = Payment.of(10L, -1, 9999L);
+        Payment failed = Payment.of(orderId, -1, totalPrice);
         when(paymentRepository.save(any())).thenReturn(failed);
 
         PaymentServiceRequest request = new PaymentServiceRequest(
-                1L, 9999L, 1L, List.of(new PaymentOrderItemDto(999L, 888L))
+                userId,
+                totalPrice,
+                1L,
+                List.of(new PaymentOrderItemDto(orderId, 999L, 888L))
         );
 
         // when
@@ -216,12 +219,9 @@ class PaymentServiceTest {
         long totalPrice = 5000L;
 
         OrderItem item = mock(OrderItem.class);
-        Order order = mock(Order.class);
-        when(item.getOrder()).thenReturn(order);
         when(item.getId()).thenReturn(orderItemId);
         when(item.getOptionId()).thenReturn(optionId);
         when(item.getQuantity()).thenReturn(1);
-        when(item.getOrder().getId()).thenReturn(orderId);
 
         OrderOption option = mock(OrderOption.class);
         when(option.getStockQuantity()).thenReturn(10);
@@ -231,14 +231,17 @@ class PaymentServiceTest {
 
         CouponIssue couponIssue = mock(CouponIssue.class);
 
-        when(orderItemRepository.findByIds(any())).thenReturn(List.of(item));
+        when(orderItemRepository.findByIds(List.of(orderItemId))).thenReturn(List.of(item));
         when(orderOptionRepository.getById(optionId)).thenReturn(option);
-        when(userPointRepository.get(any())).thenReturn(point);
+        when(userPointRepository.get(userId)).thenReturn(point);
         when(couponIssueRepository.findById(couponIssueId)).thenReturn(couponIssue);
         when(paymentRepository.save(any())).thenReturn(Payment.of(orderId, 1, totalPrice));
 
         PaymentServiceRequest request = new PaymentServiceRequest(
-                userId, totalPrice, couponIssueId, List.of(new PaymentOrderItemDto(orderItemId, optionId))
+                userId,
+                totalPrice,
+                couponIssueId,
+                List.of(new PaymentOrderItemDto(orderId, orderItemId, optionId))
         );
 
         // when
@@ -261,12 +264,9 @@ class PaymentServiceTest {
         long totalPrice = 5000L;
 
         OrderItem item = mock(OrderItem.class);
-        Order order = mock(Order.class);
-        when(item.getOrder()).thenReturn(order);
         when(item.getId()).thenReturn(orderItemId);
         when(item.getOptionId()).thenReturn(optionId);
         when(item.getQuantity()).thenReturn(1);
-        when(item.getOrder().getId()).thenReturn(orderId);
 
         OrderOption option = mock(OrderOption.class);
         when(option.getStockQuantity()).thenReturn(10);
@@ -280,16 +280,19 @@ class PaymentServiceTest {
         when(paymentRepository.save(any())).thenReturn(Payment.of(orderId, 1, totalPrice));
 
         PaymentServiceRequest request = new PaymentServiceRequest(
-                userId, totalPrice, null, List.of(new PaymentOrderItemDto(orderItemId, optionId))  // ✅ 쿠폰 없음
+                userId,
+                totalPrice,
+                null,
+                List.of(new PaymentOrderItemDto(orderId, orderItemId, optionId))
         );
 
         // when
         PaymentServiceResponse response = paymentService.pay(request);
 
         // then
+        assertThat(response.status()).isEqualTo(1);
         verify(couponIssueRepository, never()).findById(any());
         verify(couponIssueRepository, never()).save(any());
-        assertThat(response.status()).isEqualTo(1);
     }
 
 
@@ -305,12 +308,9 @@ class PaymentServiceTest {
         long totalPrice = 5000L;
 
         OrderItem item = mock(OrderItem.class);
-        Order order = mock(Order.class);
-        when(item.getOrder()).thenReturn(order);
         when(item.getId()).thenReturn(orderItemId);
         when(item.getOptionId()).thenReturn(optionId);
         when(item.getQuantity()).thenReturn(1);
-        when(item.getOrder().getId()).thenReturn(orderId);
 
         OrderOption option = mock(OrderOption.class);
         when(option.getStockQuantity()).thenReturn(10);
@@ -328,7 +328,10 @@ class PaymentServiceTest {
         when(paymentRepository.save(any())).thenReturn(Payment.of(orderId, -1, totalPrice));
 
         PaymentServiceRequest request = new PaymentServiceRequest(
-                userId, totalPrice, couponIssueId, List.of(new PaymentOrderItemDto(orderItemId, optionId))
+                userId,
+                totalPrice,
+                couponIssueId,
+                List.of(new PaymentOrderItemDto(orderId, orderItemId, optionId))
         );
 
         // when
@@ -338,6 +341,5 @@ class PaymentServiceTest {
         assertThat(response.status()).isEqualTo(-1);
         verify(issue).markUsed();
     }
-
 
 }

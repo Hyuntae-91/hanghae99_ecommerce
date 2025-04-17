@@ -1,6 +1,7 @@
 package kr.hhplus.be.server.domain.point.service;
 
-import kr.hhplus.be.server.domain.common.exception.ResourceNotFoundException;
+import kr.hhplus.be.server.domain.point.repository.PointRepository;
+import kr.hhplus.be.server.exception.custom.ResourceNotFoundException;
 import kr.hhplus.be.server.domain.point.dto.UserPointMapper;
 import kr.hhplus.be.server.domain.point.dto.request.PointHistoryServiceRequest;
 import kr.hhplus.be.server.domain.point.dto.response.PointHistoryServiceResponse;
@@ -21,15 +22,17 @@ import static org.mockito.Mockito.*;
 
 public class PointHistoryServiceTest {
 
+    private PointRepository pointRepository;
     private PointHistoryService pointHistoryService;
     private PointHistoryRepository pointHistoryRepository;
     private UserPointMapper userPointMapper;
 
     @BeforeEach
     void setUp() {
+        pointRepository = mock(PointRepository.class);
         pointHistoryRepository = mock(PointHistoryRepository.class);
         userPointMapper = mock(UserPointMapper.class);
-        pointHistoryService = new PointHistoryService(pointHistoryRepository, userPointMapper);
+        pointHistoryService = new PointHistoryService(pointRepository, pointHistoryRepository, userPointMapper);
     }
 
     @Nested

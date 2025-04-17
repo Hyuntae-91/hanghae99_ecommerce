@@ -8,4 +8,5 @@ public interface CouponIssueRepository {
     CouponIssue findById(Long couponIssueId);
     CouponIssue save(CouponIssue couponIssue);
     List<CouponIssue> findByUserId(Long userId);
+    List<CouponIssue> findUsableByUserId(Long userId);
 }

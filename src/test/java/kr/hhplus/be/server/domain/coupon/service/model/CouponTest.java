@@ -3,9 +3,10 @@ package kr.hhplus.be.server.domain.coupon.service.model;
 import kr.hhplus.be.server.domain.coupon.repository.CouponIssueRepository;
 import kr.hhplus.be.server.domain.coupon.repository.CouponRepository;
 import kr.hhplus.be.server.domain.coupon.service.CouponService;
-import kr.hhplus.be.server.domain.coupon.dto.IssueNewCouponServiceRequest;
+import kr.hhplus.be.server.domain.coupon.dto.request.IssueNewCouponServiceRequest;
 import kr.hhplus.be.server.domain.coupon.model.Coupon;
 import kr.hhplus.be.server.domain.coupon.model.CouponType;
+import kr.hhplus.be.server.exception.custom.InvalidCouponUseException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -75,7 +76,7 @@ class CouponTest {
 
         // then
         assertThatThrownBy(coupon::increaseIssued)
-                .isInstanceOf(IllegalStateException.class)
+                .isInstanceOf(InvalidCouponUseException.class)
                 .hasMessageContaining("쿠폰 발급 수량을 초과했습니다.");
     }
 
@@ -100,7 +101,7 @@ class CouponTest {
         // then
         assertThatThrownBy(() ->
                 couponService.issueNewCoupon(new IssueNewCouponServiceRequest(1L, 1L)))
-                .isInstanceOf(IllegalStateException.class)
+                .isInstanceOf(InvalidCouponUseException.class)
                 .hasMessageContaining("쿠폰 발급 수량을 초과했습니다.");
     }
 }

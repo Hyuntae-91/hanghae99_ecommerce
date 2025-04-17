@@ -2,6 +2,7 @@ package kr.hhplus.be.server.domain.order.model;
 
 import jakarta.persistence.*;
 import kr.hhplus.be.server.domain.product.model.Product;
+import kr.hhplus.be.server.exception.custom.ConflictException;
 import lombok.*;
 
 @Getter
@@ -31,10 +32,6 @@ public class OrderOption {
     @Column(name = "updated_at", nullable = false)
     private String updatedAt;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "product_id", insertable = false, updatable = false)
-    private Product product;
-
     @PrePersist
     @PreUpdate
     public void validateFields() {
@@ -58,7 +55,7 @@ public class OrderOption {
 
     public void validateEnoughStock(int quantity) {
         if (this.stockQuantity < quantity) {
-            throw new IllegalStateException("재고가 부족합니다. optionId=" + this.id);
+            throw new ConflictException("재고가 부족합니다. optionId=" + this.id);
         }
     }
 }

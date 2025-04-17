@@ -13,7 +13,7 @@ import java.util.List;
 @Mapper(componentModel = "spring")
 public interface ProductMapper {
 
-    @Mapping(source = "orderOptions", target = "options")
+    @Mapping(target = "options", ignore = true)
     ProductServiceResponse productToProductServiceResponse(Product product);
 
     List<ProductServiceResponse> productsToProductServiceResponses(List<Product> products);

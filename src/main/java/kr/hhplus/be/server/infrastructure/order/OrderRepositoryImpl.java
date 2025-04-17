@@ -1,6 +1,6 @@
 package kr.hhplus.be.server.infrastructure.order;
 
-import kr.hhplus.be.server.domain.common.exception.ResourceNotFoundException;
+import kr.hhplus.be.server.exception.custom.ResourceNotFoundException;
 import kr.hhplus.be.server.domain.order.repository.OrderRepository;
 import kr.hhplus.be.server.domain.order.model.Order;
 import kr.hhplus.be.server.infrastructure.order.repository.OrderJpaRepository;

@@ -1,22 +1,24 @@
 package kr.hhplus.be.server.interfaces.api.coupon;
 
 import kr.hhplus.be.server.domain.coupon.service.CouponService;
-import kr.hhplus.be.server.domain.coupon.dto.GetCouponsServiceRequest;
-import kr.hhplus.be.server.domain.coupon.dto.GetCouponsServiceResponse;
-import kr.hhplus.be.server.domain.coupon.dto.IssueNewCouponServiceRequest;
-import kr.hhplus.be.server.domain.coupon.dto.IssueNewCouponServiceResponse;
+import kr.hhplus.be.server.domain.coupon.dto.request.GetCouponsServiceRequest;
+import kr.hhplus.be.server.domain.coupon.dto.response.GetCouponsServiceResponse;
+import kr.hhplus.be.server.domain.coupon.dto.request.IssueNewCouponServiceRequest;
+import kr.hhplus.be.server.domain.coupon.dto.response.IssueNewCouponServiceResponse;
 import kr.hhplus.be.server.exception.ErrorResponse;
 import kr.hhplus.be.server.interfaces.api.coupon.dto.CouponIssueResponse;
 import kr.hhplus.be.server.interfaces.api.coupon.dto.CouponListResponse;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
+@RequiredArgsConstructor
 public class CouponController implements CouponApi {
 
-    private CouponService couponService;
+    private final CouponService couponService;
 
     // TODO: 진행중인 쿠폰 배분 이벤트 추가 해볼만 하다
 
@@ -38,10 +40,9 @@ public class CouponController implements CouponApi {
                     .body(new ErrorResponse(400, "Missing userId header"));
         }
 
-        IssueNewCouponServiceRequest issueNewCouponServiceRequest = new IssueNewCouponServiceRequest(
-                userId, couponId
+        IssueNewCouponServiceResponse result = couponService.issueNewCoupon(
+                new IssueNewCouponServiceRequest(userId, couponId)
         );
-        IssueNewCouponServiceResponse result = couponService.issueNewCoupon(issueNewCouponServiceRequest);
         return ResponseEntity.ok(CouponIssueResponse.from(result));
     }
 }

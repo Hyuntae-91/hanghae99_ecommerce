@@ -2,6 +2,7 @@ package kr.hhplus.be.server.infrastructure.order;
 
 import kr.hhplus.be.server.domain.order.repository.OrderItemRepository;
 import kr.hhplus.be.server.domain.order.model.OrderItem;
+import kr.hhplus.be.server.exception.custom.ResourceNotFoundException;
 import kr.hhplus.be.server.infrastructure.order.repository.OrderItemJpaRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
@@ -13,6 +14,12 @@ import java.util.List;
 public class OrderItemRepositoryImpl implements OrderItemRepository {
 
     private final OrderItemJpaRepository orderItemJpaRepository;
+
+    @Override
+    public OrderItem findById(Long id) {
+        return orderItemJpaRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("OrderItem not found: " + id));
+    }
 
     @Override
     public OrderItem save(OrderItem orderItem) {
@@ -35,7 +42,7 @@ public class OrderItemRepositoryImpl implements OrderItemRepository {
     }
 
     @Override
-    public void saveAll(List<OrderItem> orderItems) {
-        orderItemJpaRepository.saveAll(orderItems);
+    public List<OrderItem> saveAll(List<OrderItem> orderItems) {
+        return orderItemJpaRepository.saveAll(orderItems);
     }
 }

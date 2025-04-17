@@ -1,7 +1,7 @@
 package kr.hhplus.be.server.domain.coupon.service.dto;
 
 
-import kr.hhplus.be.server.domain.coupon.dto.IssueNewCouponServiceResponse;
+import kr.hhplus.be.server.domain.coupon.dto.response.IssueNewCouponServiceResponse;
 import kr.hhplus.be.server.domain.coupon.model.Coupon;
 import kr.hhplus.be.server.domain.coupon.model.CouponIssue;
 import kr.hhplus.be.server.domain.coupon.model.CouponType;
@@ -30,7 +30,7 @@ class IssueNewCouponServiceResponseTest {
         CouponIssue issue = CouponIssue.builder()
                 .id(1L)
                 .userId(1L)
-                .coupon(coupon)
+                .couponId(1L)
                 .state(0)
                 .startAt("2025-04-11T10:00:00")
                 .endAt("2025-04-18T10:00:00")
@@ -38,7 +38,7 @@ class IssueNewCouponServiceResponseTest {
                 .updatedAt("2025-04-11T10:00:00")
                 .build();
 
-        IssueNewCouponServiceResponse response = IssueNewCouponServiceResponse.from(issue);
+        IssueNewCouponServiceResponse response = IssueNewCouponServiceResponse.from(issue, coupon);
 
         assertThat(response.couponId()).isEqualTo(1L);
         assertThat(response.type()).isEqualTo("FIXED");

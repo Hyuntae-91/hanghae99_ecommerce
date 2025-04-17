@@ -1,6 +1,10 @@
 package kr.hhplus.be.server.domain.coupon.service;
 
-import kr.hhplus.be.server.domain.coupon.dto.*;
+import kr.hhplus.be.server.domain.coupon.dto.request.*;
+import kr.hhplus.be.server.domain.coupon.dto.response.ApplyCouponDiscountServiceResponse;
+import kr.hhplus.be.server.domain.coupon.dto.response.CouponIssueDto;
+import kr.hhplus.be.server.domain.coupon.dto.response.GetCouponsServiceResponse;
+import kr.hhplus.be.server.domain.coupon.dto.response.IssueNewCouponServiceResponse;
 import kr.hhplus.be.server.domain.coupon.model.Coupon;
 import kr.hhplus.be.server.domain.coupon.model.CouponIssue;
 import kr.hhplus.be.server.domain.coupon.repository.CouponIssueRepository;
@@ -19,18 +23,22 @@ public class CouponService {
 
     public CouponIssueDto getCouponIssueById(GetCouponIssueServiceRequest request) {
         CouponIssue couponIssue = couponIssueRepository.findById(request.couponIssueId());
-        return CouponIssueDto.from(couponIssue);
+        Coupon coupon = couponRepository.findById(couponIssue.getCouponId());
+        return CouponIssueDto.from(couponIssue, coupon);
     }
 
     public GetCouponsServiceResponse getCoupons(GetCouponsServiceRequest request) {
         Long userId = request.userId();
 
         // 1. 사용자 보유 쿠폰 조회
-        List<CouponIssue> couponIssues = couponIssueRepository.findByUserId(userId);
+        List<CouponIssue> couponIssues = couponIssueRepository.findUsableByUserId(userId);
 
         // 2. 쿠폰 정보를 CouponDto로 매핑
         List<CouponIssueDto> couponDtoList = couponIssues.stream()
-                .map(CouponIssue::toDto)
+                .map(issue -> {
+                    Coupon coupon = couponRepository.findById(issue.getCouponId());
+                    return issue.toDto(coupon);
+                })
                 .toList();
 
         return new GetCouponsServiceResponse(couponDtoList);
@@ -47,7 +55,7 @@ public class CouponService {
 
         CouponIssue issue = CouponIssue.builder()
                 .userId(request.userId())
-                .coupon(coupon)
+                .couponId(coupon.getId())
                 .state(0) // 0: 사용 가능
                 .startAt(now)
                 .endAt(end)
@@ -60,7 +68,7 @@ public class CouponService {
         // 발급 수량 증가
         coupon.increaseIssued();
         couponRepository.save(coupon);
-        return IssueNewCouponServiceResponse.from(issue);
+        return IssueNewCouponServiceResponse.from(issue, coupon);
     }
 
     public void saveState(SaveCouponStateRequest request) {
@@ -73,7 +81,9 @@ public class CouponService {
     public ApplyCouponDiscountServiceResponse applyCouponDiscount(ApplyCouponDiscountServiceRequest request) {
         CouponIssue issue = couponIssueRepository.findById(request.couponIssueId());
         issue.validateUsable();
-        long finalPrice = issue.calculateFinalPrice(request.originalPrice());
+
+        Coupon coupon = couponRepository.findById(issue.getCouponId());
+        long finalPrice = issue.calculateFinalPrice(request.originalPrice(), coupon);
         return new ApplyCouponDiscountServiceResponse(finalPrice);
     }
 }
