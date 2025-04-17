@@ -1,6 +1,7 @@
 package kr.hhplus.be.server.domain.coupon.model;
 
 import jakarta.persistence.*;
+import kr.hhplus.be.server.exception.custom.InvalidCouponUseException;
 import lombok.*;
 
 @Getter
@@ -48,7 +49,7 @@ public class Coupon {
 
     public void validateIssuable() {
         if (this.issued >= this.quantity) {
-            throw new IllegalStateException("쿠폰 발급 수량을 초과했습니다.");
+            throw new InvalidCouponUseException("쿠폰 발급 수량을 초과했습니다.");
         }
     }
 }

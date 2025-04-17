@@ -5,6 +5,7 @@ import lombok.*;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 
 @Getter
@@ -31,10 +32,8 @@ public class Order {
 
     private String updatedAt;
 
-    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<OrderItem> orderItems;
-
     public static Order create(Long userId, Long totalPrice, Long couponIssueId) {
+        String now = LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
         if (userId == null || totalPrice == null) {
             throw new IllegalArgumentException("userId와 totalPrice는 필수 값입니다.");
         }
@@ -44,7 +43,8 @@ public class Order {
                 .totalPrice(totalPrice)
                 .couponIssueId(couponIssueId)
                 .state(0)
-                .createdAt(LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME))
+                .createdAt(now)
+                .updatedAt(now)
                 .build();
     }
 

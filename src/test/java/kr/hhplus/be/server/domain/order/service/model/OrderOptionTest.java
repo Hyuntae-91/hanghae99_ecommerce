@@ -1,6 +1,7 @@
 package kr.hhplus.be.server.domain.order.service.model;
 
 import kr.hhplus.be.server.domain.order.model.OrderOption;
+import kr.hhplus.be.server.exception.custom.ConflictException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -129,7 +130,7 @@ class OrderOptionTest {
 
         // when & then
         assertThatThrownBy(() -> orderOption.validateEnoughStock(5))
-                .isInstanceOf(IllegalStateException.class)
+                .isInstanceOf(ConflictException.class)
                 .hasMessageContaining("재고가 부족합니다. optionId=99");
     }
 

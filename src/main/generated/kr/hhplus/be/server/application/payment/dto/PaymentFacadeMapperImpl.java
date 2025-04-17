@@ -4,13 +4,13 @@ import java.util.ArrayList;
 import java.util.List;
 import javax.annotation.processing.Generated;
 import kr.hhplus.be.server.domain.product.dto.request.ProductOptionKeyDto;
-import kr.hhplus.be.server.interfaces.api.payment.dto.PaymentProductDto;
-import kr.hhplus.be.server.interfaces.api.payment.dto.PaymentRequest;
+import kr.hhplus.be.server.interfaces.api.payment.dto.request.PaymentProductDto;
+import kr.hhplus.be.server.interfaces.api.payment.dto.request.PaymentRequest;
 import org.springframework.stereotype.Component;
 
 @Generated(
     value = "org.mapstruct.ap.MappingProcessor",
-    date = "2025-04-13T20:16:03+0900",
+    date = "2025-04-17T15:01:22+0900",
     comments = "version: 1.5.2.Final, compiler: javac, environment: Java 17.0.12 (Oracle Corporation)"
 )
 @Component

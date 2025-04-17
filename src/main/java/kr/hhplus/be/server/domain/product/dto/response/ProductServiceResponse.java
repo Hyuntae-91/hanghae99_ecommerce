@@ -23,8 +23,11 @@ public record ProductServiceResponse(
         if (createdAt == null || createdAt.isBlank()) {
             throw new IllegalArgumentException("createdAt은 null이거나 빈 값일 수 없습니다.");
         }
-        if (options == null) {
-            throw new IllegalArgumentException("options는 null이 될 수 없습니다.");
-        }
+    }
+
+    public ProductServiceResponse withOptions(List<ProductOptionResponse> newOptions) {
+        return new ProductServiceResponse(
+                this.id, this.name, this.price, this.state, this.createdAt, newOptions
+        );
     }
 }

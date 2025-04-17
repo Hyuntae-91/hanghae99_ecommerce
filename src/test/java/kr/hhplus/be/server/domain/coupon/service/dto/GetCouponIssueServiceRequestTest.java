@@ -1,6 +1,6 @@
 package kr.hhplus.be.server.domain.coupon.service.dto;
 
-import kr.hhplus.be.server.domain.coupon.dto.GetCouponIssueServiceRequest;
+import kr.hhplus.be.server.domain.coupon.dto.request.GetCouponIssueServiceRequest;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 

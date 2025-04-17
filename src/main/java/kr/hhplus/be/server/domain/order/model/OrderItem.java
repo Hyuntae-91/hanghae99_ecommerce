@@ -1,7 +1,7 @@
 package kr.hhplus.be.server.domain.order.model;
 
 import jakarta.persistence.*;
-import kr.hhplus.be.server.domain.order.dto.CartItemResponse;
+import kr.hhplus.be.server.domain.order.dto.response.CartItemResponse;
 import kr.hhplus.be.server.domain.product.model.Product;
 import lombok.*;
 
@@ -19,6 +19,7 @@ public class OrderItem {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Setter
     private Long id;
 
     private Long userId;
@@ -26,6 +27,10 @@ public class OrderItem {
     @Column(name = "product_id")
     private Long productId;
 
+    @Column(name = "order_id")
+    private Long orderId;
+
+    @Column(name = "order_option_id")
     private Long optionId;
 
     private Long eachPrice;
@@ -36,35 +41,12 @@ public class OrderItem {
 
     private String updatedAt;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "product_id", insertable = false, updatable = false)
-    private Product product;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "order_id", insertable = false, updatable = false)
-    private Order order;
-
-    @Setter
-    @ManyToOne(fetch = FetchType.LAZY)
-    private OrderOption orderOption;
-
     public Long calculateTotalPrice() {
         return eachPrice * quantity;
     }
 
-    public OrderOption getOption(List<OrderOption> options) {
-        return options.stream()
-                .filter(option -> option.getId().equals(optionId)) // optionId로 필터링
-                .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("옵션이 존재하지 않습니다."));
-    }
-
-    public int getStock(List<OrderOption> options) {
-        return getOption(options).getStockQuantity();
-    }
-
-    public int getSize(List<OrderOption> options) {
-        return getOption(options).getSize();
+    public void applyOrderId(Long orderId) {
+        this.orderId = orderId;
     }
 
     public static OrderItem of(
@@ -86,20 +68,14 @@ public class OrderItem {
                 .build();
     }
 
-    public CartItemResponse toCartItemResponse() {
-        if (orderOption == null) {
-            throw new IllegalStateException("OrderOption이 초기화되지 않았습니다.");
-        }
-        int stock = orderOption.getStockQuantity();
-        int size = orderOption.getSize();
-
+    public CartItemResponse toCartItemResponse(OrderOption option) {
         return new CartItemResponse(
-                productId,
-                quantity,
-                optionId,
-                eachPrice,
-                stock,
-                size
+                this.productId,
+                this.quantity,
+                this.optionId,
+                this.eachPrice,
+                option.getStockQuantity(),
+                option.getSize()
         );
     }
 }

@@ -1,10 +1,13 @@
 package kr.hhplus.be.server.domain.product.service;
 
-import kr.hhplus.be.server.domain.common.exception.ResourceNotFoundException;
+import kr.hhplus.be.server.domain.order.model.OrderOption;
+import kr.hhplus.be.server.domain.order.repository.OrderItemRepository;
+import kr.hhplus.be.server.domain.order.repository.OrderOptionRepository;
+import kr.hhplus.be.server.domain.product.dto.response.ProductOptionResponse;
+import kr.hhplus.be.server.exception.custom.ResourceNotFoundException;
 import kr.hhplus.be.server.domain.order.model.OrderItem;
-import kr.hhplus.be.server.domain.product.ProductRepository;
-import kr.hhplus.be.server.domain.product.ProductService;
-import kr.hhplus.be.server.domain.product.ProductStates;
+import kr.hhplus.be.server.domain.product.repository.ProductRepository;
+import kr.hhplus.be.server.domain.product.model.ProductStates;
 import kr.hhplus.be.server.domain.product.dto.*;
 import kr.hhplus.be.server.domain.product.dto.request.ProductListServiceRequest;
 import kr.hhplus.be.server.domain.product.dto.request.ProductOptionKeyDto;
@@ -25,14 +28,18 @@ import static org.mockito.Mockito.*;
 class ProductServiceTest {
 
     private ProductRepository productRepository;
+    private OrderItemRepository orderItemRepository;
+    private OrderOptionRepository orderOptionRepository;
     private ProductService productService;
     private ProductMapper productMapper;
 
     @BeforeEach
     void setUp() {
         productRepository = mock(ProductRepository.class);
+        orderItemRepository = mock(OrderItemRepository.class);
+        orderOptionRepository = mock(OrderOptionRepository.class);
         productMapper = mock(ProductMapper.class);
-        productService = new ProductService(productRepository, productMapper);
+        productService = new ProductService(productRepository, orderItemRepository, orderOptionRepository, productMapper);
     }
 
     @Test
@@ -45,7 +52,6 @@ class ProductServiceTest {
                 .price(1000L)
                 .state(1)
                 .createdAt("2025-04-01 12:00:00")
-                .orderOptions(List.of())
                 .build();
 
         ProductServiceResponse response = new ProductServiceResponse(
@@ -66,29 +72,76 @@ class ProductServiceTest {
         // then
         assertThat(dto.id()).isEqualTo(1L);
         assertThat(dto.name()).isEqualTo("테스트상품");
+        assertThat(dto.price()).isEqualTo(1000L);
+        assertThat(dto.createdAt()).isEqualTo("2025-04-01 12:00:00");
+        assertThat(dto.options()).isEmpty();
     }
 
     @Test
     @DisplayName("성공: 상품 리스트 조회")
     void get_product_list_success() {
         // given
-        List<Product> productList = List.of(
-                Product.builder().id(1L).name("상품1").price(1000L).state(1).orderOptions(List.of()).createdAt("2025-04-01 12:00:00").build(),
-                Product.builder().id(2L).name("상품2").price(2000L).state(1).orderOptions(List.of()).createdAt("2025-04-01 12:00:00").build()
-        );
+        Product product1 = Product.builder()
+                .id(1L)
+                .name("상품1")
+                .price(1000L)
+                .state(1)
+                .createdAt("2025-04-01 12:00:00")
+                .build();
+
+        Product product2 = Product.builder()
+                .id(2L)
+                .name("상품2")
+                .price(2000L)
+                .state(1)
+                .createdAt("2025-04-01 12:00:00")
+                .build();
+
+        List<Product> productList = List.of(product1, product2);
 
         List<Integer> excludedStates = List.of(
                 ProductStates.DELETED.getCode(),
                 ProductStates.SOLD_OUT.getCode()
         );
 
-        when(productRepository.findByStateNotIn(1, 10, "created_at", excludedStates)).thenReturn(productList);
+        when(productRepository.findByStateNotIn(eq(1), eq(10), eq("createdAt"), eq(excludedStates)))
+                .thenReturn(productList);
 
-        ProductServiceResponse dto1 = new ProductServiceResponse(1L, "상품1", 1000L, 1, "2025-04-01 12:00:00", List.of());
-        ProductServiceResponse dto2 = new ProductServiceResponse(2L, "상품2", 2000L, 1, "2025-04-01 12:00:00", List.of());
+        // order options
+        OrderOption option1 = OrderOption.builder()
+                .id(101L)
+                .productId(1L)
+                .size(275)
+                .stockQuantity(10)
+                .build();
 
-        when(productMapper.productsToProductServiceResponses(anyList()))
-                .thenReturn(List.of(dto1, dto2));
+        OrderOption option2 = OrderOption.builder()
+                .id(102L)
+                .productId(2L)
+                .size(280)
+                .stockQuantity(5)
+                .build();
+
+        when(orderOptionRepository.findByProductId(1L)).thenReturn(List.of(option1));
+        when(orderOptionRepository.findByProductId(2L)).thenReturn(List.of(option2));
+
+        // option responses
+        ProductOptionResponse optResponse1 = new ProductOptionResponse(101L, 275, 10);
+        ProductOptionResponse optResponse2 = new ProductOptionResponse(102L, 280, 5);
+
+        when(productMapper.toProductOptionResponseList(List.of(option1))).thenReturn(List.of(optResponse1));
+        when(productMapper.toProductOptionResponseList(List.of(option2))).thenReturn(List.of(optResponse2));
+
+        // product response DTOs with options
+        ProductServiceResponse dto1 = new ProductServiceResponse(
+                1L, "상품1", 1000L, 1, "2025-04-01 12:00:00", List.of(optResponse1)
+        );
+        ProductServiceResponse dto2 = new ProductServiceResponse(
+                2L, "상품2", 2000L, 1, "2025-04-01 12:00:00", List.of(optResponse2)
+        );
+
+        when(productMapper.productToProductServiceResponse(product1)).thenReturn(dto1);
+        when(productMapper.productToProductServiceResponse(product2)).thenReturn(dto2);
 
         // when
         var result = productService.getProductList(new ProductListServiceRequest(1, 10, "createdAt"));
@@ -96,42 +149,41 @@ class ProductServiceTest {
         // then
         assertThat(result).hasSize(2);
         assertThat(result.get(0).name()).isEqualTo("상품1");
+        assertThat(result.get(0).options()).hasSize(1);
+        assertThat(result.get(0).options().get(0).optionId()).isEqualTo(101L);
+        assertThat(result.get(0).options().get(0).size()).isEqualTo(275);
+        assertThat(result.get(0).options().get(0).stock()).isEqualTo(10);
     }
-
 
     @Test
     @DisplayName("성공: 인기 상품 조회")
     void get_best_products_success() {
         // given
+        ProductOptionKeyDto item1 = new ProductOptionKeyDto(1L, 11L, 1L);
+        ProductOptionKeyDto item2 = new ProductOptionKeyDto(1L, 12L, 2L);
+        List<ProductOptionKeyDto> request = List.of(item1, item2);
+
+        OrderItem orderItem1 = OrderItem.of(1L, 1L, 11L, 100L, 1);
+        OrderItem orderItem2 = OrderItem.of(1L, 1L, 12L, 300L, 1);
+        orderItem1.setId(1L);
+        orderItem2.setId(2L);
+
         Product product = Product.builder()
                 .id(1L)
-                .name("인기상품")
-                .price(3000L)
-                .state(1)
-                .orderOptions(List.of())
-                .createdAt("2025-04-01 12:00:00")
+                .price(0L)
+                .createdAt("2025-04-10T12:00:00")
                 .build();
 
-        when(productRepository.findPopularTop5()).thenReturn(List.of(product));
-
-        ProductServiceResponse dto = new ProductServiceResponse(
-                1L,
-                "인기상품",
-                3000L,
-                1,
-                "2025-04-01 12:00:00",
-                List.of() // options
-        );
-
-        when(productMapper.productsToProductServiceResponses(List.of(product)))
-                .thenReturn(List.of(dto));
+        when(productMapper.extractProductIds(request)).thenReturn(List.of(1L));
+        when(productRepository.findByIds(List.of(1L))).thenReturn(List.of(product));
+        when(orderItemRepository.findById(1L)).thenReturn(orderItem1);
+        when(orderItemRepository.findById(2L)).thenReturn(orderItem2);
 
         // when
-        var result = productService.getBestProducts();
+        ProductTotalPriceResponse result = productService.calculateTotalPrice(request);
 
         // then
-        assertThat(result).hasSize(1);
-        assertThat(result.get(0).name()).isEqualTo("인기상품");
+        assertThat(result.totalPrice()).isEqualTo(100L + 300L);
     }
 
 
@@ -180,27 +232,26 @@ class ProductServiceTest {
     }
 
     @Test
-    @DisplayName("성공: 상품은 조회됐지만 OrderItem이 없으면 총합은 0")
-    void calculateTotalPrice_when_no_orderItems() {
+    @DisplayName("실패: OrderItem이 존재하지 않으면 ResourceNotFoundException 발생")
+    void calculateTotalPrice_when_orderItem_not_found_should_throw_exception() {
         // given
-        ProductOptionKeyDto item = new ProductOptionKeyDto(1L, 1L, 1L);
+        ProductOptionKeyDto item = new ProductOptionKeyDto(1L, 1L, 1L); // itemId = 1
         List<ProductOptionKeyDto> request = List.of(item);
 
         Product product = Product.builder()
                 .id(1L)
                 .price(1000L)
-                .orderItems(List.of())  // orderItems 비어 있음
                 .createdAt("2025-04-10T12:00:00")
                 .build();
 
-        when(productRepository.findByIds(List.of(1L)))
-                .thenReturn(List.of(product));
+        when(productMapper.extractProductIds(request)).thenReturn(List.of(1L));
+        when(productRepository.findByIds(List.of(1L))).thenReturn(List.of(product));
 
-        // when
-        ProductTotalPriceResponse response = productService.calculateTotalPrice(request);
+        when(orderItemRepository.findById(1L))
+                .thenThrow(new ResourceNotFoundException("OrderItem not found: 1"));
 
-        // then
-        assertThat(response.totalPrice()).isEqualTo(0L);
+        // when & then
+        assertThrows(ResourceNotFoundException.class, () -> productService.calculateTotalPrice(request));
     }
 
     @Test
@@ -210,14 +261,16 @@ class ProductServiceTest {
         ProductOptionKeyDto item = new ProductOptionKeyDto(99L, 1L, 1L);
         List<ProductOptionKeyDto> request = List.of(item);
 
-        when(productRepository.findByIds(List.of(99L)))
-                .thenReturn(List.of());  // 빈 productList
+        List<Long> productIds = List.of(99L);
 
-        // when
-        ProductTotalPriceResponse response = productService.calculateTotalPrice(request);
+        when(productMapper.extractProductIds(request)).thenReturn(productIds);
+        when(productRepository.findByIds(productIds)).thenReturn(List.of());
+        when(orderItemRepository.findById(1L))
+                .thenThrow(new ResourceNotFoundException("OrderItem not found: 1"));
 
-        // then
-        assertThat(response.totalPrice()).isEqualTo(0L);
+        // when & then
+        assertThrows(ResourceNotFoundException.class, () ->
+                productService.calculateTotalPrice(request));
     }
 
     @Test
@@ -266,48 +319,29 @@ class ProductServiceTest {
     @DisplayName("성공: 요청된 item(productId + optionId)만 총합 계산")
     void calculateTotalPrice_with_selected_items_only() {
         // given
+        ProductOptionKeyDto item1 = new ProductOptionKeyDto(1L, 11L, 1L);
+        ProductOptionKeyDto item2 = new ProductOptionKeyDto(1L, 12L, 2L);
+        List<ProductOptionKeyDto> request = List.of(item1, item2);
+
+        OrderItem orderItem1 = OrderItem.of(1L, 1L, 11L, 100L, 1);
+        OrderItem orderItem2 = OrderItem.of(1L, 1L, 12L, 300L, 1);
+
         Product product = Product.builder()
                 .id(1L)
-                .price(1000L)
+                .price(0L)
                 .createdAt("2025-04-10T12:00:00")
                 .build();
 
-        OrderItem item1 = OrderItem.builder()
-                .id(1L)
-                .userId(1L)
-                .productId(1L)
-                .optionId(11L)
-                .eachPrice(100L)
-                .quantity(1)
-                .createdAt("2025-04-10T12:00:00")
-                .updatedAt("2025-04-10T12:00:00")
-                .build();
-
-        OrderItem item2 = OrderItem.builder()
-                .id(2L)
-                .userId(1L)
-                .productId(1L)
-                .optionId(12L)
-                .eachPrice(300L)
-                .quantity(1)
-                .createdAt("2025-04-10T12:00:00")
-                .updatedAt("2025-04-10T12:00:00")
-                .build();
-
-        product.setOrderItems(List.of(item1, item2));
-
-        List<ProductOptionKeyDto> request = List.of(
-                new ProductOptionKeyDto(1L, 11L, 1L),  // matches item1
-                new ProductOptionKeyDto(1L, 12L, 2L)   // matches item2
-        );
-
-        when(productRepository.findByIds(anyList())).thenReturn(List.of(product));
+        when(productMapper.extractProductIds(request)).thenReturn(List.of(1L));
+        when(productRepository.findByIds(List.of(1L))).thenReturn(List.of(product));
+        when(orderItemRepository.findById(1L)).thenReturn(orderItem1);
+        when(orderItemRepository.findById(2L)).thenReturn(orderItem2);
 
         // when
-        ProductTotalPriceResponse result = productService.calculateTotalPrice(request);
+        ProductTotalPriceResponse result = productService.calculateTotalPrice(List.of(item1, item2));
 
         // then
-        assertThat(result.totalPrice()).isEqualTo(100L + 300L); // 400
+        assertThat(result.totalPrice()).isEqualTo(100L + 300L);
     }
 
     @Test
@@ -361,31 +395,31 @@ class ProductServiceTest {
     void calculateTotalPrice_success() {
         // given
         ProductOptionKeyDto item1 = new ProductOptionKeyDto(1L, 1L, 1L);
-        ProductOptionKeyDto item2 = new ProductOptionKeyDto(2L, 2L, 1L);
+        ProductOptionKeyDto item2 = new ProductOptionKeyDto(2L, 2L, 2L);
         List<ProductOptionKeyDto> request = List.of(item1, item2);
 
         OrderItem orderItem1 = OrderItem.of(1L, 1L, 1L, 1000L, 2);
         OrderItem orderItem2 = OrderItem.of(1L, 2L, 2L, 2000L, 3);
-        List<OrderItem> orderItems = List.of(orderItem1, orderItem2);
+        orderItem1.setId(1L);
+        orderItem2.setId(2L);
 
         Product product1 = Product.builder()
                 .id(1L)
                 .price(1000L)
-                .orderItems(List.of(orderItem1))
                 .createdAt("2025-04-10T12:00:00")
                 .build();
 
         Product product2 = Product.builder()
                 .id(2L)
                 .price(2000L)
-                .orderItems(List.of(orderItem2))
                 .createdAt("2025-04-10T12:00:00")
                 .build();
 
         List<Long> productIds = List.of(item1.productId(), item2.productId());
         when(productMapper.extractProductIds(request)).thenReturn(productIds);
-
-        when(productRepository.findByIds(List.of(1L, 2L))).thenReturn(List.of(product1, product2));
+        when(productRepository.findByIds(productIds)).thenReturn(List.of(product1, product2));
+        when(orderItemRepository.findById(1L)).thenReturn(orderItem1);
+        when(orderItemRepository.findById(2L)).thenReturn(orderItem2);
 
         // when
         ProductTotalPriceResponse result = productService.calculateTotalPrice(request);

@@ -36,4 +36,15 @@ public class PointHistory {
         this.type = type;
         this.createdAt = createdAt;
     }
+
+    public static PointHistory of(Long userId, Long point, PointHistoryType type) {
+        String now = java.time.LocalDateTime.now().toString();
+        return PointHistory.builder()
+                .userId(userId)
+                .point(point)
+                .type(type)
+                .createdAt(now)
+                .build();
+    }
+
 }
