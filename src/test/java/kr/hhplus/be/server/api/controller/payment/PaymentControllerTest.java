@@ -416,4 +416,93 @@ public class PaymentControllerTest {
                 .andExpect(jsonPath("$.total_price").value(originalPrice - discountAmount));
     }
 
+    @Test
+    @DisplayName("결제 실패 시 모든 상태가 rollback 되어야 한다")
+    void rollback_on_payment_failure() throws Exception {
+        Long userId = 1L;
+        long productPrice = 5000L;
+        int discount = 1000;
+
+        // 유저 포인트 세팅
+        userPointJpaRepository.save(UserPoint.builder()
+                .userId(userId)
+                .point(10000L)
+                .build());
+
+        // 상품 및 옵션 생성
+        Product product = productJpaRepository.save(Product.builder()
+                .name("롤백 테스트 상품").price(productPrice).state(1)
+                .createdAt("2025-04-16T00:00:00").updatedAt("2025-04-16T00:00:00")
+                .build());
+
+        OrderOption option = orderOptionJpaRepository.save(OrderOption.builder()
+                .productId(product.getId())
+                .size(270)
+                .stockQuantity(1)
+                .createdAt("2025-04-16T00:00:00").updatedAt("2025-04-16T00:00:00")
+                .build());
+
+        // 장바구니 아이템
+        OrderItem item = orderItemJpaRepository.save(OrderItem.of(
+                userId, product.getId(), option.getId(), productPrice, 1
+        ));
+
+        // 쿠폰 발급
+        Coupon coupon = couponJpaRepository.save(Coupon.builder()
+                .type(CouponType.FIXED)
+                .description("롤백 쿠폰")
+                .discount(discount)
+                .quantity(10)
+                .issued(1)
+                .expirationDays(7)
+                .createdAt("2025-04-16T00:00:00")
+                .updatedAt("2025-04-16T00:00:00")
+                .build());
+
+        CouponIssue issue = couponIssueJpaRepository.save(CouponIssue.builder()
+                .userId(userId)
+                .couponId(coupon.getId())
+                .state(0)
+                .startAt("2025-04-01T00:00:00")
+                .endAt("2025-04-30T23:59:59")
+                .createdAt("2025-04-01T00:00:00")
+                .updatedAt("2025-04-01T00:00:00")
+                .build());
+
+        // 쿠폰을 사용불가로 만들기 → 결제 실패 유도
+        issue.updateState(1);
+        couponIssueJpaRepository.save(issue);
+
+        String payload = """
+    {
+      "products": [
+        {
+          "id": %d,
+          "optionId": %d,
+          "itemId": %d,
+          "quantity": 1
+        }
+      ],
+      "couponIssueId": %d
+    }
+    """.formatted(product.getId(), option.getId(), item.getId(), issue.getId());
+
+        // when & then
+        mockMvc.perform(post("/v1/payment")
+                        .header("userId", userId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(payload))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("사용할 수 없는 쿠폰입니다."));
+
+        // 검증
+        OrderOption afterOption = orderOptionJpaRepository.findById(option.getId()).get();
+        UserPoint afterPoint = userPointJpaRepository.findById(userId).get();
+        CouponIssue afterIssue = couponIssueJpaRepository.findById(issue.getId()).get();
+
+        assertThat(afterOption.getStockQuantity()).isEqualTo(1);
+        assertThat(afterPoint.getPoint()).isEqualTo(10000L);
+        assertThat(afterIssue.getState()).isEqualTo(1);  // 이미 사용불가였으므로 유지됨
+    }
+
 }

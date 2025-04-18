@@ -7,6 +7,8 @@ import kr.hhplus.be.server.infrastructure.payment.repository.PaymentJpaRepositor
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
+
 @Repository
 @RequiredArgsConstructor
 public class PaymentRepositoryImpl implements PaymentRepository {
@@ -28,4 +30,7 @@ public class PaymentRepositoryImpl implements PaymentRepository {
     public void delete(Long id) {
         paymentJpaRepository.deleteById(id);
     }
+
+    @Override
+    public List<Payment> findAll() { return paymentJpaRepository.findAll(); }
 }
