@@ -8,9 +8,8 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import kr.hhplus.be.server.exception.ErrorResponse;
-import kr.hhplus.be.server.interfaces.api.payment.dto.PaymentCancelResponse;
-import kr.hhplus.be.server.interfaces.api.payment.dto.PaymentRequest;
-import kr.hhplus.be.server.interfaces.api.payment.dto.PaymentResponse;
+import kr.hhplus.be.server.interfaces.api.payment.dto.request.PaymentRequest;
+import kr.hhplus.be.server.interfaces.api.payment.dto.response.PaymentResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 

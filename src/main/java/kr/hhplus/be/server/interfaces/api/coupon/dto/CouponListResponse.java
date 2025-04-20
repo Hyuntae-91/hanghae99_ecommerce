@@ -1,6 +1,6 @@
 package kr.hhplus.be.server.interfaces.api.coupon.dto;
 
-import kr.hhplus.be.server.domain.coupon.dto.GetCouponsServiceResponse;
+import kr.hhplus.be.server.domain.coupon.dto.response.GetCouponsServiceResponse;
 
 import java.util.List;
 

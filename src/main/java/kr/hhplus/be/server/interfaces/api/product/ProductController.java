@@ -1,7 +1,7 @@
 package kr.hhplus.be.server.interfaces.api.product;
 
 import jakarta.validation.Valid;
-import kr.hhplus.be.server.domain.product.ProductService;
+import kr.hhplus.be.server.domain.product.service.ProductService;
 import kr.hhplus.be.server.domain.product.dto.request.ProductListServiceRequest;
 import kr.hhplus.be.server.domain.product.dto.request.ProductServiceRequest;
 import kr.hhplus.be.server.exception.ErrorResponse;

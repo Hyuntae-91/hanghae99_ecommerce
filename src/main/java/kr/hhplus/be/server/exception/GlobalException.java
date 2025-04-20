@@ -1,7 +1,10 @@
 package kr.hhplus.be.server.exception;
 
 import jakarta.validation.ConstraintViolationException;
-import kr.hhplus.be.server.domain.common.exception.ResourceNotFoundException;
+import kr.hhplus.be.server.exception.custom.ConflictException;
+import kr.hhplus.be.server.exception.custom.InvalidCouponUseException;
+import kr.hhplus.be.server.exception.custom.OrderItemNotFoundException;
+import kr.hhplus.be.server.exception.custom.ResourceNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -10,6 +13,22 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
 
 @RestControllerAdvice
 class GlobalException extends ResponseEntityExceptionHandler {
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ErrorResponse> handleIllegalArgumentException(IllegalArgumentException ex) {
+        return buildErrorResponse(400, ex.getMessage(), HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(InvalidCouponUseException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidCouponUseException(InvalidCouponUseException ex) {
+        return buildErrorResponse(400, ex.getMessage(), HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(ConflictException.class)
+    public ResponseEntity<ErrorResponse> handleConflict(ConflictException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(new ErrorResponse(409, ex.getMessage()));
+    }
+
     @ExceptionHandler(ConstraintViolationException.class)
     public ResponseEntity<ErrorResponse> handleConstraintViolation(ConstraintViolationException ex) {
         return buildErrorResponse(400, ex.getMessage(), HttpStatus.BAD_REQUEST);
@@ -21,9 +40,14 @@ class GlobalException extends ResponseEntityExceptionHandler {
                 .body(new ErrorResponse(404, e.getMessage()));
     }
 
+    @ExceptionHandler(OrderItemNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleOrderItemNotFound(OrderItemNotFoundException e) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(new ErrorResponse(404, e.getMessage()));
+    }
+
     @ExceptionHandler(value = Exception.class)
     public ResponseEntity<ErrorResponse> handleException(Exception e) {
-        System.out.println(e.getMessage());
         return ResponseEntity.status(500).body(new ErrorResponse(500, "에러가 발생했습니다."));
     }
 

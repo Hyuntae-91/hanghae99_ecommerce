@@ -40,18 +40,6 @@ public class Product {
     @Column(name = "updated_at")
     private String updatedAt;
 
-    @OneToMany(mappedBy = "productId", fetch = FetchType.LAZY)
-    @Builder.Default
-    private List<OrderItem> orderItems = new ArrayList<>();
-
-    @OneToMany(mappedBy = "productId", fetch = FetchType.LAZY)
-    @Builder.Default
-    private List<OrderOption> orderOptions = new ArrayList<>();
-
-    public void setOrderOptions(List<OrderOption> orderOptions) {
-        this.orderOptions = orderOptions != null ? orderOptions : new ArrayList<>();
-    }
-
     public boolean isDeleted() {
         return state == -1;
     }
@@ -66,9 +54,5 @@ public class Product {
 
     public boolean isHidden() {
         return state == 3;
-    }
-
-    public void setOrderItems(List<OrderItem> orderItems) {
-        this.orderItems = orderItems != null ? orderItems : new ArrayList<>();
     }
 }
