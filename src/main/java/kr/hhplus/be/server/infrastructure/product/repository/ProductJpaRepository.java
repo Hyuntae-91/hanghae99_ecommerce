@@ -19,17 +19,21 @@ public interface ProductJpaRepository extends JpaRepository<Product, Long> {
     Page<Product> findByStateNotIn(List<Integer> excludeStates, Pageable pageable);
 
     @Query(value = """
-    SELECT p.*
-    FROM product p
-    JOIN (
-        SELECT oi.product_id
-        FROM order_item oi
-        JOIN `order` o ON oi.order_id = o.id
-        WHERE o.state = 1
-        GROUP BY oi.product_id
-        ORDER BY SUM(oi.quantity) DESC
-        LIMIT 5
-    ) popular ON p.id = popular.product_id
+        SELECT p.*
+        FROM product p
+        JOIN (
+          SELECT oi.product_id
+          FROM order_item oi
+          WHERE oi.order_id IN (
+              SELECT o.id
+              FROM `order` o
+              WHERE o.state = 1
+                AND o.created_at >= DATE_SUB(NOW(), INTERVAL 3 DAY)
+          )
+          GROUP BY oi.product_id
+          ORDER BY SUM(oi.quantity) DESC
+          LIMIT 5
+        ) best ON p.id = best.product_id;
     """, nativeQuery = true)
     List<Product> findTop5PopularProducts();
 
