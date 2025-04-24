@@ -1,7 +1,5 @@
 package kr.hhplus.be.server.api.controller.payment;
 
-import jakarta.transaction.Transactional;
-import kr.hhplus.be.server.common.AbstractIntegrationTestSupport;
 import kr.hhplus.be.server.domain.coupon.model.Coupon;
 import kr.hhplus.be.server.domain.coupon.model.CouponIssue;
 import kr.hhplus.be.server.domain.coupon.model.CouponType;
