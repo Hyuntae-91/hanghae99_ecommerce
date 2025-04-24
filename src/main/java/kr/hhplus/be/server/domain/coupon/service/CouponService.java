@@ -79,11 +79,17 @@ public class CouponService {
     }
 
     public ApplyCouponDiscountServiceResponse applyCouponDiscount(ApplyCouponDiscountServiceRequest request) {
-        CouponIssue issue = couponIssueRepository.findById(request.couponIssueId());
-        issue.validateUsable();
+        long finalPrice = request.originalPrice();
+        if (request.couponIssueId() != null && request.couponIssueId() > 0) {
+            CouponIssue issue = couponIssueRepository.findById(request.couponIssueId());
+            issue.validateUsable();
 
-        Coupon coupon = couponRepository.findById(issue.getCouponId());
-        long finalPrice = issue.calculateFinalPrice(request.originalPrice(), coupon);
+            Coupon coupon = couponRepository.findById(issue.getCouponId());
+            finalPrice = issue.calculateFinalPrice(finalPrice, coupon);
+
+            issue.markUsed();                      // 도메인 로직
+            couponIssueRepository.save(issue);     // 저장
+        }
         return new ApplyCouponDiscountServiceResponse(finalPrice);
     }
 }

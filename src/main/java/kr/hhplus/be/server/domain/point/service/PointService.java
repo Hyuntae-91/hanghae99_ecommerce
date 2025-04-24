@@ -2,10 +2,8 @@ package kr.hhplus.be.server.domain.point.service;
 
 import kr.hhplus.be.server.domain.point.dto.UserPointMapper;
 import kr.hhplus.be.server.domain.point.dto.request.PointChargeServiceRequest;
-import kr.hhplus.be.server.domain.point.dto.request.PointHistoryServiceRequest;
 import kr.hhplus.be.server.domain.point.dto.request.UserPointServiceRequest;
 import kr.hhplus.be.server.domain.point.dto.response.PointChargeServiceResponse;
-import kr.hhplus.be.server.domain.point.dto.response.PointHistoryServiceResponse;
 import kr.hhplus.be.server.domain.point.dto.response.UserPointServiceResponse;
 import kr.hhplus.be.server.domain.point.model.*;
 import kr.hhplus.be.server.domain.point.repository.PointHistoryRepository;

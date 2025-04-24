@@ -27,6 +27,12 @@ public class OrderOptionRepositoryImpl  implements OrderOptionRepository {
     }
 
     @Override
+    public OrderOption findById(Long optionId) {
+        return orderOptionJpaRepository.findById(optionId)
+                .orElseThrow(() -> new ResourceNotFoundException("OrderOption not found. id = " + optionId));
+    }
+
+    @Override
     public OrderOption save(OrderOption orderOption) {
         return orderOptionJpaRepository.save(orderOption);
     }

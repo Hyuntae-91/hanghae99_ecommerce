@@ -84,4 +84,28 @@ public class CouponIssue {
                 createdAt
         );
     }
+
+    public static CouponIssue of(
+            Long id,
+            Long userId,
+            Long couponId,
+            Integer state,
+            String startAt,
+            String endAt,
+            String createdAt,
+            String updatedAt
+    ) {
+        return new CouponIssue(
+                id,
+                userId,
+                couponId,
+                state,
+                startAt,
+                endAt,
+                0L,
+                createdAt,
+                updatedAt
+        );
+    }
+
 }

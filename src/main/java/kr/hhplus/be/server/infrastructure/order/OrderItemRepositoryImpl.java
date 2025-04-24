@@ -32,11 +32,6 @@ public class OrderItemRepositoryImpl implements OrderItemRepository {
     }
 
     @Override
-    public List<OrderItem> findAllByOrderId(Long orderId) {
-        return orderItemJpaRepository.findAllByOrderId(orderId);
-    }
-
-    @Override
     public List<OrderItem> findCartByUserId(Long userId) {
         return orderItemJpaRepository.findCartByUserId(userId);
     }

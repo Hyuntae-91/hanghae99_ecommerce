@@ -8,4 +8,5 @@ public interface OrderOptionRepository {
     OrderOption getById(Long id);
     OrderOption save(OrderOption orderOption);
     List<OrderOption> findByProductId(Long productId);
+    OrderOption findById(Long optionId);
 }

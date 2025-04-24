@@ -1,10 +1,11 @@
 package kr.hhplus.be.server.application.payment.dto;
 
+import kr.hhplus.be.server.domain.coupon.dto.request.ApplyCouponDiscountServiceRequest;
+import kr.hhplus.be.server.domain.order.dto.request.CreateOrderServiceRequest;
 import kr.hhplus.be.server.domain.product.dto.request.ProductOptionKeyDto;
 import kr.hhplus.be.server.interfaces.api.payment.dto.request.PaymentProductDto;
 import kr.hhplus.be.server.interfaces.api.payment.dto.request.PaymentRequest;
-import org.mapstruct.Mapper;
-import org.mapstruct.Mapping;
+import org.mapstruct.*;
 
 import java.util.List;
 
@@ -26,4 +27,12 @@ public interface PaymentFacadeMapper {
     ProductOptionKeyDto toProductOptionKey(PaymentProductFacadeDto dto);
 
     List<ProductOptionKeyDto> toProductOptionKeyList(List<PaymentProductFacadeDto> dtoList);
+
+    @Mapping(source = "products", target = "options")
+    CreateOrderServiceRequest toServiceRequest(PaymentFacadeRequest request);
+
+    @Mapping(source = "totalPrice", target = "originalPrice")
+    ApplyCouponDiscountServiceRequest toApplyCouponDiscountServiceRequest(Long couponIssueId, Long totalPrice);
+
 }
+

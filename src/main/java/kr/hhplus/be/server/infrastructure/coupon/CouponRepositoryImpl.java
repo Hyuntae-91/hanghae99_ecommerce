@@ -9,13 +9,13 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 @RequiredArgsConstructor
-public class CouponeRepositoryImpl implements CouponRepository {
+public class CouponRepositoryImpl implements CouponRepository {
 
     private final CouponJpaRepository couponJpaRepository;
 
     @Override
     public Coupon findById(Long couponId) {
-        return couponJpaRepository.findById(couponId)
+        return couponJpaRepository.findWithLockById(couponId)
                 .orElseThrow(() -> new ResourceNotFoundException("존재하지 않는 쿠폰입니다."));
     }
 
