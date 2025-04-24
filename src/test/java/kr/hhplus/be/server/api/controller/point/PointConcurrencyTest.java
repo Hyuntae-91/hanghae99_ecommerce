@@ -14,8 +14,10 @@ import org.junit.jupiter.api.TestInstance;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.MediaType;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.web.servlet.MockMvc;
 import org.testcontainers.containers.MySQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -24,6 +26,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadLocalRandom;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 
 
 @SpringBootTest
@@ -53,6 +56,9 @@ public class PointConcurrencyTest {
     }
 
     @Autowired
+    private MockMvc mockMvc;
+
+    @Autowired
     private PointService pointService;
 
     @Autowired
@@ -79,7 +85,15 @@ public class PointConcurrencyTest {
         for (int i = 0; i < threadCount; i++) {
             new Thread(() -> {
                 try {
-                    pointService.charge(new PointChargeServiceRequest(randomUserId, chargeAmount));
+                    mockMvc.perform(put("/v1/point")
+                                    .header("userId", randomUserId)
+                                    .contentType("application/json")
+                                    .content("""
+                                    {
+                                        "point": %d
+                                    }
+                                """.formatted(chargeAmount)))
+                            .andReturn();
                 } catch (Exception e) {
                     System.err.println("충전 중 예외 발생: " + e.getMessage());
                 } finally {
@@ -109,7 +123,15 @@ public class PointConcurrencyTest {
             for (int j = 0; j < THREAD_COUNT_PER_USER; j++) {
                 new Thread(() -> {
                     try {
-                        pointService.charge(new PointChargeServiceRequest(userId, chargeAmount));
+                        mockMvc.perform(put("/v1/point")
+                                        .header("userId", userId)
+                                        .contentType(MediaType.APPLICATION_JSON)
+                                        .content("""
+                                        {
+                                            "point": %d
+                                        }
+                                    """.formatted(chargeAmount)))
+                                .andReturn();
                     } catch (Exception e) {
                         System.err.println("유저 " + userId + " 충전 중 예외 발생: " + e.getMessage());
                     } finally {
@@ -120,7 +142,8 @@ public class PointConcurrencyTest {
         }
         latch.await();
 
-        for (long userId = randomUserId; userId <= USER_COUNT; userId++) {
+        for (int i = 0; i < USER_COUNT; i++) {
+            long userId = randomUserId + i;
             UserPointServiceResponse result = pointService.getUserPoint(new UserPointServiceRequest(userId));
             assertEquals(THREAD_COUNT_PER_USER * chargeAmount, result.point(), "유저 " + userId + " 포인트 불일치");
         }
