@@ -20,6 +20,12 @@ public class PointRepositoryImpl implements PointRepository {
     }
 
     @Override
+    public UserPoint findWithLockByUserId(Long userId) {
+        return userPointJpaRepository.findWithLockByUserId(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+    }
+
+    @Override
     public void savePoint(UserPoint userPoint) { userPointJpaRepository.save(userPoint); }
 
 }

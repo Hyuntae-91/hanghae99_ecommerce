@@ -34,6 +34,9 @@ public class CouponIssue {
     @Column(name = "end_at", nullable = false)
     private String endAt;
 
+    @Version
+    private Long version;
+
     @Column(name = "created_at", nullable = false)
     private String createdAt;
 

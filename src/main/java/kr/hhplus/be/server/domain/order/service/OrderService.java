@@ -15,6 +15,7 @@ import kr.hhplus.be.server.exception.custom.AlreadyOrderedException;
 import kr.hhplus.be.server.exception.custom.OrderItemNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Map;
@@ -36,7 +37,7 @@ public class OrderService {
 
         List<CartItemResponse> cartList = cartItems.stream()
                 .map(item -> item.toCartItemResponse(
-                        orderOptionRepository.getById(item.getOptionId())
+                        orderOptionRepository.findWithLockById(item.getOptionId())
                 ))
                 .toList();
 
@@ -53,8 +54,9 @@ public class OrderService {
         return new CartItemServiceResponse(bundle.items, bundle.totalPrice());
     }
 
+    @Transactional
     public AddCartServiceResponse addCartService(AddCartServiceRequest request) {
-        OrderOption option = orderOptionRepository.getById(request.optionId());
+        OrderOption option = orderOptionRepository.findWithLockById(request.optionId());
         option.validateEnoughStock(request.quantity());
         OrderItem orderItem = OrderItem.of(
                 request.userId(),

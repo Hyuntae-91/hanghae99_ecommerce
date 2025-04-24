@@ -1,5 +1,7 @@
 package kr.hhplus.be.server.domain.coupon.service;
 
+import jakarta.transaction.Transactional;
+import kr.hhplus.be.server.common.annotation.OptimisticRetry;
 import kr.hhplus.be.server.domain.coupon.dto.request.*;
 import kr.hhplus.be.server.domain.coupon.dto.response.ApplyCouponDiscountServiceResponse;
 import kr.hhplus.be.server.domain.coupon.dto.response.CouponIssueDto;
@@ -27,6 +29,7 @@ public class CouponService {
         return CouponIssueDto.from(couponIssue, coupon);
     }
 
+    @Transactional
     public GetCouponsServiceResponse getCoupons(GetCouponsServiceRequest request) {
         Long userId = request.userId();
 
@@ -44,6 +47,7 @@ public class CouponService {
         return new GetCouponsServiceResponse(couponDtoList);
     }
 
+    @Transactional
     public IssueNewCouponServiceResponse issueNewCoupon(IssueNewCouponServiceRequest request) {
         Coupon coupon = couponRepository.findById(request.couponId());
         coupon.validateIssuable();
@@ -78,6 +82,7 @@ public class CouponService {
         couponIssueRepository.save(couponIssue);
     }
 
+    @OptimisticRetry(maxAttempts = 3)
     public ApplyCouponDiscountServiceResponse applyCouponDiscount(ApplyCouponDiscountServiceRequest request) {
         long finalPrice = request.originalPrice();
         if (request.couponIssueId() != null && request.couponIssueId() > 0) {
