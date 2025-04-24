@@ -4,14 +4,23 @@ import kr.hhplus.be.server.domain.coupon.model.Coupon;
 import kr.hhplus.be.server.domain.coupon.model.CouponType;
 import kr.hhplus.be.server.infrastructure.coupon.repository.CouponIssueJpaRepository;
 import kr.hhplus.be.server.infrastructure.coupon.repository.CouponJpaRepository;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
+import org.testcontainers.containers.MySQLContainer;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
+
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.util.concurrent.ThreadLocalRandom;
 
 import java.util.concurrent.CountDownLatch;
 
@@ -20,7 +29,29 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 
 @SpringBootTest
 @AutoConfigureMockMvc
+@Testcontainers
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class CouponConcurrencyTest {
+
+    @Container
+    static final MySQLContainer<?> mysqlContainer = new MySQLContainer<>("mysql:8.0")
+            .withDatabaseName("test")
+            .withUsername("test")
+            .withPassword("test");
+
+    @DynamicPropertySource
+    static void overrideProperties(DynamicPropertyRegistry registry) {
+        if (!mysqlContainer.isRunning()) {
+            mysqlContainer.start();
+        }
+        registry.add("spring.datasource.url", mysqlContainer::getJdbcUrl);
+        registry.add("spring.datasource.username", mysqlContainer::getUsername);
+        registry.add("spring.datasource.password", mysqlContainer::getPassword);
+        registry.add("spring.datasource.driver-class-name", mysqlContainer::getDriverClassName);
+        registry.add("spring.jpa.database-platform", () -> "org.hibernate.dialect.MySQL8Dialect");
+        registry.add("spring.sql.init.mode", () -> "always");
+        registry.add("spring.sql.init.schema-locations", () -> "classpath:schema.sql");
+    }
 
     @Autowired
     private MockMvc mockMvc;
@@ -38,6 +69,7 @@ public class CouponConcurrencyTest {
     @Test
     @DisplayName("동시성 테스트: 20명의 유저가 동시에 쿠폰 발급 요청을 보냈을 때 실제 발급된 수가 초과될 수 있다")
     void concurrent_coupon_issue_test() throws InterruptedException {
+        long randomUserId = ThreadLocalRandom.current().nextInt(1, 100_000);
         // 발급 가능한 수량이 3개인 쿠폰 등록
         Coupon coupon = Coupon.builder()
                 .type(CouponType.FIXED)
@@ -55,8 +87,8 @@ public class CouponConcurrencyTest {
         int threadCount = 20;
         CountDownLatch latch = new CountDownLatch(threadCount);
 
-        for (long userId = 1; userId <= threadCount; userId++) {
-            final long uid = userId;
+        for (int i = 0; i < threadCount; i++) {
+            final long uid = randomUserId + i;
             new Thread(() -> {
                 try {
                     mockMvc.perform(post("/v1/coupon/" + couponId + "/issue")
@@ -76,8 +108,6 @@ public class CouponConcurrencyTest {
         long actualIssued = couponIssueJpaRepository.findAll().stream()
                 .filter(issue -> issue.getCouponId().equals(couponId))
                 .count();
-
-        System.out.println("최종 발급된 쿠폰 수: " + actualIssued);
 
         assertThat(actualIssued).isEqualTo(3);
     }

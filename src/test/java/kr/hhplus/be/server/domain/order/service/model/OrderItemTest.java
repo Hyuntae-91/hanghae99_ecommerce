@@ -65,4 +65,30 @@ class OrderItemTest {
         assertThat(cartItemResponse.size()).isEqualTo(100);
     }
 
+    @Test
+    @DisplayName("성공: 수량 변경")
+    void apply_quantity_success() {
+        // given
+        int newQuantity = 5;
+
+        // when
+        orderItem.applyQuantity(newQuantity);
+
+        // then
+        assertThat(orderItem.getQuantity()).isEqualTo(5);
+    }
+
+    @Test
+    @DisplayName("실패: 수량이 1 미만일 경우 예외 발생")
+    void apply_quantity_fail_when_less_than_one() {
+        // given
+        int invalidQuantity = 0;
+
+        // then
+        assertThatThrownBy(() -> orderItem.applyQuantity(invalidQuantity))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("수량은 1 이상이어야 합니다.");
+    }
+
+
 }

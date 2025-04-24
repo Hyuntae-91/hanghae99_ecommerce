@@ -1,6 +1,7 @@
 package kr.hhplus.be.server.api.controller.coupon;
 
 import kr.hhplus.be.server.domain.coupon.model.CouponIssue;
+import org.junit.jupiter.api.TestInstance;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import kr.hhplus.be.server.domain.coupon.model.Coupon;
@@ -10,14 +11,17 @@ import kr.hhplus.be.server.infrastructure.coupon.repository.CouponIssueJpaReposi
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.http.MediaType;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.transaction.annotation.Transactional;
+import org.testcontainers.containers.MySQLContainer;
+import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
+import java.sql.Connection;
+import java.sql.DriverManager;
 import java.time.LocalDateTime;
+import java.util.concurrent.ThreadLocalRandom;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -27,9 +31,29 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest
 @AutoConfigureMockMvc
-@Transactional
 @Testcontainers
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class CouponControllerTest {
+
+    @Container
+    static final MySQLContainer<?> mysqlContainer = new MySQLContainer<>("mysql:8.0")
+            .withDatabaseName("test")
+            .withUsername("test")
+            .withPassword("test");
+
+    @DynamicPropertySource
+    static void overrideProperties(DynamicPropertyRegistry registry) {
+        if (!mysqlContainer.isRunning()) {
+            mysqlContainer.start();
+        }
+        registry.add("spring.datasource.url", mysqlContainer::getJdbcUrl);
+        registry.add("spring.datasource.username", mysqlContainer::getUsername);
+        registry.add("spring.datasource.password", mysqlContainer::getPassword);
+        registry.add("spring.datasource.driver-class-name", mysqlContainer::getDriverClassName);
+        registry.add("spring.jpa.database-platform", () -> "org.hibernate.dialect.MySQL8Dialect");
+        registry.add("spring.sql.init.mode", () -> "always");
+        registry.add("spring.sql.init.schema-locations", () -> "classpath:schema.sql");
+    }
 
     @Autowired
     private MockMvc mockMvc;
@@ -43,6 +67,8 @@ class CouponControllerTest {
     @Test
     @DisplayName("성공: 쿠폰 발급 후 조회까지 전체 흐름 확인")
     void issue_and_get_coupon_success() throws Exception {
+        long randomUserId = ThreadLocalRandom.current().nextInt(1, 100_000);
+
         // given
         Coupon coupon = couponJpaRepository.save(Coupon.builder()
                 .type(CouponType.FIXED)
@@ -56,18 +82,17 @@ class CouponControllerTest {
                 .build());
 
         Long couponId = coupon.getId();
-        Long userId = 117685L;
 
         // when: 쿠폰 발급 API 요청
         mockMvc.perform(post("/v1/coupon/{couponId}/issue", couponId)
-                        .header("userId", userId))
+                        .header("userId", randomUserId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.couponId").value(couponId))
                 .andExpect(jsonPath("$.type").value("FIXED"))
                 .andExpect(jsonPath("$.discount").value(1000));
 
         // then: 실제 DB에 쿠폰 이슈 존재하는지 검증
-        var allIssues = couponIssueJpaRepository.findAllByUserId(userId);
+        var allIssues = couponIssueJpaRepository.findAllByUserId(randomUserId);
         assertThat(allIssues).hasSize(1);
         assertThat(allIssues.get(0).getCouponId()).isEqualTo(couponId);
 
@@ -80,7 +105,7 @@ class CouponControllerTest {
     @DisplayName("성공: 쿠폰 목록 조회")
     void get_coupons_success() throws Exception {
         // given
-        Long userId = 1L;
+        long randomUserId = ThreadLocalRandom.current().nextInt(1, 100_000);
 
         Coupon coupon = couponJpaRepository.save(Coupon.builder()
                 .type(CouponType.FIXED)
@@ -94,7 +119,7 @@ class CouponControllerTest {
                 .build());
 
         couponIssueJpaRepository.save(CouponIssue.builder()
-                .userId(userId)
+                .userId(randomUserId)
                 .couponId(coupon.getId())
                 .state(0)
                 .startAt(nowPlus(-1))
@@ -105,7 +130,7 @@ class CouponControllerTest {
 
         // when & then
         mockMvc.perform(get("/v1/coupon")
-                        .header("userId", userId))
+                        .header("userId", randomUserId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.coupons").isArray())
                 .andExpect(jsonPath("$.coupons.length()").value(1))
@@ -117,6 +142,7 @@ class CouponControllerTest {
     @DisplayName("실패: 쿠폰 수량 초과로 발급 실패")
     void issue_coupon_fail_when_quantity_exceeded() throws Exception {
         // given
+        long randomUserId = ThreadLocalRandom.current().nextInt(1, 100_000);
         Long couponId = couponJpaRepository.save(Coupon.builder()
                 .type(CouponType.FIXED)
                 .description("초과 쿠폰")
@@ -129,11 +155,9 @@ class CouponControllerTest {
                 .build()
         ).getId();
 
-        Long userId = 1L;
-
         // when & then
         mockMvc.perform(post("/v1/coupon/" + couponId + "/issue")
-                        .header("userId", userId))
+                        .header("userId", randomUserId))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("쿠폰 발급 수량을 초과했습니다."));
     }
@@ -142,7 +166,7 @@ class CouponControllerTest {
     @DisplayName("성공: 만료된 쿠폰은 목록에서 제외된다")
     void get_coupons_excludes_expired_coupons() throws Exception {
         // given
-        Long userId = 95L;
+        long randomUserId = ThreadLocalRandom.current().nextInt(1, 100_000);
 
         // 유효한 쿠폰
         Coupon validCoupon = couponJpaRepository.save(Coupon.builder()
@@ -157,7 +181,7 @@ class CouponControllerTest {
                 .build());
 
         couponIssueJpaRepository.save(CouponIssue.builder()
-                .userId(userId)
+                .userId(randomUserId)
                 .couponId(validCoupon.getId())
                 .state(0)
                 .startAt(nowPlus(-1))
@@ -179,7 +203,7 @@ class CouponControllerTest {
                 .build());
 
         couponIssueJpaRepository.save(CouponIssue.builder()
-                .userId(userId)
+                .userId(randomUserId)
                 .couponId(expiredCoupon.getId())
                 .state(0)
                 .startAt(nowPlus(-10))
@@ -190,7 +214,7 @@ class CouponControllerTest {
 
         // when & then
         mockMvc.perform(get("/v1/coupon")
-                        .header("userId", userId))
+                        .header("userId", randomUserId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.coupons").isArray())
                 .andExpect(jsonPath("$.coupons.length()").value(1))

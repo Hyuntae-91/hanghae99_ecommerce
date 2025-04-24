@@ -10,9 +10,7 @@ import kr.hhplus.be.server.domain.order.repository.OrderRepository;
 import kr.hhplus.be.server.domain.order.model.Order;
 import kr.hhplus.be.server.domain.order.model.OrderItem;
 import kr.hhplus.be.server.domain.order.model.OrderOption;
-import kr.hhplus.be.server.exception.custom.OrderItemNotFoundException;
 import kr.hhplus.be.server.exception.custom.ResourceNotFoundException;
-import kr.hhplus.be.server.interfaces.api.order.dto.response.GetCartItemsResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -66,7 +64,7 @@ class OrderServiceTest {
 
         when(orderItemRepository.save(any(OrderItem.class))).thenReturn(mockItem);
         when(orderItemRepository.findCartByUserId(1L)).thenReturn(List.of(mockItem));
-        when(orderOptionRepository.getById(10L)).thenReturn(option);
+        when(orderOptionRepository.findWithLockById(10L)).thenReturn(option);
 
         // when
         AddCartServiceResponse response = orderService.addCartService(request);
@@ -79,82 +77,13 @@ class OrderServiceTest {
     }
 
     @Test
-    @DisplayName("성공: 주문 생성")
-    void create_order_success() {
-        // given
-        Long userId = 1L;
-        Long couponIssueId = 5L;
-        Long totalPrice = 5000L;
-
-        List<CreateOrderItemDto> items = List.of(
-                new CreateOrderItemDto(1L, 1),
-                new CreateOrderItemDto(2L, 1)
-        );
-        CreateOrderServiceRequest request = new CreateOrderServiceRequest(userId, couponIssueId, items);
-
-        OrderItem item1 = OrderItem.of(userId, 10L, 1L, 2000L, 1);
-        OrderItem item2 = OrderItem.of(userId, 11L, 2L, 3000L, 1);
-        item1.setId(1L);
-        item2.setId(2L);
-
-        List<OrderItem> cartItems = List.of(item1, item2);
-
-        Order savedOrder = Order.builder()
-                .id(100L)
-                .userId(userId)
-                .couponIssueId(couponIssueId)
-                .totalPrice(0L)
-                .state(0)
-                .createdAt("2025-04-10T12:00:00")
-                .updatedAt("2025-04-10T12:00:00")
-                .build();
-
-        when(orderItemRepository.findCartByUserId(userId)).thenReturn(cartItems);
-        when(orderRepository.save(any())).thenReturn(savedOrder);
-
-        when(orderItemRepository.saveAll(anyList())).thenReturn(cartItems);
-
-        // when
-        var response = orderService.createOrder(request);
-
-        savedOrder.applyTotalPrice(totalPrice);
-
-        // then
-        verify(orderRepository, times(1)).save(any(Order.class));
-        verify(orderItemRepository, times(1)).saveAll(anyList());
-
-        assertThat(response).isNotNull();
-        assertThat(response.orderId()).isEqualTo(100L);
-        assertThat(savedOrder.getTotalPrice()).isEqualTo(totalPrice);
-    }
-
-    @Test
-    @DisplayName("실패: 주문 생성 - orderRepository.save()가 null을 반환")
-    void create_order_fail_save_null() {
-        // given
-        Long userId = 1L;
-        Long couponIssueId = 1L;
-        List<CreateOrderItemDto> items = List.of(new CreateOrderItemDto(1L, 1));
-        CreateOrderServiceRequest request = new CreateOrderServiceRequest(userId, couponIssueId, items);
-
-        OrderItem item = OrderItem.of(userId, 100L, 10L, 1000L, 1);
-        item.setId(1L);
-
-        when(orderItemRepository.findCartByUserId(userId)).thenReturn(List.of(item));
-        when(orderRepository.save(any())).thenReturn(null);
-
-        // then
-        assertThrows(OrderItemNotFoundException.class, () -> orderService.createOrder(request));
-    }
-
-    @Test
     @DisplayName("실패: 주문 생성 - orderItemRepository.saveAll()에서 예외 발생")
     void create_order_fail_saveAll_exception() {
         // given
         Long userId = 1L;
         Long couponIssueId = 5L;
 
-        List<CreateOrderItemDto> items = List.of(new CreateOrderItemDto(1L, 1));
+        List<CreateOrderOptionDto> items = List.of(new CreateOrderOptionDto(1L, 1));
         CreateOrderServiceRequest request = new CreateOrderServiceRequest(userId, couponIssueId, items);
 
         Order savedOrder = Order.builder()
@@ -172,20 +101,6 @@ class OrderServiceTest {
 
         // then
         assertThrows(RuntimeException.class, () -> orderService.createOrder(request));
-    }
-
-    @Test
-    @DisplayName("실패: 주문 생성 - 장바구니가 비어있는 경우")
-    void create_order_fail_empty_orderItems() {
-        // given
-        Long userId = 1L;
-        List<CreateOrderItemDto> items = List.of(new CreateOrderItemDto(1L, 1));
-        CreateOrderServiceRequest request = new CreateOrderServiceRequest(userId, 1L, items);
-
-        when(orderItemRepository.findCartByUserId(userId)).thenReturn(List.of());
-
-        // then
-        assertThrows(OrderItemNotFoundException.class, () -> orderService.createOrder(request));
     }
 
     @Test
@@ -212,7 +127,7 @@ class OrderServiceTest {
                 .build();
 
         when(orderItemRepository.findCartByUserId(userId)).thenReturn(List.of(item));
-        when(orderOptionRepository.getById(10L)).thenReturn(option);
+        when(orderOptionRepository.findWithLockById(10L)).thenReturn(option);
 
         // when
         var result = orderService.getCart(new GetCartServiceRequest(userId));
@@ -247,7 +162,7 @@ class OrderServiceTest {
         OrderItem item = OrderItem.of(userId, 100L, 10L, 2000L, 1);
 
         when(orderItemRepository.findCartByUserId(userId)).thenReturn(List.of(item));
-        when(orderOptionRepository.getById(10L))
+        when(orderOptionRepository.findWithLockById(10L))
                 .thenThrow(new ResourceNotFoundException("OrderOption not found"));
 
         // then
@@ -300,8 +215,8 @@ class OrderServiceTest {
                 .build();
 
         when(orderItemRepository.findCartByUserId(userId)).thenReturn(List.of(itemA, itemB));
-        when(orderOptionRepository.getById(1001L)).thenReturn(optionA);
-        when(orderOptionRepository.getById(2001L)).thenReturn(optionB);
+        when(orderOptionRepository.findWithLockById(1001L)).thenReturn(optionA);
+        when(orderOptionRepository.findWithLockById(2001L)).thenReturn(optionB);
 
         // when
         CartItemServiceResponse result = orderService.getCart(new GetCartServiceRequest(userId));

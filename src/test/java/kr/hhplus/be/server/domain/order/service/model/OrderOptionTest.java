@@ -181,7 +181,7 @@ class OrderOptionTest {
                 .build();
 
         assertThatThrownBy(() -> orderOption.decreaseStock(3))
-                .isInstanceOf(IllegalStateException.class)
+                .isInstanceOf(ConflictException.class)
                 .hasMessageContaining("재고가 부족합니다");
     }
 
