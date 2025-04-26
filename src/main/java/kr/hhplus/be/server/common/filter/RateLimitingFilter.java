@@ -3,6 +3,7 @@ package kr.hhplus.be.server.common.filter;
 import jakarta.servlet.*;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
@@ -14,6 +15,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @Order(3)
 @Slf4j
 @Component
+@ConditionalOnProperty(name = "ratelimit.enabled", havingValue = "true", matchIfMissing = true)
 public class RateLimitingFilter implements Filter {
 
     private final Map<String, RequestTracker> requestCounts = new ConcurrentHashMap<>();
