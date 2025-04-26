@@ -11,6 +11,4 @@ public interface PaymentRepository {
     Payment findById(Long id);
 
     List<Payment> findAll();
-
-    void delete(Long id);
 }

@@ -7,13 +7,19 @@ import kr.hhplus.be.server.infrastructure.point.repository.PointHistoryJpaReposi
 import kr.hhplus.be.server.infrastructure.point.repository.UserPointJpaRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.transaction.annotation.Transactional;
+import org.testcontainers.containers.MySQLContainer;
+import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
+
+import java.util.concurrent.ThreadLocalRandom;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -21,9 +27,29 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest
 @AutoConfigureMockMvc
-@Transactional
 @Testcontainers
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class PointControllerTest {
+
+    @Container
+    static final MySQLContainer<?> mysqlContainer = new MySQLContainer<>("mysql:8.0")
+            .withDatabaseName("test")
+            .withUsername("test")
+            .withPassword("test");
+
+    @DynamicPropertySource
+    static void overrideProperties(DynamicPropertyRegistry registry) {
+        if (!mysqlContainer.isRunning()) {
+            mysqlContainer.start();
+        }
+        registry.add("spring.datasource.url", mysqlContainer::getJdbcUrl);
+        registry.add("spring.datasource.username", mysqlContainer::getUsername);
+        registry.add("spring.datasource.password", mysqlContainer::getPassword);
+        registry.add("spring.datasource.driver-class-name", mysqlContainer::getDriverClassName);
+        registry.add("spring.jpa.database-platform", () -> "org.hibernate.dialect.MySQL8Dialect");
+        registry.add("spring.sql.init.mode", () -> "always");
+        registry.add("spring.sql.init.schema-locations", () -> "classpath:schema.sql");
+    }
 
     @Autowired
     private MockMvc mockMvc;
@@ -37,19 +63,19 @@ public class PointControllerTest {
     @Test
     @DisplayName("성공: 포인트 조회")
     void get_point_success() throws Exception {
-        Long userId = 1L;
+        long randomUserId = ThreadLocalRandom.current().nextInt(1, 100_000);
         Long point = 100000L;
 
         UserPoint userPoint = UserPoint.builder()
-                .userId(userId)
+                .userId(randomUserId)
                 .point(point)
                 .build();
         userPointJpaRepository.save(userPoint);
 
         mockMvc.perform(get("/v1/point")
-                        .header("userId", userId))
+                        .header("userId", randomUserId))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.userId").value(userId))
+                .andExpect(jsonPath("$.userId").value(randomUserId))
                 .andExpect(jsonPath("$.point").value(point));
 
     }
@@ -57,12 +83,12 @@ public class PointControllerTest {
     @Test
     @DisplayName("성공: 포인트 충전")
     void put_point_charge_success() throws Exception {
-        Long userId = 1L;
+        long randomUserId = ThreadLocalRandom.current().nextInt(1, 100_000);
         Long point = 100000L;
         Long chargeAmount = 500L;
 
         UserPoint userPoint = UserPoint.builder()
-                .userId(userId)
+                .userId(randomUserId)
                 .point(point)
                 .build();
         userPointJpaRepository.save(userPoint);
@@ -74,7 +100,7 @@ public class PointControllerTest {
         """, chargeAmount);
 
         mockMvc.perform(put("/v1/point")
-                        .header("userId", userId)
+                        .header("userId", randomUserId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(payload))
                 .andExpect(status().isOk())
@@ -86,21 +112,21 @@ public class PointControllerTest {
     @DisplayName("성공: 포인트 히스토리 조회")
     void get_point_history_success() throws Exception {
         // given
-        Long userId = 1L;
+        long randomUserId = ThreadLocalRandom.current().nextInt(1, 100_000);
 
         // 포인트 및 히스토리 저장
         UserPoint userPoint = UserPoint.builder()
-                .userId(userId)
+                .userId(randomUserId)
                 .point(1000L)
                 .build();
         userPointJpaRepository.save(userPoint);
 
-        pointHistoryJpaRepository.save(PointHistory.of(userId, 100L, PointHistoryType.CHARGE));
-        pointHistoryJpaRepository.save(PointHistory.of(userId, 50L, PointHistoryType.USE));
+        pointHistoryJpaRepository.save(PointHistory.of(randomUserId, 100L, PointHistoryType.CHARGE));
+        pointHistoryJpaRepository.save(PointHistory.of(randomUserId, 50L, PointHistoryType.USE));
 
         // when & then
         mockMvc.perform(get("/v1/point/history")
-                        .header("userId", userId)
+                        .header("userId", randomUserId)
                         .param("page", "1")
                         .param("size", "10")
                         .param("sort", "createdAt"))
@@ -115,6 +141,7 @@ public class PointControllerTest {
     @DisplayName("실패: 포인트 충전 0보다 커야한다")
     void put_point_charge_fail() throws Exception {
         Long chargeAmount = 0L;
+        long randomUserId = ThreadLocalRandom.current().nextInt(1, 100_000);
 
         String payload = String.format("""
             {
@@ -123,7 +150,7 @@ public class PointControllerTest {
         """, chargeAmount);
 
         mockMvc.perform(put("/v1/point")
-                        .header("userId", 1)
+                        .header("userId", randomUserId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(payload))
                 .andExpect(status().isBadRequest());
@@ -156,6 +183,7 @@ public class PointControllerTest {
     @Test
     @DisplayName("실패: 포인트 충전 금액이 음수일 경우 400 반환")
     void put_point_charge_fail_negative_amount() throws Exception {
+        long randomUserId = ThreadLocalRandom.current().nextInt(1, 100_000);
         String payload = """
             {
               "point": -500
@@ -163,7 +191,7 @@ public class PointControllerTest {
         """;
 
         mockMvc.perform(put("/v1/point")
-                        .header("userId", 1)
+                        .header("userId", randomUserId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(payload))
                 .andExpect(status().isBadRequest());

@@ -18,11 +18,11 @@ class ApplyCouponDiscountServiceRequestTest {
     }
 
     @Test
-    @DisplayName("실패: couponIssueId가 null인 경우")
-    void fail_when_couponIssueId_is_null() {
-        assertThatThrownBy(() -> new ApplyCouponDiscountServiceRequest(null, 5000L))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("couponIssueId는 1 이상이어야 합니다.");
+    @DisplayName("성공: couponIssueId가 null인 경우")
+    void success_when_couponIssueId_is_null() {
+        ApplyCouponDiscountServiceRequest request = new ApplyCouponDiscountServiceRequest(null, 5000L);
+        assertThat(request.couponIssueId()).isNull();
+        assertThat(request.originalPrice()).isEqualTo(5000L);
     }
 
     @Test

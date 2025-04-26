@@ -1,9 +1,6 @@
 package kr.hhplus.be.server.domain.point.model;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.*;
 
 @Getter
@@ -41,5 +38,9 @@ public class UserPoint {
         if (this.point < amount) {
             throw new IllegalStateException("포인트가 부족합니다.");
         }
+    }
+
+    public static UserPoint of(Long userId, Long point) {
+        return new UserPoint(userId, point);
     }
 }

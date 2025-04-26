@@ -16,14 +16,20 @@ public class OrderOptionRepositoryImpl  implements OrderOptionRepository {
     private final OrderOptionJpaRepository orderOptionJpaRepository;
 
     @Override
-    public OrderOption getById(Long id) {
-        return orderOptionJpaRepository.findById(id)
+    public OrderOption findWithLockById(Long id) {
+        return orderOptionJpaRepository.findWithLockById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("OrderOption not found. id = " + id));
     }
 
     @Override
     public List<OrderOption> findByProductId(Long productId) {
         return orderOptionJpaRepository.findByProductId(productId);
+    }
+
+    @Override
+    public OrderOption findById(Long optionId) {
+        return orderOptionJpaRepository.findById(optionId)
+                .orElseThrow(() -> new ResourceNotFoundException("OrderOption not found. id = " + optionId));
     }
 
     @Override

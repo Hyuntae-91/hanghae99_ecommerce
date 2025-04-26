@@ -3,7 +3,6 @@ package kr.hhplus.be.server.api.controller.payment;
 import kr.hhplus.be.server.domain.coupon.model.Coupon;
 import kr.hhplus.be.server.domain.coupon.model.CouponIssue;
 import kr.hhplus.be.server.domain.coupon.model.CouponType;
-import kr.hhplus.be.server.domain.order.model.Order;
 import kr.hhplus.be.server.domain.order.model.OrderItem;
 import kr.hhplus.be.server.domain.order.model.OrderOption;
 import kr.hhplus.be.server.domain.payment.repository.PaymentRepository;
@@ -16,22 +15,55 @@ import kr.hhplus.be.server.infrastructure.order.repository.OrderJpaRepository;
 import kr.hhplus.be.server.infrastructure.order.repository.OrderOptionJpaRepository;
 import kr.hhplus.be.server.infrastructure.point.repository.UserPointJpaRepository;
 import kr.hhplus.be.server.infrastructure.product.repository.ProductJpaRepository;
+import kr.hhplus.be.server.testhelper.RepositoryCleaner;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
+import org.testcontainers.containers.MySQLContainer;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ThreadLocalRandom;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 
+@ActiveProfiles("local")
 @SpringBootTest
 @AutoConfigureMockMvc
+@Testcontainers
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class PaymentConcurrencyTest {
+
+    @Container
+    static final MySQLContainer<?> mysqlContainer = new MySQLContainer<>("mysql:8.0")
+            .withDatabaseName("test")
+            .withUsername("test")
+            .withPassword("test");
+
+    @DynamicPropertySource
+    static void overrideProperties(DynamicPropertyRegistry registry) {
+        if (!mysqlContainer.isRunning()) {
+            mysqlContainer.start();
+        }
+        registry.add("spring.datasource.url", mysqlContainer::getJdbcUrl);
+        registry.add("spring.datasource.username", mysqlContainer::getUsername);
+        registry.add("spring.datasource.password", mysqlContainer::getPassword);
+        registry.add("spring.datasource.driver-class-name", mysqlContainer::getDriverClassName);
+        registry.add("spring.jpa.database-platform", () -> "org.hibernate.dialect.MySQL8Dialect");
+        registry.add("spring.sql.init.mode", () -> "always");
+        registry.add("spring.sql.init.schema-locations", () -> "classpath:schema.sql");
+    }
 
     @Autowired
     private MockMvc mockMvc;
@@ -60,10 +92,19 @@ public class PaymentConcurrencyTest {
     @Autowired
     private OrderJpaRepository orderJpaRepository;
 
+    @Autowired
+    private RepositoryCleaner repositoryCleaner;
+
+    @BeforeEach
+    void cleanup() {
+        repositoryCleaner.cleanUpAll();
+    }
+
     @Test
     @DisplayName("동시성 테스트: 재고 1개인 상품에 대해 10명이 동시에 결제 시도할 경우 1명만 성공해야 한다")
     void concurrent_payment_exceed_stock() throws Exception {
         // given
+        long randomUserId = ThreadLocalRandom.current().nextInt(1, 100_000);
         long productPrice = 2000L;
         Long productId, optionId;
 
@@ -83,7 +124,8 @@ public class PaymentConcurrencyTest {
         int threadCount = 10;
         CountDownLatch latch = new CountDownLatch(threadCount);
 
-        for (long userId = 1; userId <= threadCount; userId++) {
+        for (int i = 0; i <= threadCount; i++) {
+            long userId = randomUserId + i;
             // 포인트 충분히 저장
             userPointJpaRepository.save(UserPoint.builder().userId(userId).point(10_000L).build());
 
@@ -135,11 +177,11 @@ public class PaymentConcurrencyTest {
     @DisplayName("동시성 테스트: 단일 유저가 동일 상품에 대해 여러 번 결제 시도 시 포인트 부족으로 1건만 성공")
     void concurrent_payment_single_user_exceed_point() throws Exception {
         // given
-        long userId = 1L;
+        long randomUserId = ThreadLocalRandom.current().nextInt(1, 100_000);
         long productPrice = 2000L;
 
         // 포인트는 1번만 결제 가능하게 설정
-        userPointJpaRepository.save(UserPoint.builder().userId(userId).point(2000L).build());
+        userPointJpaRepository.save(UserPoint.builder().userId(randomUserId).point(2000L).build());
 
         Product product = productJpaRepository.save(Product.builder()
                 .name("동시성 상품-단일 유저 포인트 초과")
@@ -157,7 +199,7 @@ public class PaymentConcurrencyTest {
                 .updatedAt("2025-04-16T00:00:00")
                 .build());
 
-        OrderItem item = orderItemJpaRepository.save(OrderItem.of(userId, product.getId(), option.getId(), productPrice, 1));
+        OrderItem item = orderItemJpaRepository.save(OrderItem.of(randomUserId, product.getId(), option.getId(), productPrice, 1));
 
         String payload = """
         {
@@ -180,7 +222,7 @@ public class PaymentConcurrencyTest {
             new Thread(() -> {
                 try {
                     mockMvc.perform(post("/v1/payment")
-                                    .header("userId", userId)
+                                    .header("userId", randomUserId)
                                     .contentType(MediaType.APPLICATION_JSON)
                                     .content(payload))
                             .andReturn();
@@ -204,12 +246,12 @@ public class PaymentConcurrencyTest {
     @Test
     @DisplayName("동시성 테스트: 하나의 쿠폰에 대해 여러 결제 시도 시 1건만 성공해야 한다")
     void concurrent_payment_with_single_coupon() throws Exception {
-        long userId = 1L;
+        long randomUserId = ThreadLocalRandom.current().nextInt(1, 100_000);
         long productPrice = 2000L;
         int threadCount = 5;
 
         // 유저 포인트 충분히 지급
-        userPointJpaRepository.save(UserPoint.builder().userId(userId).point(10000L).build());
+        userPointJpaRepository.save(UserPoint.builder().userId(randomUserId).point(10000L).build());
 
         // 상품 생성
         Product product = productJpaRepository.save(Product.builder()
@@ -224,7 +266,7 @@ public class PaymentConcurrencyTest {
                 .build());
 
         // 장바구니 항목 저장
-        OrderItem item = orderItemJpaRepository.save(OrderItem.of(userId, product.getId(), option.getId(), productPrice, 1));
+        OrderItem item = orderItemJpaRepository.save(OrderItem.of(randomUserId, product.getId(), option.getId(), productPrice, 1));
 
         // 쿠폰 생성
         Coupon coupon = couponJpaRepository.save(Coupon.builder()
@@ -238,7 +280,7 @@ public class PaymentConcurrencyTest {
                 .build());
 
         CouponIssue issue = couponIssueJpaRepository.save(CouponIssue.builder()
-                .userId(userId)
+                .userId(randomUserId)
                 .couponId(coupon.getId())
                 .state(0)
                 .startAt("2025-04-01T00:00:00")
@@ -267,7 +309,7 @@ public class PaymentConcurrencyTest {
             new Thread(() -> {
                 try {
                     mockMvc.perform(post("/v1/payment")
-                                    .header("userId", userId)
+                                    .header("userId", randomUserId)
                                     .contentType(MediaType.APPLICATION_JSON)
                                     .content(payload))
                             .andReturn();
@@ -290,11 +332,13 @@ public class PaymentConcurrencyTest {
     @Test
     @DisplayName("동시성 테스트: 동일 주문 ID로 여러 번 결제를 시도하면 1건만 성공해야 한다")
     void concurrent_payment_same_order_id() throws Exception {
-        long userId = 1L;
+        long randomUserId = ThreadLocalRandom.current().nextInt(1, 100_000);
         long productPrice = 2000L;
 
-        userPointJpaRepository.save(UserPoint.builder().userId(userId).point(10000L).build());
+        // 포인트 생성
+        userPointJpaRepository.save(UserPoint.builder().userId(randomUserId).point(10000L).build());
 
+        // 상품 및 옵션
         Product product = productJpaRepository.save(Product.builder()
                 .name("중복 결제 방지 상품")
                 .price(productPrice)
@@ -311,14 +355,12 @@ public class PaymentConcurrencyTest {
                 .updatedAt("2025-04-16T00:00:00")
                 .build());
 
-        OrderItem item = orderItemJpaRepository.save(OrderItem.of(
-                userId, product.getId(), option.getId(), productPrice, 1
-        ));
+        OrderItem item = OrderItem.of(
+                randomUserId, product.getId(), option.getId(), productPrice, 1
+        );
+        item = orderItemJpaRepository.save(item); // 저장 후 itemId 확보
 
-        Order order = orderJpaRepository.save(Order.of(
-                userId, null, productPrice, 0
-        ));
-
+        // 고정 payload (동일 orderItemId 사용)
         String payload = """
         {
           "products": [
@@ -340,7 +382,7 @@ public class PaymentConcurrencyTest {
             new Thread(() -> {
                 try {
                     mockMvc.perform(post("/v1/payment")
-                                    .header("userId", userId)
+                                    .header("userId", randomUserId)
                                     .contentType(MediaType.APPLICATION_JSON)
                                     .content(payload))
                             .andReturn();
@@ -360,6 +402,5 @@ public class PaymentConcurrencyTest {
 
         assertThat(successCount).isEqualTo(1);
     }
-
 
 }

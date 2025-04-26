@@ -2,12 +2,10 @@ package kr.hhplus.be.server.domain.order.model;
 
 import jakarta.persistence.*;
 import kr.hhplus.be.server.domain.order.dto.response.CartItemResponse;
-import kr.hhplus.be.server.domain.product.model.Product;
 import lombok.*;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.List;
 
 @Getter
 @Entity
@@ -47,6 +45,13 @@ public class OrderItem {
 
     public void applyOrderId(Long orderId) {
         this.orderId = orderId;
+    }
+
+    public void applyQuantity(int quantity) {
+        if (quantity < 1) {
+            throw new IllegalArgumentException("수량은 1 이상이어야 합니다.");
+        }
+        this.quantity = quantity;
     }
 
     public static OrderItem of(

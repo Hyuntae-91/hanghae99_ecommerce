@@ -34,6 +34,9 @@ public class CouponIssue {
     @Column(name = "end_at", nullable = false)
     private String endAt;
 
+    @Version
+    private Long version;
+
     @Column(name = "created_at", nullable = false)
     private String createdAt;
 
@@ -84,4 +87,28 @@ public class CouponIssue {
                 createdAt
         );
     }
+
+    public static CouponIssue of(
+            Long id,
+            Long userId,
+            Long couponId,
+            Integer state,
+            String startAt,
+            String endAt,
+            String createdAt,
+            String updatedAt
+    ) {
+        return new CouponIssue(
+                id,
+                userId,
+                couponId,
+                state,
+                startAt,
+                endAt,
+                0L,
+                createdAt,
+                updatedAt
+        );
+    }
+
 }

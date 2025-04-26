@@ -20,7 +20,7 @@ public class PointHistoryService {
     private final PointHistoryRepository pointHistoryRepository;
     private final UserPointMapper userPointMapper;
 
-    @Transactional(readOnly = true)
+    @Transactional
     public List<PointHistoryServiceResponse> getHistory(PointHistoryServiceRequest reqService) {
         UserPoint user = pointRepository.get(reqService.userId());
         return userPointMapper.toHistoryListResponse(

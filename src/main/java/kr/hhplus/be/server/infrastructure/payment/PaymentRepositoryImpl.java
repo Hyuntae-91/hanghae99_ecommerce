@@ -27,10 +27,5 @@ public class PaymentRepositoryImpl implements PaymentRepository {
     }
 
     @Override
-    public void delete(Long id) {
-        paymentJpaRepository.deleteById(id);
-    }
-
-    @Override
     public List<Payment> findAll() { return paymentJpaRepository.findAll(); }
 }

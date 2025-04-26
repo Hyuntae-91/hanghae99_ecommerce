@@ -11,8 +11,6 @@ public interface OrderItemRepository {
 
     List<OrderItem> findByIds(List<Long> orderItemIds);
 
-    List<OrderItem> findAllByOrderId(Long orderId);
-
     List<OrderItem> findCartByUserId(Long userId);
 
     List<OrderItem> saveAll(List<OrderItem> orderItems);

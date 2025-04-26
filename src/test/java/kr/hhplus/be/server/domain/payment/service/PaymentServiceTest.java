@@ -1,10 +1,8 @@
 package kr.hhplus.be.server.domain.payment.service;
 
 import kr.hhplus.be.server.domain.coupon.repository.CouponIssueRepository;
-import kr.hhplus.be.server.domain.coupon.model.CouponIssue;
 import kr.hhplus.be.server.domain.order.repository.OrderItemRepository;
 import kr.hhplus.be.server.domain.order.repository.OrderOptionRepository;
-import kr.hhplus.be.server.domain.order.model.Order;
 import kr.hhplus.be.server.domain.order.model.OrderItem;
 import kr.hhplus.be.server.domain.order.model.OrderOption;
 import kr.hhplus.be.server.domain.payment.repository.PaymentRepository;
@@ -76,7 +74,7 @@ class PaymentServiceTest {
         Payment payment = Payment.of(orderId, 1, totalPrice);
 
         when(orderItemRepository.findByIds(List.of(orderItemId))).thenReturn(List.of(item));
-        when(orderOptionRepository.getById(optionId)).thenReturn(option);
+        when(orderOptionRepository.findWithLockById(optionId)).thenReturn(option);
         when(userPointRepository.get(userId)).thenReturn(userPoint);
         when(paymentRepository.save(any(Payment.class))).thenReturn(payment);
 
@@ -84,7 +82,7 @@ class PaymentServiceTest {
                 userId,
                 totalPrice,
                 1L,
-                List.of(new PaymentOrderItemDto(orderId, orderItemId, optionId))
+                List.of(new PaymentOrderItemDto(orderId, orderItemId,  optionId, 1))
         );
 
         // when
@@ -116,14 +114,14 @@ class PaymentServiceTest {
         Payment failedPayment = Payment.of(orderId, -1, 1000L);
 
         when(orderItemRepository.findByIds(List.of(orderItemId))).thenReturn(List.of(item));
-        when(orderOptionRepository.getById(optionId)).thenReturn(option);
+        when(orderOptionRepository.findWithLockById(optionId)).thenReturn(option);
         when(paymentRepository.save(any())).thenReturn(failedPayment);
 
         PaymentServiceRequest request = new PaymentServiceRequest(
                 userId,
                 1000L,
                 1L,
-                List.of(new PaymentOrderItemDto(orderId, orderItemId, optionId))
+                List.of(new PaymentOrderItemDto(orderId, orderItemId,  optionId, 1))
         );
 
         // when
@@ -157,7 +155,7 @@ class PaymentServiceTest {
                 .when(userPoint).validateUsableBalance(anyLong());
 
         when(orderItemRepository.findByIds(List.of(orderItemId))).thenReturn(List.of(item));
-        when(orderOptionRepository.getById(optionId)).thenReturn(option);
+        when(orderOptionRepository.findWithLockById(optionId)).thenReturn(option);
         when(userPointRepository.get(userId)).thenReturn(userPoint);
         when(paymentRepository.save(any())).thenReturn(Payment.of(orderId, -1, 1000L));
 
@@ -165,7 +163,7 @@ class PaymentServiceTest {
                 userId,
                 1000L,
                 1L,
-                List.of(new PaymentOrderItemDto(orderId, orderItemId, optionId))
+                List.of(new PaymentOrderItemDto(orderId, orderItemId, optionId, 1))
         );
 
 
@@ -196,7 +194,7 @@ class PaymentServiceTest {
                 userId,
                 totalPrice,
                 1L,
-                List.of(new PaymentOrderItemDto(orderId, 999L, 888L))
+                List.of(new PaymentOrderItemDto(orderId, 999L,888L, 1))
         );
 
         // when
@@ -205,52 +203,6 @@ class PaymentServiceTest {
         // then
         assertThat(response.status()).isEqualTo(-1);
         verify(paymentRepository, times(1)).save(any(Payment.class));
-    }
-
-    @Test
-    @DisplayName("성공: 쿠폰 사용 처리")
-    void pay_success_with_coupon_usage() {
-        // given
-        Long userId = 1L;
-        Long orderId = 10L;
-        Long orderItemId = 100L;
-        Long optionId = 200L;
-        Long couponIssueId = 300L;
-        long totalPrice = 5000L;
-
-        OrderItem item = mock(OrderItem.class);
-        when(item.getId()).thenReturn(orderItemId);
-        when(item.getOptionId()).thenReturn(optionId);
-        when(item.getQuantity()).thenReturn(1);
-
-        OrderOption option = mock(OrderOption.class);
-        when(option.getStockQuantity()).thenReturn(10);
-
-        UserPoint point = mock(UserPoint.class);
-        when(point.getPoint()).thenReturn(10000L);
-
-        CouponIssue couponIssue = mock(CouponIssue.class);
-
-        when(orderItemRepository.findByIds(List.of(orderItemId))).thenReturn(List.of(item));
-        when(orderOptionRepository.getById(optionId)).thenReturn(option);
-        when(userPointRepository.get(userId)).thenReturn(point);
-        when(couponIssueRepository.findById(couponIssueId)).thenReturn(couponIssue);
-        when(paymentRepository.save(any())).thenReturn(Payment.of(orderId, 1, totalPrice));
-
-        PaymentServiceRequest request = new PaymentServiceRequest(
-                userId,
-                totalPrice,
-                couponIssueId,
-                List.of(new PaymentOrderItemDto(orderId, orderItemId, optionId))
-        );
-
-        // when
-        PaymentServiceResponse response = paymentService.pay(request);
-
-        // then
-        verify(couponIssue, times(1)).markUsed();
-        verify(couponIssueRepository, times(1)).save(couponIssue);
-        assertThat(response.status()).isEqualTo(1);
     }
 
     @Test
@@ -275,7 +227,7 @@ class PaymentServiceTest {
         when(userPoint.getPoint()).thenReturn(10000L);
 
         when(orderItemRepository.findByIds(any())).thenReturn(List.of(item));
-        when(orderOptionRepository.getById(optionId)).thenReturn(option);
+        when(orderOptionRepository.findWithLockById(optionId)).thenReturn(option);
         when(userPointRepository.get(any())).thenReturn(userPoint);
         when(paymentRepository.save(any())).thenReturn(Payment.of(orderId, 1, totalPrice));
 
@@ -283,7 +235,7 @@ class PaymentServiceTest {
                 userId,
                 totalPrice,
                 null,
-                List.of(new PaymentOrderItemDto(orderId, orderItemId, optionId))
+                List.of(new PaymentOrderItemDto(orderId, orderItemId, optionId, 1))
         );
 
         // when
@@ -295,43 +247,33 @@ class PaymentServiceTest {
         verify(couponIssueRepository, never()).save(any());
     }
 
-
     @Test
-    @DisplayName("실패: 쿠폰 상태가 사용 불가 상태인 경우")
-    void pay_fail_coupon_invalid_state() {
+    @DisplayName("실패: 요청된 수량과 주문 항목의 수량이 다를 경우")
+    void fail_when_quantity_mismatch() {
         // given
         Long userId = 1L;
         Long orderId = 10L;
         Long orderItemId = 100L;
         Long optionId = 200L;
-        Long couponIssueId = 300L;
         long totalPrice = 5000L;
 
         OrderItem item = mock(OrderItem.class);
         when(item.getId()).thenReturn(orderItemId);
         when(item.getOptionId()).thenReturn(optionId);
-        when(item.getQuantity()).thenReturn(1);
+        when(item.getQuantity()).thenReturn(3);  // 실제 수량과 다르게 세팅
 
         OrderOption option = mock(OrderOption.class);
         when(option.getStockQuantity()).thenReturn(10);
 
-        UserPoint userPoint = mock(UserPoint.class);
-        when(userPoint.getPoint()).thenReturn(10000L);
-
-        CouponIssue issue = mock(CouponIssue.class);
-        doThrow(new IllegalStateException("사용할 수 없는 쿠폰입니다.")).when(issue).markUsed();
-
         when(orderItemRepository.findByIds(any())).thenReturn(List.of(item));
-        when(orderOptionRepository.getById(optionId)).thenReturn(option);
-        when(userPointRepository.get(any())).thenReturn(userPoint);
-        when(couponIssueRepository.findById(couponIssueId)).thenReturn(issue);
+        when(orderOptionRepository.findWithLockById(optionId)).thenReturn(option);
         when(paymentRepository.save(any())).thenReturn(Payment.of(orderId, -1, totalPrice));
 
         PaymentServiceRequest request = new PaymentServiceRequest(
                 userId,
                 totalPrice,
-                couponIssueId,
-                List.of(new PaymentOrderItemDto(orderId, orderItemId, optionId))
+                null,
+                List.of(new PaymentOrderItemDto(orderId, orderItemId, optionId, 1))  // 수량 다르게 설정
         );
 
         // when
@@ -339,7 +281,6 @@ class PaymentServiceTest {
 
         // then
         assertThat(response.status()).isEqualTo(-1);
-        verify(issue).markUsed();
     }
 
 }

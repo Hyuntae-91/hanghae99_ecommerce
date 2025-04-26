@@ -5,5 +5,6 @@ import kr.hhplus.be.server.domain.point.model.UserPoint;
 
 public interface PointRepository {
     UserPoint get(Long userId);
+    UserPoint findWithLockByUserId(Long userId);
     void savePoint(UserPoint userPoint);
 }

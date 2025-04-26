@@ -42,8 +42,8 @@ class PointServiceTest {
         void getPoint_success() {
             // given
             Long userId = 1L;
-            UserPoint userPoint = new UserPoint(userId, 500L);
-            when(pointRepository.get(any())).thenReturn(userPoint);
+            UserPoint userPoint = UserPoint.of(userId, 500L);
+            when(pointRepository.findWithLockByUserId(any())).thenReturn(userPoint);
             when(userPointMapper.toUserPointResponse(userPoint)).thenReturn(
                     UserPointMapper.INSTANCE.toUserPointResponse(userPoint)
             );
@@ -61,7 +61,7 @@ class PointServiceTest {
         void getPoint_userNotFound() {
             // given
             Long userId = 1L;
-            when(pointRepository.get(any()))
+            when(pointRepository.findWithLockByUserId(any()))
                     .thenThrow(new ResourceNotFoundException("User not found"));
 
             // when & then
@@ -69,7 +69,7 @@ class PointServiceTest {
                     .isInstanceOf(ResourceNotFoundException.class)
                     .hasMessageContaining("User not found");
 
-            verify(pointRepository).get(any());
+            verify(pointRepository).findWithLockByUserId(any());
             verifyNoMoreInteractions(pointRepository);
         }
     }
@@ -85,14 +85,14 @@ class PointServiceTest {
             Long currentPoint = 100L;
             Long chargeAmount = 200L;
 
-            UserPoint userPoint = new UserPoint(userId, currentPoint);
+            UserPoint userPoint = UserPoint.of(userId, currentPoint);
 
-            when(pointRepository.get(any())).thenReturn(userPoint);
+            when(pointRepository.findWithLockByUserId(any())).thenReturn(userPoint);
             doNothing().when(pointHistoryRepository)
                     .saveHistory(eq(userId), eq(chargeAmount), eq(PointHistoryType.CHARGE));
             when(userPointMapper.toUserPointChargeResponse(userPoint)).thenReturn(
                     UserPointMapper.INSTANCE.toUserPointChargeResponse(
-                            new UserPoint(userId, currentPoint + chargeAmount)
+                            UserPoint.of(userId, currentPoint + chargeAmount)
                     )
             );
 
@@ -112,7 +112,7 @@ class PointServiceTest {
         void charge_userNotFound() {
             // given
             Long userId = 999999L;
-            when(pointRepository.get(any()))
+            when(pointRepository.findWithLockByUserId(any()))
                     .thenThrow(new ResourceNotFoundException("User not found"));
 
             // when & then
@@ -120,7 +120,7 @@ class PointServiceTest {
                     .isInstanceOf(ResourceNotFoundException.class)
                     .hasMessageContaining("User not found");
 
-            verify(pointRepository).get(any());
+            verify(pointRepository).findWithLockByUserId(any());
             verifyNoMoreInteractions(pointRepository);
         }
 
@@ -130,8 +130,8 @@ class PointServiceTest {
             // given
             Long userId = 1L;
             Long chargeAmount = 100L;
-            UserPoint userPoint = new UserPoint(userId, 100L);
-            when(pointRepository.get(any())).thenReturn(userPoint);
+            UserPoint userPoint = UserPoint.of(userId, 100L);
+            when(pointRepository.findWithLockByUserId(any())).thenReturn(userPoint);
             doThrow(new RuntimeException("DB Error")).when(pointHistoryRepository).saveHistory(
                     userId, chargeAmount, PointHistoryType.CHARGE
             );
@@ -141,7 +141,7 @@ class PointServiceTest {
                     .isInstanceOf(RuntimeException.class)
                     .hasMessageContaining("DB Error");
 
-            verify(pointRepository).get(any());
+            verify(pointRepository).findWithLockByUserId(any());
             verify(pointRepository).savePoint(userPoint);
             verify(pointHistoryRepository).saveHistory(userId, chargeAmount, PointHistoryType.CHARGE);
         }

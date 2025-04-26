@@ -159,6 +159,43 @@ class CouponServiceTest {
                 .hasMessageContaining("쿠폰 사용 가능 기간이 아닙니다");
     }
 
+    @Test
+    @DisplayName("성공: 쿠폰 없이 할인 적용 요청")
+    void apply_coupon_discount_without_coupon_success() {
+        ApplyCouponDiscountServiceRequest request = new ApplyCouponDiscountServiceRequest(null, 5000L);
+        var result = couponService.applyCouponDiscount(request);
+
+        assertThat(result).isNotNull();
+        assertThat(result.finalPrice()).isEqualTo(5000L);
+    }
+
+    @Test
+    @DisplayName("실패: 할인 요청 originalPrice가 음수일 경우 예외 발생")
+    void apply_coupon_discount_invalid_originalPrice() {
+        assertThatThrownBy(() -> new ApplyCouponDiscountServiceRequest(null, -100L))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("originalPrice는 0 이상이어야 합니다.");
+    }
+
+    @Test
+    @DisplayName("성공: 쿠폰 정상 적용 시 할인 금액 계산")
+    void apply_coupon_discount_success() {
+        Coupon coupon = new Coupon(1L, CouponType.FIXED, "desc", 1000, 10, 0, 7, now(), now());
+        CouponIssue issue = CouponIssue.builder()
+                .id(1L).userId(1L).couponId(1L).state(0)
+                .startAt(nowPlus(-1)).endAt(nowPlus(1))
+                .createdAt(now()).updatedAt(now()).build();
+
+        when(couponIssueRepository.findById(1L)).thenReturn(issue);
+        when(couponRepository.findById(1L)).thenReturn(coupon);
+
+        var result = couponService.applyCouponDiscount(new ApplyCouponDiscountServiceRequest(1L, 5000L));
+        assertThat(result.finalPrice()).isEqualTo(4000L);
+    }
+
+
+
+
     private String now() {
         return LocalDateTime.now().toString();
     }

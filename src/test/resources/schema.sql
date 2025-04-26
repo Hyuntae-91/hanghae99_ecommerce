@@ -115,6 +115,7 @@ CREATE TABLE coupon_issue
     state tinyint not null comment '-1: 만료, 0: 미사용, 1: 사용',
     start_at timestamp,
     end_at timestamp,
+    version    bigint    default 0                 not null,
     created_at timestamp default CURRENT_TIMESTAMP not null,
     updated_at timestamp default CURRENT_TIMESTAMP not null on update CURRENT_TIMESTAMP
 )

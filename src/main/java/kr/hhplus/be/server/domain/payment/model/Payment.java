@@ -18,6 +18,7 @@ public class Payment {
     @Column(name = "order_id", nullable = false)
     private Long orderId;
 
+    @Getter
     @Column(nullable = false)
     private Integer state;  // 1 = 결제 완료, -1 = 결제 취소 등
 

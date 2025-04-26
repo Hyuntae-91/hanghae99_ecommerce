@@ -1,11 +1,10 @@
 package kr.hhplus.be.server.domain.point.service;
 
+import kr.hhplus.be.server.common.annotation.OptimisticRetry;
 import kr.hhplus.be.server.domain.point.dto.UserPointMapper;
 import kr.hhplus.be.server.domain.point.dto.request.PointChargeServiceRequest;
-import kr.hhplus.be.server.domain.point.dto.request.PointHistoryServiceRequest;
 import kr.hhplus.be.server.domain.point.dto.request.UserPointServiceRequest;
 import kr.hhplus.be.server.domain.point.dto.response.PointChargeServiceResponse;
-import kr.hhplus.be.server.domain.point.dto.response.PointHistoryServiceResponse;
 import kr.hhplus.be.server.domain.point.dto.response.UserPointServiceResponse;
 import kr.hhplus.be.server.domain.point.model.*;
 import kr.hhplus.be.server.domain.point.repository.PointHistoryRepository;
@@ -24,14 +23,14 @@ public class PointService {
     private final PointHistoryRepository pointHistoryRepository;
     private final UserPointMapper userPointMapper;
 
-    @Transactional(readOnly = true)
+    @Transactional
     public UserPointServiceResponse getUserPoint(UserPointServiceRequest reqService) {
-        return userPointMapper.toUserPointResponse(pointRepository.get(reqService.userId()));
+        return userPointMapper.toUserPointResponse(pointRepository.findWithLockByUserId(reqService.userId()));
     }
 
     @Transactional
     public PointChargeServiceResponse charge(PointChargeServiceRequest reqService) {
-        UserPoint userPoint = pointRepository.get(reqService.userId());
+        UserPoint userPoint = pointRepository.findWithLockByUserId(reqService.userId());
         userPoint.charge(reqService.point());
         pointRepository.savePoint(userPoint);
         pointHistoryRepository.saveHistory(reqService.userId(), reqService.point(), PointHistoryType.CHARGE);
