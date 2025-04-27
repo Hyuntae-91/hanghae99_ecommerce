@@ -17,13 +17,7 @@ import org.springframework.stereotype.Service;
 @Service
 @RequiredArgsConstructor
 public class PaymentService {
-
-    private final OrderItemRepository orderItemRepository;
-    private final OrderOptionRepository orderOptionRepository;
     private final PaymentRepository paymentRepository;
-    private final PointRepository userPointRepository;
-    private final PointHistoryRepository pointHistoryRepository;
-    private final CouponIssueRepository couponIssueRepository;
 
     private PaymentServiceResponse toResponse(Payment payment) {
         return new PaymentServiceResponse(
@@ -38,18 +32,9 @@ public class PaymentService {
     public PaymentServiceResponse pay(PaymentServiceRequest request) {
         Long userId = request.userId();
         long totalPrice = request.totalPrice();
-        Long orderId = request.orderItems().get(0).orderId();
+        long orderId = request.orderId();
 
         try {
-            // 포인트 검증
-            UserPoint userPoint = userPointRepository.get(userId);
-            userPoint.validateUsableBalance(totalPrice);
-
-            // 포인트 차감 및 이력 저장
-            userPoint.use(totalPrice);
-            userPointRepository.savePoint(userPoint);
-            pointHistoryRepository.saveHistory(userId, totalPrice, PointHistoryType.USE);
-
             // 결제 처리
             Payment payment = Payment.of(orderId, 1, totalPrice);
             Payment savedPayment = paymentRepository.save(payment);

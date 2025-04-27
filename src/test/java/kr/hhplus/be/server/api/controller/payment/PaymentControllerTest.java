@@ -283,8 +283,8 @@ public class PaymentControllerTest {
                         .header("userId", randomUserId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(payload))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value(-1));
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("포인트가 부족합니다."));
     }
 
     @Test

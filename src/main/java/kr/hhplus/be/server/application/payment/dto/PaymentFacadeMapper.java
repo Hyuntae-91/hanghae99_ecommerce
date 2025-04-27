@@ -34,5 +34,7 @@ public interface PaymentFacadeMapper {
     @Mapping(source = "totalPrice", target = "originalPrice")
     ApplyCouponDiscountServiceRequest toApplyCouponDiscountServiceRequest(Long couponIssueId, Long totalPrice);
 
+
+
 }
 
