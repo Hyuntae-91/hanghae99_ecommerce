@@ -160,7 +160,7 @@ class ProductControllerTest {
         """;
 
         // when & then
-        mockMvc.perform(get("/v1/products")
+        mockMvc.perform(get("/v1/products?page=1&size=10&sort=createdAt")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(payload))
                 .andExpect(status().isOk())

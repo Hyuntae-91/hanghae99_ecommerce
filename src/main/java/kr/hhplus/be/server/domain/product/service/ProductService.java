@@ -55,7 +55,7 @@ public class ProductService {
 
     @Cacheable(
             value = "productList",
-            key = "'productList::page=' + #requestDto.page() + ':size=' + #requestDto.size() + ':sort=' + #requestDto.sort()"
+            key = "'productList::page=' + #root.args[0].page() + ':size=' + #root.args[0].size() + ':sort=' + #root.args[0].sort()"
     )
     public List<ProductServiceResponse> getProductList(ProductListServiceRequest requestDto) {
         List<Integer> excludedStates = List.of(
@@ -75,7 +75,6 @@ public class ProductService {
                 .toList();
     }
 
-    @Cacheable(value = "bestProducts", key = "'bestProducts'")
     public List<ProductServiceResponse> getBestProducts() {
         log.info("============ " + "[Cache miss]" + " ============");
         List<Product> bestProducts = productRepository.findPopularTop5();
@@ -85,7 +84,6 @@ public class ProductService {
                 .toList();
     }
 
-    @CachePut(value = "bestProducts", key = "'bestProducts'")
     public List<ProductServiceResponse> calculateBestProducts() {
         log.info("[Scheduler] Calculating best products");
         List<Product> bestProducts = productRepository.findPopularTop5();
