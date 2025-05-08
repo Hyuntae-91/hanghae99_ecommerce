@@ -96,7 +96,7 @@ class CouponTest {
                 .updatedAt(now())
                 .build();
 
-        when(couponRepository.findById(1L)).thenReturn(coupon);
+        when(couponRepository.findWithLockById(1L)).thenReturn(coupon);
 
         // then
         assertThatThrownBy(() ->

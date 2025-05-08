@@ -15,6 +15,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
+import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.MySQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -41,6 +42,10 @@ public class CouponConcurrencyTest {
             .withUsername("test")
             .withPassword("test");
 
+    @Container
+    static final GenericContainer<?> redisContainer = new GenericContainer<>("redis:7.0")
+            .withExposedPorts(6379);
+
     @DynamicPropertySource
     static void overrideProperties(DynamicPropertyRegistry registry) {
         if (!mysqlContainer.isRunning()) {
@@ -53,6 +58,10 @@ public class CouponConcurrencyTest {
         registry.add("spring.jpa.database-platform", () -> "org.hibernate.dialect.MySQL8Dialect");
         registry.add("spring.sql.init.mode", () -> "always");
         registry.add("spring.sql.init.schema-locations", () -> "classpath:schema.sql");
+
+        redisContainer.start();
+        registry.add("spring.data.redis.host", redisContainer::getHost);
+        registry.add("spring.data.redis.port", () -> redisContainer.getMappedPort(6379));
     }
 
     @Autowired
@@ -112,5 +121,51 @@ public class CouponConcurrencyTest {
                 .count();
 
         assertThat(actualIssued).isEqualTo(3);
+    }
+
+    @Test
+    @DisplayName("동시성 테스트: 20명의 유저가 동시에 쿠폰 발급 요청을 보냈을 때 실제 발급된 수가 초과될 수 있다")
+    void concurrent_coupon_issue_test_2() throws InterruptedException {
+        long randomUserId = ThreadLocalRandom.current().nextInt(1, 100_000);
+        // 발급 가능한 수량이 15개인 쿠폰 등록
+        Coupon coupon = Coupon.builder()
+                .type(CouponType.FIXED)
+                .description("동시성 테스트 쿠폰")
+                .discount(1000)
+                .quantity(15)
+                .issued(0)
+                .expirationDays(7)
+                .createdAt(nowPlus(-1))
+                .updatedAt(nowPlus(1))
+                .build();
+        Coupon getCoupon = couponJpaRepository.save(coupon);
+        Long couponId = getCoupon.getId();
+
+        int threadCount = 20;
+        CountDownLatch latch = new CountDownLatch(threadCount);
+
+        for (int i = 0; i < threadCount; i++) {
+            final long uid = randomUserId + i;
+            new Thread(() -> {
+                try {
+                    mockMvc.perform(post("/v1/coupon/" + couponId + "/issue")
+                                    .header("userId", uid)
+                                    .contentType(MediaType.APPLICATION_JSON))
+                            .andReturn();
+                } catch (Exception e) {
+                    System.out.println("에러 발생: " + e.getMessage());
+                } finally {
+                    latch.countDown();
+                }
+            }).start();
+        }
+
+        latch.await();
+
+        long actualIssued = couponIssueJpaRepository.findAll().stream()
+                .filter(issue -> issue.getCouponId().equals(couponId))
+                .count();
+
+        assertThat(actualIssued).isEqualTo(15);
     }
 }

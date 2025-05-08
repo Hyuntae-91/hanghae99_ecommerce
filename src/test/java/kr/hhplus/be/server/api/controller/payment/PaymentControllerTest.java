@@ -22,10 +22,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
+import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.MySQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -39,6 +41,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+@ActiveProfiles("local")
 @SpringBootTest
 @AutoConfigureMockMvc
 @Testcontainers
@@ -50,6 +53,10 @@ public class PaymentControllerTest {
             .withDatabaseName("test")
             .withUsername("test")
             .withPassword("test");
+
+    @Container
+    static final GenericContainer<?> redisContainer = new GenericContainer<>("redis:7.0")
+            .withExposedPorts(6379);
 
     @DynamicPropertySource
     static void overrideProperties(DynamicPropertyRegistry registry) {
@@ -63,6 +70,10 @@ public class PaymentControllerTest {
         registry.add("spring.jpa.database-platform", () -> "org.hibernate.dialect.MySQL8Dialect");
         registry.add("spring.sql.init.mode", () -> "always");
         registry.add("spring.sql.init.schema-locations", () -> "classpath:schema.sql");
+
+        redisContainer.start();
+        registry.add("spring.data.redis.host", redisContainer::getHost);
+        registry.add("spring.data.redis.port", () -> redisContainer.getMappedPort(6379));
     }
 
     @Autowired
@@ -91,6 +102,10 @@ public class PaymentControllerTest {
 
     @Autowired
     private CouponIssueJpaRepository couponIssueJpaRepository;
+
+    private String nowPlus(int days) {
+        return java.time.LocalDateTime.now().plusDays(days).toString();
+    }
 
     @Test
     @Transactional
@@ -283,8 +298,8 @@ public class PaymentControllerTest {
                         .header("userId", randomUserId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(payload))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value(-1));
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("포인트가 부족합니다."));
     }
 
     @Test
@@ -414,8 +429,8 @@ public class PaymentControllerTest {
                 .userId(randomUserId)
                 .couponId(coupon.getId())
                 .state(0)
-                .startAt("2025-04-01T00:00:00")
-                .endAt("2025-04-30T23:59:59")
+                .startAt(nowPlus(-3))
+                .endAt(nowPlus(3))
                 .createdAt("2025-04-01T00:00:00")
                 .updatedAt("2025-04-01T00:00:00")
                 .build());

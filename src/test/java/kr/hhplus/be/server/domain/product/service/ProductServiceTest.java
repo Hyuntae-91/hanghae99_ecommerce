@@ -39,7 +39,12 @@ class ProductServiceTest {
         orderItemRepository = mock(OrderItemRepository.class);
         orderOptionRepository = mock(OrderOptionRepository.class);
         productMapper = mock(ProductMapper.class);
-        productService = new ProductService(productRepository, orderItemRepository, orderOptionRepository, productMapper);
+        productService = new ProductService(
+                productRepository,
+                orderItemRepository,
+                orderOptionRepository,
+                productMapper
+        );
     }
 
     @Test
@@ -186,17 +191,6 @@ class ProductServiceTest {
         assertThat(result.totalPrice()).isEqualTo(100L + 300L);
     }
 
-
-    @Test
-    @DisplayName("성공: 인기 상품 점수 재계산")
-    void calculate_best_products_success() {
-        // when
-        productService.calculateBestProducts();
-
-        // then
-        verify(productRepository, times(1)).recalculateBestProducts();
-    }
-
     @Test
     @DisplayName("실패: 인기 상품 조회 - 인기 상품 없음")
     void get_best_products_fail_empty() {
@@ -208,16 +202,6 @@ class ProductServiceTest {
 
         // then
         assertThat(result).isEmpty();
-    }
-
-    @Test
-    @DisplayName("실패: 인기 상품 점수 재계산 중 예외 발생")
-    void calculate_best_products_fail_by_exception() {
-        // given
-        doThrow(new RuntimeException("DB error")).when(productRepository).recalculateBestProducts();
-
-        // then
-        assertThrows(RuntimeException.class, () -> productService.calculateBestProducts());
     }
 
     @Test

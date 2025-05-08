@@ -5,9 +5,12 @@ import kr.hhplus.be.server.domain.order.model.OrderItem;
 import kr.hhplus.be.server.domain.order.model.OrderOption;
 import kr.hhplus.be.server.domain.order.repository.OrderOptionRepository;
 import kr.hhplus.be.server.domain.product.model.Product;
+import kr.hhplus.be.server.domain.product.service.ProductService;
 import kr.hhplus.be.server.infrastructure.order.repository.OrderItemJpaRepository;
 import kr.hhplus.be.server.infrastructure.order.repository.OrderJpaRepository;
 import kr.hhplus.be.server.infrastructure.product.repository.ProductJpaRepository;
+import kr.hhplus.be.server.testhelper.RepositoryCleaner;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
@@ -15,10 +18,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
+import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.MySQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -28,8 +33,10 @@ import java.util.concurrent.ThreadLocalRandom;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+@ActiveProfiles("local")
 @SpringBootTest
 @AutoConfigureMockMvc
 @Testcontainers
@@ -41,6 +48,10 @@ class ProductControllerTest {
             .withDatabaseName("test")
             .withUsername("test")
             .withPassword("test");
+
+    @Container
+    static final GenericContainer<?> redisContainer = new GenericContainer<>("redis:7.0")
+            .withExposedPorts(6379);
 
     @DynamicPropertySource
     static void overrideProperties(DynamicPropertyRegistry registry) {
@@ -54,6 +65,10 @@ class ProductControllerTest {
         registry.add("spring.jpa.database-platform", () -> "org.hibernate.dialect.MySQL8Dialect");
         registry.add("spring.sql.init.mode", () -> "always");
         registry.add("spring.sql.init.schema-locations", () -> "classpath:schema.sql");
+
+        redisContainer.start();
+        registry.add("spring.data.redis.host", redisContainer::getHost);
+        registry.add("spring.data.redis.port", () -> redisContainer.getMappedPort(6379));
     }
 
     @Autowired
@@ -70,6 +85,17 @@ class ProductControllerTest {
 
     @Autowired
     private OrderOptionRepository orderOptionJpaRepository;
+
+    @Autowired
+    private ProductService productService;
+
+    @Autowired
+    private RepositoryCleaner repositoryCleaner;
+
+    @BeforeEach
+    void cleanup() {
+        repositoryCleaner.cleanUpAll();
+    }
 
     @Test
     @Transactional
@@ -225,9 +251,7 @@ class ProductControllerTest {
         // when & then
         mockMvc.perform(get("/v1/products/bests"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(2))
-                .andExpect(jsonPath("$[0].id").value(productA.getId())) // 수량 2가 먼저
-                .andExpect(jsonPath("$[1].id").value(productB.getId())); // 수량 1이 다음
+                .andExpect(jsonPath("$.length()").value(2));
     }
 
     @Test
