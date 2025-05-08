@@ -12,6 +12,8 @@ import kr.hhplus.be.server.domain.coupon.model.CouponIssue;
 import kr.hhplus.be.server.domain.coupon.repository.CouponIssueRepository;
 import kr.hhplus.be.server.domain.coupon.repository.CouponRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -30,6 +32,7 @@ public class CouponService {
     }
 
     @Transactional
+    @Cacheable(value = "getCoupon", key = "#root.args[0].userId()")
     public GetCouponsServiceResponse getCoupons(GetCouponsServiceRequest request) {
         Long userId = request.userId();
 
@@ -49,6 +52,7 @@ public class CouponService {
 
     @DistributedLock(key = "'lock:coupon:fifo:' + #arg0.couponId")
     @Transactional
+    @CacheEvict(value = "getCoupon", key = "#root.args[0].userId()")
     public IssueNewCouponServiceResponse issueNewCoupon(IssueNewCouponServiceRequest request) {
         Coupon coupon = couponRepository.findWithLockById(request.couponId());
         coupon.validateIssuable();
