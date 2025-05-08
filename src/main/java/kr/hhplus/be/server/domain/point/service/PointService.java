@@ -1,6 +1,6 @@
 package kr.hhplus.be.server.domain.point.service;
 
-import kr.hhplus.be.server.common.annotation.OptimisticRetry;
+import kr.hhplus.be.server.common.aop.lock.DistributedLock;
 import kr.hhplus.be.server.domain.point.dto.UserPointMapper;
 import kr.hhplus.be.server.domain.point.dto.request.PointChargeServiceRequest;
 import kr.hhplus.be.server.domain.point.dto.request.PointUseServiceRequest;
@@ -33,6 +33,7 @@ public class PointService {
     }
 
     @Transactional
+    @DistributedLock(key = "'lock:point:user:' + #arg0.userId")
     public PointChargeServiceResponse charge(PointChargeServiceRequest reqService) {
         UserPoint userPoint = pointRepository.findWithLockByUserId(reqService.userId());
         userPoint.charge(reqService.point());
@@ -41,6 +42,7 @@ public class PointService {
 
         return userPointMapper.toUserPointChargeResponse(userPoint);
     }
+
     @Transactional
     public PointUseServiceResponse use(PointUseServiceRequest reqService) {
         UserPoint userPoint = pointRepository.findWithLockByUserId(reqService.userId());

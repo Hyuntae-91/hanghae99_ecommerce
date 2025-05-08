@@ -1,7 +1,7 @@
 package kr.hhplus.be.server.domain.coupon.service;
 
 import jakarta.transaction.Transactional;
-import kr.hhplus.be.server.common.annotation.OptimisticRetry;
+import kr.hhplus.be.server.common.aop.lock.DistributedLock;
 import kr.hhplus.be.server.domain.coupon.dto.request.*;
 import kr.hhplus.be.server.domain.coupon.dto.response.ApplyCouponDiscountServiceResponse;
 import kr.hhplus.be.server.domain.coupon.dto.response.CouponIssueDto;
@@ -47,6 +47,7 @@ public class CouponService {
         return new GetCouponsServiceResponse(couponDtoList);
     }
 
+    @DistributedLock(key = "'lock:coupon:fifo:' + #arg0.couponId")
     @Transactional
     public IssueNewCouponServiceResponse issueNewCoupon(IssueNewCouponServiceRequest request) {
         Coupon coupon = couponRepository.findWithLockById(request.couponId());

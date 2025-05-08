@@ -3,6 +3,7 @@ package kr.hhplus.be.server.application.payment;
 import jakarta.transaction.Transactional;
 import kr.hhplus.be.server.application.payment.dto.PaymentFacadeMapperImpl;
 import kr.hhplus.be.server.application.payment.dto.PaymentFacadeRequest;
+import kr.hhplus.be.server.common.aop.lock.DistributedLock;
 import kr.hhplus.be.server.domain.coupon.service.CouponService;
 import kr.hhplus.be.server.domain.coupon.dto.response.ApplyCouponDiscountServiceResponse;
 import kr.hhplus.be.server.domain.order.dto.response.CreateOrderServiceResponse;
@@ -37,6 +38,7 @@ public class PaymentFacade {
     private final ApplicationEventPublisher eventPublisher;
     private final PaymentFacadeMapper paymentMapper = new PaymentFacadeMapperImpl();
 
+    @DistributedLock(key = "'lock:point:user:' + #arg0.userId")
     @Transactional
     public PaymentServiceResponse pay(PaymentFacadeRequest request) {
         // 1. CREATE ORDER
