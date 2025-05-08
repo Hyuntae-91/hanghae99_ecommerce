@@ -11,6 +11,8 @@ import kr.hhplus.be.server.domain.payment.dto.request.PaymentOrderItemDto;
 import kr.hhplus.be.server.domain.payment.dto.request.PaymentServiceRequest;
 import kr.hhplus.be.server.domain.payment.dto.response.PaymentServiceResponse;
 import kr.hhplus.be.server.domain.payment.event.PaymentCompletedEvent;
+import kr.hhplus.be.server.domain.point.dto.request.PointUseServiceRequest;
+import kr.hhplus.be.server.domain.point.dto.request.PointValidateUsableRequest;
 import kr.hhplus.be.server.domain.point.service.PointService;
 import kr.hhplus.be.server.domain.product.service.ProductService;
 import kr.hhplus.be.server.application.payment.dto.PaymentFacadeMapper;
@@ -52,12 +54,16 @@ public class PaymentFacade {
         // 4. 계산된 총 가격 order 테이블에 업데이트
         orderService.updateTotalPrice(new UpdateOrderServiceRequest(orderIdDto.orderId(), finalTotalPrice.finalPrice()));
 
-        // 5. pay
+        // 5. UserPoint validation & use
+        pointService.validateUsable(new PointValidateUsableRequest(request.userId(), totalPrice.totalPrice()));
+        pointService.use(new PointUseServiceRequest(request.userId(), totalPrice.totalPrice()));
+
+        // 6. pay
         List<PaymentOrderItemDto> orderAndOptionIds = request.products().stream()
                 .map(p -> new PaymentOrderItemDto(orderIdDto.orderId(), p.itemId(), p.optionId(), p.quantity()))
                 .toList();
         PaymentServiceRequest paymentServiceRequest = new PaymentServiceRequest(
-                request.userId(), finalTotalPrice.finalPrice(), request.couponIssueId(), orderAndOptionIds
+                request.userId(), finalTotalPrice.finalPrice(), orderIdDto.orderId()
         );
         PaymentServiceResponse result = paymentService.pay(paymentServiceRequest);
 

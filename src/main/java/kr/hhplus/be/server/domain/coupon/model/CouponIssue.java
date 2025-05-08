@@ -45,7 +45,7 @@ public class CouponIssue {
 
     public void updateState(int state) {
         this.state = state;
-        this.updatedAt = java.time.LocalDateTime.now().toString(); // 업데이트 시간도 갱신
+        this.updatedAt = LocalDateTime.now().toString(); // 업데이트 시간도 갱신
     }
 
     public void validateUsable() {
@@ -53,7 +53,7 @@ public class CouponIssue {
             throw new InvalidCouponUseException("사용할 수 없는 쿠폰입니다.");
         }
 
-        String now = java.time.LocalDateTime.now().toString();
+        String now = LocalDateTime.now().toString();
         if (now.compareTo(this.startAt) < 0 || now.compareTo(this.endAt) > 0) {
             throw new InvalidCouponUseException("쿠폰 사용 가능 기간이 아닙니다.");
         }

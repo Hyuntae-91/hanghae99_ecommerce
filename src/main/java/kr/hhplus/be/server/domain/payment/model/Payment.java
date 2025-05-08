@@ -41,17 +41,4 @@ public class Payment {
                 .updatedAt(now)
                 .build();
     }
-
-    public void cancel() {
-        this.state = -1;
-        this.updatedAt = java.time.LocalDateTime.now().toString();
-    }
-
-    public boolean isCompleted() {
-        return state == 1;
-    }
-
-    public boolean isCancelled() {
-        return state == -1;
-    }
 }

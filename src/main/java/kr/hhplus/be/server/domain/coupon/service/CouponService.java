@@ -49,7 +49,7 @@ public class CouponService {
 
     @Transactional
     public IssueNewCouponServiceResponse issueNewCoupon(IssueNewCouponServiceRequest request) {
-        Coupon coupon = couponRepository.findById(request.couponId());
+        Coupon coupon = couponRepository.findWithLockById(request.couponId());
         coupon.validateIssuable();
 
         String now = java.time.LocalDateTime.now().toString();
@@ -82,7 +82,6 @@ public class CouponService {
         couponIssueRepository.save(couponIssue);
     }
 
-    @OptimisticRetry(maxAttempts = 3)
     public ApplyCouponDiscountServiceResponse applyCouponDiscount(ApplyCouponDiscountServiceRequest request) {
         long finalPrice = request.originalPrice();
         if (request.couponIssueId() != null && request.couponIssueId() > 0) {

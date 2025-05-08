@@ -17,9 +17,10 @@ import kr.hhplus.be.server.domain.product.model.Product;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
 import java.util.List;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ProductService {
@@ -28,6 +29,12 @@ public class ProductService {
     private final OrderItemRepository orderItemRepository;
     private final OrderOptionRepository orderOptionRepository;
     private final ProductMapper productMapper;
+
+    private ProductServiceResponse toResponseWithOptions(Product product) {
+        List<OrderOption> orderOptions = orderOptionRepository.findByProductId(product.getId());
+        List<ProductOptionResponse> optionResponses = productMapper.toProductOptionResponseList(orderOptions);
+        return productMapper.productToProductServiceResponse(product).withOptions(optionResponses);
+    }
 
     public ProductServiceResponse getProductById(ProductServiceRequest requestDto) {
         Product product = productRepository.findById(requestDto.productId());
@@ -57,33 +64,28 @@ public class ProductService {
                 excludedStates
         );
 
-        List<ProductServiceResponse> result = new ArrayList<>();  // TODO: 이런 중복 비즈니스 로직은 어디로 빼야할까??
-        for (Product product : productList) {
-            List<OrderOption> orderOptions = orderOptionRepository.findByProductId(product.getId());
-            List<ProductOptionResponse> optionResponses = productMapper.toProductOptionResponseList(orderOptions);
-            ProductServiceResponse response = productMapper.productToProductServiceResponse(product).withOptions(optionResponses);
-            result.add(response);
-        }
-
-        return result;
+        return productList.stream()
+                .map(this::toResponseWithOptions)
+                .toList();
     }
 
     public List<ProductServiceResponse> getBestProducts() {
         List<Product> bestProducts = productRepository.findPopularTop5();
 
-        List<ProductServiceResponse> result = new ArrayList<>();
-        for (Product product : bestProducts) {
-            List<OrderOption> orderOptions = orderOptionRepository.findByProductId(product.getId());
-            List<ProductOptionResponse> optionResponses = productMapper.toProductOptionResponseList(orderOptions);
-            ProductServiceResponse response = productMapper.productToProductServiceResponse(product).withOptions(optionResponses);
-            result.add(response);
-        }
+        return bestProducts.stream()
+                .map(this::toResponseWithOptions)
+                .toList();
+    }
 
         return result;
     }
+    public List<ProductServiceResponse> calculateBestProducts() {
+        log.info("[Scheduler] Calculating best products");
+        List<Product> bestProducts = productRepository.findPopularTop5();
 
-    public void calculateBestProducts() {
-        productRepository.recalculateBestProducts();
+        return bestProducts.stream()
+                .map(this::toResponseWithOptions)
+                .toList();
     }
 
     public ProductTotalPriceResponse calculateTotalPrice(List<ProductOptionKeyDto> requestDto) {
