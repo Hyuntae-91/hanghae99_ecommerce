@@ -39,7 +39,6 @@ public class PaymentFacade {
     private final PaymentFacadeMapper paymentMapper = new PaymentFacadeMapperImpl();
 
     @DistributedLock(key = "'lock:point:user:' + #arg0.userId")
-    @Transactional
     public PaymentServiceResponse pay(PaymentFacadeRequest request) {
         // 1. CREATE ORDER
         CreateOrderServiceResponse orderIdDto = orderService.createOrder(paymentMapper.toServiceRequest(request));

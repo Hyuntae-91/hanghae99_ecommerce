@@ -1,5 +1,6 @@
 package kr.hhplus.be.server.common.aop.lock;
 
+import kr.hhplus.be.server.common.aop.AopForTransaction;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
@@ -23,6 +24,7 @@ import java.util.concurrent.TimeUnit;
 public class DistributedLockAspect {
 
     private final RedissonClient redissonClient;
+    private final AopForTransaction aopForTransaction;
     private final SpelExpressionParser parser = new SpelExpressionParser();
 
     @Around("@annotation(distributedLock)")
@@ -41,8 +43,7 @@ public class DistributedLockAspect {
             }
 
             log.info("락 획득 성공: key={}", lockKey);
-            return joinPoint.proceed();
-
+            return aopForTransaction.proceed(joinPoint);
         } finally {
             if (acquired && lock.isHeldByCurrentThread()) {
                 lock.unlock();

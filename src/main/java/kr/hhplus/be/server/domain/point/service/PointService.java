@@ -35,7 +35,6 @@ public class PointService {
         return userPointMapper.toUserPointResponse(pointRepository.findWithLockByUserId(reqService.userId()));
     }
 
-    @Transactional
     @DistributedLock(key = "'lock:point:user:' + #arg0.userId")
     @CacheEvict(value = "userPoint", key = "#root.args[0].userId()")
     public PointChargeServiceResponse charge(PointChargeServiceRequest reqService) {

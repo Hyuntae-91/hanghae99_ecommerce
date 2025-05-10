@@ -51,7 +51,6 @@ public class CouponService {
     }
 
     @DistributedLock(key = "'lock:coupon:fifo:' + #arg0.couponId")
-    @Transactional
     @CacheEvict(value = "getCoupon", key = "#root.args[0].userId()")
     public IssueNewCouponServiceResponse issueNewCoupon(IssueNewCouponServiceRequest request) {
         Coupon coupon = couponRepository.findWithLockById(request.couponId());
