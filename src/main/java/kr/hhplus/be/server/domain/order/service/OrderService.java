@@ -14,6 +14,8 @@ import kr.hhplus.be.server.domain.order.repository.OrderRepository;
 import kr.hhplus.be.server.exception.custom.AlreadyOrderedException;
 import kr.hhplus.be.server.exception.custom.OrderItemNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -49,12 +51,14 @@ public class OrderService {
     }
 
     @Transactional
+    @Cacheable(value = "userCart", key = "#root.args[0].userId()")
     public CartItemServiceResponse getCart(GetCartServiceRequest request) {
         CartItemResponseBundle bundle = buildCartResponse(request.userId());
         return new CartItemServiceResponse(bundle.items, bundle.totalPrice());
     }
 
     @Transactional
+    @CacheEvict(value = "userCart", key = "#root.args[0].userId()")
     public AddCartServiceResponse addCartService(AddCartServiceRequest request) {
         OrderOption option = orderOptionRepository.findWithLockById(request.optionId());
         option.validateEnoughStock(request.quantity());
@@ -71,6 +75,7 @@ public class OrderService {
         return new AddCartServiceResponse(bundle.items, bundle.totalPrice());
     }
 
+    @CacheEvict(value = "userCart", key = "#root.args[0].userId()")
     public CreateOrderServiceResponse createOrder(CreateOrderServiceRequest requestDto) {
         // 1. 유효성 검사된 요청에서 optionId 목록과 수량 Map 추출
         List<Long> optionIds = requestDto.extractOptionIds();

@@ -44,9 +44,4 @@ public class ProductRepositoryImpl implements ProductRepository {
     public List<Product> findPopularTop5() {
         return productJpaRepository.findTop5PopularProducts(); // 가정: score 필드가 있음
     }
-
-    @Override
-    public void recalculateBestProducts() {
-        // TODO: 추후 통계 계산 쿼리로 대체
-    }
 }

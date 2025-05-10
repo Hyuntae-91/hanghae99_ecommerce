@@ -1,10 +1,7 @@
 package kr.hhplus.be.server.exception;
 
 import jakarta.validation.ConstraintViolationException;
-import kr.hhplus.be.server.exception.custom.ConflictException;
-import kr.hhplus.be.server.exception.custom.InvalidCouponUseException;
-import kr.hhplus.be.server.exception.custom.OrderItemNotFoundException;
-import kr.hhplus.be.server.exception.custom.ResourceNotFoundException;
+import kr.hhplus.be.server.exception.custom.*;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -31,6 +28,11 @@ class GlobalException extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler(ConstraintViolationException.class)
     public ResponseEntity<ErrorResponse> handleConstraintViolation(ConstraintViolationException ex) {
+        return buildErrorResponse(400, ex.getMessage(), HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(PointNotEnoughException.class)
+    public ResponseEntity<ErrorResponse> handlePointNotEnoughException(PointNotEnoughException ex) {
         return buildErrorResponse(400, ex.getMessage(), HttpStatus.BAD_REQUEST);
     }
 

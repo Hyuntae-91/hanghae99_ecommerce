@@ -83,7 +83,7 @@ class CouponServiceTest {
     @DisplayName("성공: 쿠폰 발급")
     void issue_new_coupon_success() {
         Coupon coupon = new Coupon(1L, CouponType.FIXED, "desc", 1000, 10, 5, 3, now(), now());
-        when(couponRepository.findById(1L)).thenReturn(coupon);
+        when(couponRepository.findWithLockById(1L)).thenReturn(coupon);
 
         CouponIssue newIssue = CouponIssue.builder()
                 .couponId(1L).userId(1L).state(0)
@@ -104,7 +104,7 @@ class CouponServiceTest {
     @DisplayName("실패: 쿠폰 발급 수량 초과")
     void issue_new_coupon_fail_quantity_exceeded() {
         Coupon coupon = new Coupon(1L, CouponType.FIXED, "desc", 1000, 10, 10, 3, now(), now());
-        when(couponRepository.findById(1L)).thenReturn(coupon);
+        when(couponRepository.findWithLockById(1L)).thenReturn(coupon);
 
         assertThatThrownBy(() -> couponService.issueNewCoupon(new IssueNewCouponServiceRequest(1L, 1L)))
                 .isInstanceOf(InvalidCouponUseException.class)

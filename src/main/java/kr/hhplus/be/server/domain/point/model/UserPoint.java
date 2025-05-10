@@ -1,6 +1,7 @@
 package kr.hhplus.be.server.domain.point.model;
 
 import jakarta.persistence.*;
+import kr.hhplus.be.server.exception.custom.PointNotEnoughException;
 import lombok.*;
 
 @Getter
@@ -36,7 +37,7 @@ public class UserPoint {
 
     public void validateUsableBalance(long amount) {
         if (this.point < amount) {
-            throw new IllegalStateException("포인트가 부족합니다.");
+            throw new PointNotEnoughException("포인트가 부족합니다.");
         }
     }
 

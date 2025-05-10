@@ -1,7 +1,7 @@
 package kr.hhplus.be.server.domain.coupon.service;
 
 import jakarta.transaction.Transactional;
-import kr.hhplus.be.server.common.annotation.OptimisticRetry;
+import kr.hhplus.be.server.common.aop.lock.DistributedLock;
 import kr.hhplus.be.server.domain.coupon.dto.request.*;
 import kr.hhplus.be.server.domain.coupon.dto.response.ApplyCouponDiscountServiceResponse;
 import kr.hhplus.be.server.domain.coupon.dto.response.CouponIssueDto;
@@ -12,6 +12,8 @@ import kr.hhplus.be.server.domain.coupon.model.CouponIssue;
 import kr.hhplus.be.server.domain.coupon.repository.CouponIssueRepository;
 import kr.hhplus.be.server.domain.coupon.repository.CouponRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -30,6 +32,7 @@ public class CouponService {
     }
 
     @Transactional
+    @Cacheable(value = "getCoupon", key = "#root.args[0].userId()")
     public GetCouponsServiceResponse getCoupons(GetCouponsServiceRequest request) {
         Long userId = request.userId();
 
@@ -47,9 +50,10 @@ public class CouponService {
         return new GetCouponsServiceResponse(couponDtoList);
     }
 
-    @Transactional
+    @DistributedLock(key = "'lock:coupon:fifo:' + #arg0.couponId")
+    @CacheEvict(value = "getCoupon", key = "#root.args[0].userId()")
     public IssueNewCouponServiceResponse issueNewCoupon(IssueNewCouponServiceRequest request) {
-        Coupon coupon = couponRepository.findById(request.couponId());
+        Coupon coupon = couponRepository.findWithLockById(request.couponId());
         coupon.validateIssuable();
 
         String now = java.time.LocalDateTime.now().toString();
@@ -82,7 +86,6 @@ public class CouponService {
         couponIssueRepository.save(couponIssue);
     }
 
-    @OptimisticRetry(maxAttempts = 3)
     public ApplyCouponDiscountServiceResponse applyCouponDiscount(ApplyCouponDiscountServiceRequest request) {
         long finalPrice = request.originalPrice();
         if (request.couponIssueId() != null && request.couponIssueId() > 0) {

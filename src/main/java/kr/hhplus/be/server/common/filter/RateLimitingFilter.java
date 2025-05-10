@@ -23,7 +23,7 @@ public class RateLimitingFilter implements Filter {
     private final long windowMs;
 
     public RateLimitingFilter() {
-        this(10000, 60 * 1000); // 기본값: 1분, 5회
+        this(5, 60 * 1000); // 기본값: 1분, 5회
     }
 
     // 테스트 용 생성자

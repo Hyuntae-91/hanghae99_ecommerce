@@ -28,6 +28,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
+import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.MySQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -37,6 +38,7 @@ import java.util.concurrent.ThreadLocalRandom;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 
 @ActiveProfiles("local")
 @SpringBootTest
@@ -51,6 +53,10 @@ public class PaymentConcurrencyTest {
             .withUsername("test")
             .withPassword("test");
 
+    @Container
+    static final GenericContainer<?> redisContainer = new GenericContainer<>("redis:7.0")
+            .withExposedPorts(6379);
+
     @DynamicPropertySource
     static void overrideProperties(DynamicPropertyRegistry registry) {
         if (!mysqlContainer.isRunning()) {
@@ -63,6 +69,10 @@ public class PaymentConcurrencyTest {
         registry.add("spring.jpa.database-platform", () -> "org.hibernate.dialect.MySQL8Dialect");
         registry.add("spring.sql.init.mode", () -> "always");
         registry.add("spring.sql.init.schema-locations", () -> "classpath:schema.sql");
+
+        redisContainer.start();
+        registry.add("spring.data.redis.host", redisContainer::getHost);
+        registry.add("spring.data.redis.port", () -> redisContainer.getMappedPort(6379));
     }
 
     @Autowired
@@ -98,6 +108,10 @@ public class PaymentConcurrencyTest {
     @BeforeEach
     void cleanup() {
         repositoryCleaner.cleanUpAll();
+    }
+
+    private String nowPlus(int days) {
+        return java.time.LocalDateTime.now().plusDays(days).toString();
     }
 
     @Test
@@ -283,8 +297,8 @@ public class PaymentConcurrencyTest {
                 .userId(randomUserId)
                 .couponId(coupon.getId())
                 .state(0)
-                .startAt("2025-04-01T00:00:00")
-                .endAt("2025-04-30T23:59:59")
+                .startAt(nowPlus(-3))
+                .endAt(nowPlus(3))
                 .createdAt("2025-04-01T00:00:00")
                 .updatedAt("2025-04-01T00:00:00")
                 .build());
@@ -401,6 +415,95 @@ public class PaymentConcurrencyTest {
                 .count();
 
         assertThat(successCount).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("동시성 테스트: 결제 도중 포인트 충전이 동시에 일어나도 결제가 정확히 1건만 성공한다")
+    void concurrent_payment_while_charging_point() throws Exception {
+        long randomUserId = ThreadLocalRandom.current().nextInt(1, 100_000);
+        long productPrice = 2000L;
+
+        // 초기 포인트: 2000
+        userPointJpaRepository.save(UserPoint.builder().userId(randomUserId).point(2000L).build());
+
+        // 상품 및 옵션 생성
+        Product product = productJpaRepository.save(Product.builder()
+                .name("충전 중 결제 상품")
+                .price(productPrice)
+                .state(1)
+                .createdAt("2025-04-16T00:00:00")
+                .updatedAt("2025-04-16T00:00:00")
+                .build());
+
+        OrderOption option = orderOptionJpaRepository.save(OrderOption.builder()
+                .productId(product.getId())
+                .size(270)
+                .stockQuantity(1)
+                .createdAt("2025-04-16T00:00:00")
+                .updatedAt("2025-04-16T00:00:00")
+                .build());
+
+        OrderItem item = orderItemJpaRepository.save(OrderItem.of(randomUserId, product.getId(), option.getId(), productPrice, 1));
+
+        String payload = """
+        {
+          "products": [
+            {
+              "id": %d,
+              "optionId": %d,
+              "itemId": %d,
+              "quantity": 1
+            }
+          ],
+          "couponIssueId": null
+        }
+        """.formatted(product.getId(), option.getId(), item.getId());
+
+        CountDownLatch latch = new CountDownLatch(2);
+
+        // 결제 쓰레드
+        Thread paymentThread = new Thread(() -> {
+            try {
+                mockMvc.perform(post("/v1/payment")
+                        .header("userId", randomUserId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(payload)).andReturn();
+            } catch (Exception e) {
+                System.err.println("결제 중 예외: " + e.getMessage());
+            } finally {
+                latch.countDown();
+            }
+        });
+
+        // 충전 쓰레드 (결제 금액보다 충분히 충전)
+        Thread chargeThread = new Thread(() -> {
+            try {
+                Thread.sleep(50); // 결제보다 살짝 늦게 충전 시도
+                mockMvc.perform(put("/v1/point")
+                        .header("userId", randomUserId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"point\": 3000}")).andReturn();
+            } catch (Exception e) {
+                System.err.println("충전 중 예외: " + e.getMessage());
+            } finally {
+                latch.countDown();
+            }
+        });
+
+        paymentThread.start();
+        chargeThread.start();
+
+        latch.await();
+
+        // then: 결제는 단 1건만 성공해야 한다
+        long successCount = paymentRepository.findAll().stream()
+                .filter(p -> p.getState() == 1)
+                .count();
+
+        assertThat(successCount).isEqualTo(1);
+
+        UserPoint userPoint = userPointJpaRepository.findById(randomUserId).orElseThrow();
+        assertThat(userPoint.getPoint()).isEqualTo(3000L);
     }
 
 }

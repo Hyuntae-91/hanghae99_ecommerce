@@ -1,5 +1,8 @@
 package kr.hhplus.be.server.domain.product.dto.response;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+
+import java.io.Serializable;
 import java.util.List;
 
 public record ProductServiceResponse(
@@ -9,7 +12,8 @@ public record ProductServiceResponse(
         int state,
         String createdAt,
         List<ProductOptionResponse> options
-) {
+) implements Serializable {
+    @JsonCreator
     public ProductServiceResponse {
         if (id == null || id < 1) {
             throw new IllegalArgumentException("id는 1 이상이어야 합니다.");
