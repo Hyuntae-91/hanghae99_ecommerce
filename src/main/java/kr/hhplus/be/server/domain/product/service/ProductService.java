@@ -15,6 +15,8 @@ import kr.hhplus.be.server.domain.product.dto.response.ProductServiceResponse;
 import kr.hhplus.be.server.domain.product.dto.response.ProductTotalPriceResponse;
 import kr.hhplus.be.server.domain.product.model.Product;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CachePut;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -51,6 +53,10 @@ public class ProductService {
         return productMapper.productsToProductServiceResponses(productList);
     }
 
+    @Cacheable(
+            value = "productList",
+            key = "'productList::page=' + #root.args[0].page() + ':size=' + #root.args[0].size() + ':sort=' + #root.args[0].sort()"
+    )
     public List<ProductServiceResponse> getProductList(ProductListServiceRequest requestDto) {
         List<Integer> excludedStates = List.of(
                 ProductStates.DELETED.getCode(),
@@ -70,6 +76,7 @@ public class ProductService {
     }
 
     public List<ProductServiceResponse> getBestProducts() {
+        log.info("============ " + "[Cache miss]" + " ============");
         List<Product> bestProducts = productRepository.findPopularTop5();
 
         return bestProducts.stream()
@@ -77,8 +84,6 @@ public class ProductService {
                 .toList();
     }
 
-        return result;
-    }
     public List<ProductServiceResponse> calculateBestProducts() {
         log.info("[Scheduler] Calculating best products");
         List<Product> bestProducts = productRepository.findPopularTop5();

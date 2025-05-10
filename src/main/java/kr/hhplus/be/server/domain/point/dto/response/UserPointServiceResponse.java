@@ -3,11 +3,13 @@ package kr.hhplus.be.server.domain.point.dto.response;
 import kr.hhplus.be.server.domain.point.model.UserPoint;
 import lombok.Builder;
 
+import java.io.Serializable;
+
 @Builder
 public record UserPointServiceResponse(
     Long userId,
     Long point
-) {
+) implements Serializable {
     public UserPointServiceResponse {
         if (userId == null || userId < 1) {
             throw new IllegalArgumentException("userId는 1 이상이어야 합니다.");

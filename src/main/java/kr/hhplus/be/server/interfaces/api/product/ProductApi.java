@@ -51,7 +51,7 @@ public interface ProductApi {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "계산 완료")
     })
-    @PostMapping("/best/calculate")
+    @GetMapping("/best/calculate")
     ResponseEntity<Void> calculateBestProducts();
 
 }

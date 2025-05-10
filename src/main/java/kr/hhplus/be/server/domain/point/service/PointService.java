@@ -13,6 +13,8 @@ import kr.hhplus.be.server.domain.point.model.*;
 import kr.hhplus.be.server.domain.point.repository.PointHistoryRepository;
 import kr.hhplus.be.server.domain.point.repository.PointRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.extern.slf4j.Slf4j;
@@ -27,6 +29,7 @@ public class PointService {
     private final UserPointMapper userPointMapper;
 
     @Transactional
+    @Cacheable(value = "userPoint", key = "#root.args[0].userId()")
     public UserPointServiceResponse getUserPoint(UserPointServiceRequest reqService) {
         log.info("DB 조회: userId={}", reqService.userId());
         return userPointMapper.toUserPointResponse(pointRepository.findWithLockByUserId(reqService.userId()));
@@ -34,6 +37,7 @@ public class PointService {
 
     @Transactional
     @DistributedLock(key = "'lock:point:user:' + #arg0.userId")
+    @CacheEvict(value = "userPoint", key = "#root.args[0].userId()")
     public PointChargeServiceResponse charge(PointChargeServiceRequest reqService) {
         UserPoint userPoint = pointRepository.findWithLockByUserId(reqService.userId());
         userPoint.charge(reqService.point());
@@ -44,6 +48,7 @@ public class PointService {
     }
 
     @Transactional
+    @CacheEvict(value = "userPoint", key = "#root.args[0].userId()")
     public PointUseServiceResponse use(PointUseServiceRequest reqService) {
         UserPoint userPoint = pointRepository.findWithLockByUserId(reqService.userId());
         userPoint.use(reqService.point());
