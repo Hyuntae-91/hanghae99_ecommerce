@@ -1,9 +1,9 @@
 package kr.hhplus.be.server.application.payment;
 
-import jakarta.transaction.Transactional;
 import kr.hhplus.be.server.application.payment.dto.PaymentFacadeMapperImpl;
 import kr.hhplus.be.server.application.payment.dto.PaymentFacadeRequest;
 import kr.hhplus.be.server.common.aop.lock.DistributedLock;
+import kr.hhplus.be.server.domain.coupon.event.CouponRollbackEvent;
 import kr.hhplus.be.server.domain.coupon.service.CouponService;
 import kr.hhplus.be.server.domain.coupon.dto.response.ApplyCouponDiscountServiceResponse;
 import kr.hhplus.be.server.domain.order.dto.response.CreateOrderServiceResponse;
@@ -15,6 +15,7 @@ import kr.hhplus.be.server.domain.payment.event.PaymentCompletedEvent;
 import kr.hhplus.be.server.domain.point.dto.request.PointUseServiceRequest;
 import kr.hhplus.be.server.domain.point.dto.request.PointValidateUsableRequest;
 import kr.hhplus.be.server.domain.point.service.PointService;
+import kr.hhplus.be.server.domain.product.event.ProductSoldEvent;
 import kr.hhplus.be.server.domain.product.service.ProductService;
 import kr.hhplus.be.server.application.payment.dto.PaymentFacadeMapper;
 import kr.hhplus.be.server.domain.product.dto.response.ProductTotalPriceResponse;
@@ -40,35 +41,52 @@ public class PaymentFacade {
 
     @DistributedLock(key = "'lock:point:user:' + #arg0.userId")
     public PaymentServiceResponse pay(PaymentFacadeRequest request) {
-        // 1. CREATE ORDER
-        CreateOrderServiceResponse orderIdDto = orderService.createOrder(paymentMapper.toServiceRequest(request));
-        // 2. Calculate price
-        ProductTotalPriceResponse totalPrice = productService.calculateTotalPrice(
-                paymentMapper.toProductOptionKeyList(request.products())
-        );
+        Long appliedCouponId = null;
+        try {
+            // 1. CREATE ORDER
+            CreateOrderServiceResponse orderIdDto = orderService.createOrder(paymentMapper.toServiceRequest(request));
+            // 2. Calculate price
+            ProductTotalPriceResponse totalPrice = productService.calculateTotalPrice(
+                    paymentMapper.toProductOptionKeyList(request.products())
+            );
 
-        // 3. 쿠폰 사용 처리
-        ApplyCouponDiscountServiceResponse finalTotalPrice = couponService.applyCouponDiscount(
-                paymentMapper.toApplyCouponDiscountServiceRequest(request.couponIssueId(), totalPrice.totalPrice())
-        );
+            // 3. 쿠폰 사용 처리
+            ApplyCouponDiscountServiceResponse finalTotalPrice = couponService.applyCouponDiscount(
+                    paymentMapper.toApplyCouponDiscountServiceRequest(request.couponId(), request.userId(), totalPrice.totalPrice())
+            );
+            if (request.couponId() != null && request.couponId() > 0) {
+                appliedCouponId = request.couponId();
+            }
 
-        // 4. 계산된 총 가격 order 테이블에 업데이트
-        orderService.updateTotalPrice(new UpdateOrderServiceRequest(orderIdDto.orderId(), finalTotalPrice.finalPrice()));
+            // 4. 계산된 총 가격 order 테이블에 업데이트
+            orderService.updateTotalPrice(new UpdateOrderServiceRequest(orderIdDto.orderId(), finalTotalPrice.finalPrice()));
 
-        // 5. UserPoint validation & use
-        pointService.validateUsable(new PointValidateUsableRequest(request.userId(), totalPrice.totalPrice()));
-        pointService.use(new PointUseServiceRequest(request.userId(), totalPrice.totalPrice()));
+            // 5. UserPoint validation & use
+            pointService.validateUsable(new PointValidateUsableRequest(request.userId(), totalPrice.totalPrice()));
+            pointService.use(new PointUseServiceRequest(request.userId(), totalPrice.totalPrice()));
 
-        // 6. pay
-        List<PaymentOrderItemDto> orderAndOptionIds = request.products().stream()
-                .map(p -> new PaymentOrderItemDto(orderIdDto.orderId(), p.itemId(), p.optionId(), p.quantity()))
-                .toList();
-        PaymentServiceRequest paymentServiceRequest = new PaymentServiceRequest(
-                request.userId(), finalTotalPrice.finalPrice(), orderIdDto.orderId()
-        );
-        PaymentServiceResponse result = paymentService.pay(paymentServiceRequest);
+            // 6. pay
+            List<PaymentOrderItemDto> orderAndOptionIds = request.products().stream()
+                    .map(p -> new PaymentOrderItemDto(orderIdDto.orderId(), p.itemId(), p.optionId(), p.quantity()))
+                    .toList();
+            PaymentServiceRequest paymentServiceRequest = new PaymentServiceRequest(
+                    request.userId(), finalTotalPrice.finalPrice(), orderIdDto.orderId()
+            );
+            PaymentServiceResponse result = paymentService.pay(paymentServiceRequest);
 
-        eventPublisher.publishEvent(new PaymentCompletedEvent(result));
-        return result;
+            // 7. 외부 API 호출
+            eventPublisher.publishEvent(new PaymentCompletedEvent(result));
+
+            // 8. 판매 상품 score 증가 이벤트 발생
+            List<Long> soldProductIds = paymentMapper.extractProductIds(request);
+            eventPublisher.publishEvent(new ProductSoldEvent(soldProductIds));
+            return result;
+        } catch (Exception e) {
+            // 만약 쿠폰을 적용했었고, 이후 결제 과정에서 실패하면
+            if (appliedCouponId != null) {
+                eventPublisher.publishEvent(new CouponRollbackEvent(request.userId(), appliedCouponId));
+            }
+            throw e; // 기존 에러는 그대로 터뜨림
+        }
     }
 }
