@@ -1,7 +1,7 @@
 # ERD 설계
 
 ## ER 다이어그램
-![ERD](./image/ERD.png)
+![ERD](image/ERD.png)
 ```
 Table USER {
   id int [pk]
