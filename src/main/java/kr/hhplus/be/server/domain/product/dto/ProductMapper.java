@@ -9,11 +9,15 @@ import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 @Mapper(componentModel = "spring")
 public interface ProductMapper {
 
     @Mapping(target = "options", ignore = true)
+    @Mapping(target = "withOptions", ignore = true)
     ProductServiceResponse productToProductServiceResponse(Product product);
 
     List<ProductServiceResponse> productsToProductServiceResponses(List<Product> products);
@@ -28,6 +32,24 @@ public interface ProductMapper {
         if (dtoList == null) return List.of();
         return dtoList.stream()
                 .map(ProductOptionKeyDto::productId)
+                .toList();
+    }
+
+    default List<ProductServiceResponse> toSortedProductServiceResponses(
+            List<Product> products,
+            List<Long> orderIds
+    ) {
+        if (products == null || products.isEmpty() || orderIds == null || orderIds.isEmpty()) {
+            return List.of();
+        }
+
+        Map<Long, Product> productMap = products.stream()
+                .collect(Collectors.toMap(Product::getId, p -> p));
+
+        return orderIds.stream()
+                .map(productMap::get)
+                .filter(Objects::nonNull)
+                .map(this::productToProductServiceResponse)
                 .toList();
     }
 }

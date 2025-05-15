@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import kr.hhplus.be.server.exception.ErrorResponse;
+import kr.hhplus.be.server.interfaces.api.product.dto.request.PageableRequest;
 import kr.hhplus.be.server.interfaces.api.product.dto.response.ProductResponse;
 import kr.hhplus.be.server.interfaces.api.product.dto.request.ProductsRequest;
 import org.springframework.http.ResponseEntity;
@@ -39,19 +40,20 @@ public interface ProductApi {
             @RequestBody ProductsRequest request
     );
 
-    @Operation(summary = "인기 상품 조회", description = "최근 3일 이내에 인기 상품 Top 5 조회 (매 시간마다 갱신)")
+    @Operation(summary = "일간 인기 상품 조회", description = "Daily 인기 상품 조회 API")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "조회 성공",
                     content = @Content(array = @ArraySchema(schema = @Schema(implementation = ProductResponse.class))))
     })
     @GetMapping("/bests")
-    ResponseEntity<?> getBestProducts();
+    ResponseEntity<?> getDailyBestProducts(PageableRequest request);
 
-    @Operation(summary = "인기 상품 통계 계산", description = "[Scheduler] 최근 3일 이내의 상품 판매량을 기준으로 인기 상품 Top 5를 갱신하는 API. 6시간마다 실행")
+    @Operation(summary = "주간 인기 상품 조회", description = "Weekly 인기 상품 조회 API")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "계산 완료")
+            @ApiResponse(responseCode = "200", description = "조회 성공",
+                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = ProductResponse.class))))
     })
-    @GetMapping("/best/calculate")
-    ResponseEntity<Void> calculateBestProducts();
+    @GetMapping("/weekly-bests")
+    ResponseEntity<?> getWeeklyBestProducts(PageableRequest request);
 
 }

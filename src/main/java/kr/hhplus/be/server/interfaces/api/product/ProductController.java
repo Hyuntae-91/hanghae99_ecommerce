@@ -1,10 +1,12 @@
 package kr.hhplus.be.server.interfaces.api.product;
 
 import jakarta.validation.Valid;
+import kr.hhplus.be.server.domain.product.dto.request.BestProductRequest;
 import kr.hhplus.be.server.domain.product.service.ProductService;
 import kr.hhplus.be.server.domain.product.dto.request.ProductListServiceRequest;
 import kr.hhplus.be.server.domain.product.dto.request.ProductServiceRequest;
 import kr.hhplus.be.server.exception.ErrorResponse;
+import kr.hhplus.be.server.interfaces.api.product.dto.request.PageableRequest;
 import kr.hhplus.be.server.interfaces.api.product.dto.response.ProductResponse;
 import kr.hhplus.be.server.interfaces.api.product.dto.request.ProductsRequest;
 import lombok.RequiredArgsConstructor;
@@ -39,13 +41,17 @@ public class ProductController implements ProductApi {
     }
 
     @Override
-    public ResponseEntity<?> getBestProducts() {
-        return ResponseEntity.ok(ProductResponse.fromList(productService.getBestProducts()));
+    public ResponseEntity<?> getDailyBestProducts(PageableRequest request) {
+        return ResponseEntity.ok(ProductResponse.fromList(
+                productService.getDailyBestProducts(new BestProductRequest(request.page(), request.size()))
+        ));
     }
 
     @Override
-    public ResponseEntity<Void> calculateBestProducts() {
-        productService.calculateBestProducts();
-        return ResponseEntity.ok().build();
+    public ResponseEntity<?> getWeeklyBestProducts(PageableRequest request) {
+        return ResponseEntity.ok(ProductResponse.fromList(
+                productService.getWeeklyBestProducts(new BestProductRequest(request.page(), request.size()))
+        ));
     }
+
 }
