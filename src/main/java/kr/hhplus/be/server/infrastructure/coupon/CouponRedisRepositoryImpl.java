@@ -51,7 +51,6 @@ public class CouponRedisRepositoryImpl implements CouponRedisRepository {
         redisTemplate.opsForValue().set(key, couponInfoJson);
     }
 
-
     @Override
     public Optional<String> findCouponInfo(Long couponId) {
         String key = "coupon:info:" + couponId;

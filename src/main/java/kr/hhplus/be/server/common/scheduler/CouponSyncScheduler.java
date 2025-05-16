@@ -14,7 +14,7 @@ public class CouponSyncScheduler {
 
     private final CouponService couponService;
 
-    @Scheduled(cron = "0 0 0 * * *") // 매일 00시 5분
+    @Scheduled(cron = "0 0 0 * * *") // 매일 00시
     public void syncCouponsToRedis() throws JsonProcessingException {
         log.info("[CouponSyncScheduler] 유효 쿠폰 Redis 저장 시작");
 
