@@ -1,5 +1,6 @@
 package kr.hhplus.be.server.domain.coupon.service;
 
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import kr.hhplus.be.server.domain.coupon.dto.request.*;
 import kr.hhplus.be.server.domain.coupon.dto.response.*;
 import kr.hhplus.be.server.domain.coupon.mapper.CouponJsonMapper;
@@ -73,6 +74,7 @@ public class CouponService {
         return new GetCouponsServiceResponse(couponDtoList);
     }
 
+    @CircuitBreaker(name = "couponIssue", fallbackMethod = "fallbackIssueCoupon")
     @CacheEvict(value = "getCoupon", key = "#root.args[0].userId()")
     public IssueNewCouponServiceResponse issueNewCoupon(IssueNewCouponServiceRequest request) {
         boolean stockAvailable = couponRedisRepository.decreaseStock(request.couponId());
@@ -130,5 +132,12 @@ public class CouponService {
             couponIssueRepository.save(issue);
         }
         return new ApplyCouponDiscountServiceResponse(finalPrice);
+    }
+
+    public IssueNewCouponServiceResponse fallbackIssueCoupon(IssueNewCouponServiceRequest request, Throwable t) {
+        log.warn("Coupon issue fallback triggered for userId={}, couponId={}, reason={}",
+                request.userId(), request.couponId(), t.getMessage());
+
+        throw new IllegalStateException("현재 쿠폰 발급이 불가능합니다. 잠시 후 다시 시도해주세요.");
     }
 }

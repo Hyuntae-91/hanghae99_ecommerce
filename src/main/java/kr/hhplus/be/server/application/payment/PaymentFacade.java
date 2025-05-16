@@ -1,5 +1,6 @@
 package kr.hhplus.be.server.application.payment;
 
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import kr.hhplus.be.server.application.payment.dto.PaymentFacadeMapperImpl;
 import kr.hhplus.be.server.application.payment.dto.PaymentFacadeRequest;
 import kr.hhplus.be.server.common.aop.lock.DistributedLock;
@@ -26,7 +27,9 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class PaymentFacade {
@@ -39,6 +42,7 @@ public class PaymentFacade {
     private final ApplicationEventPublisher eventPublisher;
     private final PaymentFacadeMapper paymentMapper = new PaymentFacadeMapperImpl();
 
+    @CircuitBreaker(name = "payment", fallbackMethod = "fallbackPayment")
     @DistributedLock(key = "'lock:point:user:' + #arg0.userId")
     public PaymentServiceResponse pay(PaymentFacadeRequest request) {
         Long appliedCouponId = null;
@@ -88,5 +92,10 @@ public class PaymentFacade {
             }
             throw e; // 기존 에러는 그대로 터뜨림
         }
+    }
+
+    public PaymentServiceResponse fallbackPayment(PaymentFacadeRequest request, Throwable t) {
+        log.error("[서킷브레이커] payment fallback triggered. Reason: {}", t.getMessage(), t);
+        throw new IllegalStateException("현재 결제 서비스가 원활하지 않습니다. 잠시 후 다시 시도해주세요.");
     }
 }

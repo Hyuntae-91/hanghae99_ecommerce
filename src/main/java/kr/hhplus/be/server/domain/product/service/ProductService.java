@@ -1,5 +1,6 @@
 package kr.hhplus.be.server.domain.product.service;
 
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import kr.hhplus.be.server.domain.order.model.OrderItem;
 import kr.hhplus.be.server.domain.order.model.OrderOption;
 import kr.hhplus.be.server.domain.order.repository.OrderItemRepository;
@@ -120,6 +121,7 @@ public class ProductService {
                 .toList();
     }
 
+    @CircuitBreaker(name = "dailyBestProducts", fallbackMethod = "fallbackDaily")
     @Cacheable(
             value = "productDailyBest",
             key = "'dailyBest::page=' + #root.args[0].page() + ':size=' + #root.args[0].size()"
@@ -133,6 +135,7 @@ public class ProductService {
         return response;
     }
 
+    @CircuitBreaker(name = "weeklyBestProducts", fallbackMethod = "fallbackWeekly")
     @Cacheable(
             value = "productWeeklyBest",
             key = "'weeklyBest::page=' + #root.args[0].page() + ':size=' + #root.args[0].size()"
@@ -154,5 +157,15 @@ public class ProductService {
         }
 
         return new ProductTotalPriceResponse(total);
+    }
+
+    public List<Product> fallbackDaily(BestProductRequest request, Throwable t) {
+        log.error("fallbackDaily triggered: {}", t.getMessage(), t);
+        return List.of(); // 빈 리스트 반환
+    }
+
+    public List<Product> fallbackWeekly(BestProductRequest request, Throwable t) {
+        log.error("fallbackWeekly triggered: {}", t.getMessage(), t);
+        return List.of(); // 빈 리스트 반환
     }
 }

@@ -7,7 +7,6 @@ import kr.hhplus.be.server.domain.product.repository.ProductRankingRedisReposito
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.ZSetOperations;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -37,7 +36,6 @@ public class ProductRankingService {
 
     private static final int RANKING_TOP_N = 100;
 
-    @Scheduled(cron = "0 50 23 * * *")
     public void updateDailyProductRanking() {
         log.info("[ProductRankingService] Start ranking update at 23:50");
 
