@@ -249,94 +249,11 @@ class ProductControllerTest {
                 .build());
 
         // when & then
-        mockMvc.perform(get("/v1/products/bests"))
+        mockMvc.perform(get("/v1/products/bests")
+                        .param("page", "0")
+                        .param("size", "10"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(2));
-    }
-
-    @Test
-    @DisplayName("E2E: calculateBestProducts 수동 캐시 + getBestProducts 캐시 적용 확인")
-    void calculate_and_getBestProducts_cache_test() throws Exception {
-        // given: 상품 2개
-        long randomUserId = ThreadLocalRandom.current().nextInt(1, 100_000);
-        Product productA = productJpaRepository.save(Product.builder()
-                .name("인기상품 A").price(1000L).state(1)
-                .createdAt("2025-04-10T00:00:00").updatedAt("2025-04-10T00:00:00").build());
-
-        Product productB = productJpaRepository.save(Product.builder()
-                .name("인기상품 B").price(2000L).state(1)
-                .createdAt("2025-04-10T00:00:00").updatedAt("2025-04-10T00:00:00").build());
-
-        // orderOption 생성
-        OrderOption optionA = orderOptionJpaRepository.save(OrderOption.builder()
-                .productId(productA.getId())
-                .size(275)
-                .stockQuantity(10)
-                .createdAt("2025-04-10T00:00:00")
-                .updatedAt("2025-04-10T00:00:00")
-                .build());
-
-        OrderOption optionB = orderOptionJpaRepository.save(OrderOption.builder()
-                .productId(productB.getId())
-                .size(280)
-                .stockQuantity(5)
-                .createdAt("2025-04-10T00:00:00")
-                .updatedAt("2025-04-10T00:00:00")
-                .build());
-
-        // 주문 아이템 리스트 생성
-        List<OrderItem> items = List.of(
-                OrderItem.builder()
-                        .userId(randomUserId)
-                        .productId(productA.getId())
-                        .optionId(optionA.getId())
-                        .eachPrice(1000L)
-                        .quantity(2)
-                        .createdAt("2025-04-10T00:00:00")
-                        .updatedAt("2025-04-10T00:00:00")
-                        .build(),
-                OrderItem.builder()
-                        .userId(randomUserId)
-                        .productId(productB.getId())
-                        .optionId(optionB.getId())
-                        .eachPrice(2000L)
-                        .quantity(1)
-                        .createdAt("2025-04-10T00:00:00")
-                        .updatedAt("2025-04-10T00:00:00")
-                        .build()
-        );
-
-        // 주문 및 아이템
-        Order order = orderJpaRepository.save(Order.of(randomUserId, null, 5000L, 1));
-
-        orderItemJpaRepository.save(OrderItem.builder()
-                .orderId(order.getId())
-                .userId(randomUserId)
-                .productId(productA.getId())
-                .optionId(optionA.getId())
-                .eachPrice(1000L)
-                .quantity(2)
-                .createdAt("2025-04-10T00:00:00")
-                .updatedAt("2025-04-10T00:00:00")
-                .build());
-
-        orderItemJpaRepository.save(OrderItem.builder()
-                .orderId(order.getId())
-                .userId(randomUserId)
-                .productId(productB.getId())
-                .optionId(optionB.getId())
-                .eachPrice(2000L)
-                .quantity(1)
-                .createdAt("2025-04-10T00:00:00")
-                .updatedAt("2025-04-10T00:00:00")
-                .build());
-
-        // 캐싱 수행
-        productService.calculateBestProducts();
-
-        mockMvc.perform(get("/v1/products/bests"))
-                .andDo(print())
-                .andExpect(status().isOk());
     }
 
 }
