@@ -1,9 +1,11 @@
 package kr.hhplus.be.server.api.controller.payment;
 
+import kr.hhplus.be.server.domain.coupon.mapper.CouponJsonMapper;
 import kr.hhplus.be.server.domain.coupon.model.Coupon;
 import kr.hhplus.be.server.domain.coupon.model.CouponIssue;
 import kr.hhplus.be.server.domain.coupon.model.CouponType;
 import kr.hhplus.be.server.domain.coupon.repository.CouponIssueRepository;
+import kr.hhplus.be.server.domain.coupon.repository.CouponRedisRepository;
 import kr.hhplus.be.server.domain.order.model.OrderItem;
 import kr.hhplus.be.server.domain.order.model.OrderOption;
 import kr.hhplus.be.server.domain.point.model.UserPoint;
@@ -26,14 +28,11 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.transaction.annotation.Transactional;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.MySQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
-import java.sql.Connection;
-import java.sql.DriverManager;
 import java.util.concurrent.ThreadLocalRandom;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
@@ -103,22 +102,25 @@ public class PaymentControllerTest {
     @Autowired
     private CouponIssueJpaRepository couponIssueJpaRepository;
 
+    @Autowired
+    private CouponRedisRepository couponRedisRepository;
+
     private String nowPlus(int days) {
         return java.time.LocalDateTime.now().plusDays(days).toString();
     }
 
     @Test
-    @Transactional
-    @DisplayName("성공: 정상 결제 요청 시 결제 완료")
-    public void pay_success() throws Exception {
+    @DisplayName("성공: 정상 결제 요청 시 결제 완료 (Redis 기반)")
+    void pay_success() throws Exception {
         long randomUserId = ThreadLocalRandom.current().nextInt(1, 100_000);
-        // given: 유저 포인트 충분
+
+        // 유저 포인트 충분 저장
         userPointJpaRepository.save(UserPoint.builder()
                 .userId(randomUserId)
                 .point(10_000L)
                 .build());
 
-        // 상품 + 옵션 저장
+        // 상품 저장
         Product product = productJpaRepository.save(Product.builder()
                 .name("결제상품")
                 .price(2000L)
@@ -127,6 +129,7 @@ public class PaymentControllerTest {
                 .updatedAt("2025-04-16T10:00:00")
                 .build());
 
+        // 옵션 저장
         OrderOption option = orderOptionJpaRepository.save(OrderOption.builder()
                 .productId(product.getId())
                 .size(275)
@@ -135,8 +138,13 @@ public class PaymentControllerTest {
                 .updatedAt("2025-04-16T10:00:00")
                 .build());
 
-        OrderItem item = OrderItem.of(randomUserId, product.getId(), option.getId(), 2000L, 2);
-        OrderItem savedItem = orderItemJpaRepository.save(item);
+        // 장바구니 항목 저장
+        OrderItem savedItem = orderItemJpaRepository.save(OrderItem.of(
+                randomUserId, product.getId(), option.getId(), 2000L, 2
+        ));
+
+        // Redis에 옵션 재고 저장
+        couponRedisRepository.saveStock(option.getId(), option.getStockQuantity());
 
         String payload = """
         {
@@ -148,11 +156,11 @@ public class PaymentControllerTest {
                     "quantity": 2
                 }
             ],
-            "couponIssueId": null
+            "couponId": null
         }
         """.formatted(product.getId(), option.getId(), savedItem.getId());
 
-        // when & then: 결제 성공 응답
+        // when & then
         mockMvc.perform(post("/v1/payment")
                         .header("userId", randomUserId)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -262,23 +270,41 @@ public class PaymentControllerTest {
     }
 
     @Test
-    @DisplayName("실패: 보유 포인트가 부족할 경우 결제 실패")
+    @DisplayName("실패: 보유 포인트가 부족할 경우 결제 실패 (Redis 기반)")
     void pay_fail_due_to_point_lack() throws Exception {
         long randomUserId = ThreadLocalRandom.current().nextInt(1, 100_000);
-        userPointJpaRepository.save(UserPoint.builder().userId(randomUserId).point(100L).build());
 
+        // 포인트 부족 유저 저장
+        userPointJpaRepository.save(UserPoint.builder()
+                .userId(randomUserId)
+                .point(100L)  // 포인트 일부러 적게 설정
+                .build());
+
+        // 상품 저장
         Product product = productJpaRepository.save(Product.builder()
-                .name("포인트 부족 상품").price(2000L).state(1)
-                .createdAt("2025-04-16T10:00:00").updatedAt("2025-04-16T10:00:00")
+                .name("포인트 부족 상품")
+                .price(2000L)
+                .state(1)
+                .createdAt("2025-04-16T10:00:00")
+                .updatedAt("2025-04-16T10:00:00")
                 .build());
 
+        // 옵션 저장
         OrderOption option = orderOptionJpaRepository.save(OrderOption.builder()
-                .productId(product.getId()).size(270).stockQuantity(10)
-                .createdAt("2025-04-16T10:00:00").updatedAt("2025-04-16T10:00:00")
+                .productId(product.getId())
+                .size(270)
+                .stockQuantity(10)
+                .createdAt("2025-04-16T10:00:00")
+                .updatedAt("2025-04-16T10:00:00")
                 .build());
 
-        OrderItem item = OrderItem.of(randomUserId, product.getId(), option.getId(), 2000L, 2);
-        orderItemJpaRepository.save(item);
+        // 장바구니 항목 저장
+        OrderItem item = orderItemJpaRepository.save(OrderItem.of(
+                randomUserId, product.getId(), option.getId(), 2000L, 2
+        ));
+
+        // Redis에 상품/옵션 재고 저장
+        couponRedisRepository.saveStock(option.getId(), option.getStockQuantity());
 
         String payload = """
         {
@@ -290,10 +316,11 @@ public class PaymentControllerTest {
                     "quantity": 2
                 }
             ],
-            "couponIssueId": null
+            "couponId": null
         }
         """.formatted(product.getId(), option.getId(), item.getId());
 
+        // when & then
         mockMvc.perform(post("/v1/payment")
                         .header("userId", randomUserId)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -314,40 +341,48 @@ public class PaymentControllerTest {
                 .build());
 
         Product product = productJpaRepository.save(Product.builder()
-                .name("쿠폰 테스트 상품").price(2000L).state(1)
-                .createdAt("2025-04-16T10:00:00").updatedAt("2025-04-16T10:00:00")
+                .name("쿠폰 테스트 상품")
+                .price(2000L)
+                .state(1)
+                .createdAt("2025-04-16T10:00:00")
+                .updatedAt("2025-04-16T10:00:00")
                 .build());
 
         OrderOption option = orderOptionJpaRepository.save(OrderOption.builder()
-                .productId(product.getId()).size(275).stockQuantity(10)
-                .createdAt("2025-04-16T10:00:00").updatedAt("2025-04-16T10:00:00")
+                .productId(product.getId())
+                .size(275)
+                .stockQuantity(10)
+                .createdAt("2025-04-16T10:00:00")
+                .updatedAt("2025-04-16T10:00:00")
                 .build());
 
-        OrderItem item = OrderItem.of(randomUserId, product.getId(), option.getId(), 2000L, 2);
-        orderItemJpaRepository.save(item);
+        OrderItem item = orderItemJpaRepository.save(OrderItem.of(
+                randomUserId, product.getId(), option.getId(), 2000L, 2
+        ));
 
         Coupon coupon = couponJpaRepository.save(Coupon.builder()
-                .id(1L)
                 .type(CouponType.FIXED)
                 .description("test")
                 .discount(100)
                 .quantity(10)
-                .issued(10)
+                .state(1)
                 .expirationDays(7)
-                .createdAt("2025-04-16T10:00:00").updatedAt("2025-04-16T10:00:00")
+                .createdAt("2025-04-16T10:00:00")
+                .updatedAt("2025-04-16T10:00:00")
                 .build()
         );
 
         CouponIssue invalidCoupon = couponIssueJpaRepository.save(CouponIssue.builder()
                 .userId(randomUserId)
-                .couponId(1L)
+                .couponId(coupon.getId())
                 .state(1)
                 .startAt("2025-04-01T00:00:00")
                 .endAt("2025-04-30T23:59:59")
                 .createdAt("2025-04-01T00:00:00")
                 .updatedAt("2025-04-01T00:00:00")
                 .build());
-        Long couponIssueId = invalidCoupon.getId();
+
+        couponRedisRepository.addCouponForUser(randomUserId, coupon.getId(), 1);
 
         String payload = """
         {
@@ -359,9 +394,9 @@ public class PaymentControllerTest {
                     "quantity": 2
                 }
             ],
-            "couponIssueId": %d
+            "couponId": %d
         }
-        """.formatted(product.getId(), option.getId(), item.getId(), couponIssueId);
+        """.formatted(product.getId(), option.getId(), item.getId(), invalidCoupon.getId());
 
         // when & then
         mockMvc.perform(post("/v1/payment")
@@ -369,25 +404,21 @@ public class PaymentControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(payload))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value("사용할 수 없는 쿠폰입니다."));
-
+                .andExpect(jsonPath("$.message").value("이미 사용된 쿠폰입니다."));
     }
 
     @Test
     @DisplayName("성공: FIXED 쿠폰 적용 시 결제 금액에 할인 반영됨")
     void pay_success_with_coupon_discount_applied() throws Exception {
-        // given
         long randomUserId = ThreadLocalRandom.current().nextInt(1, 100_000);
         long originalPrice = 5000L;
         int discountAmount = 1000;
 
-        // 1. 유저 포인트 충전
         userPointJpaRepository.save(UserPoint.builder()
                 .userId(randomUserId)
                 .point(10_000L)
                 .build());
 
-        // 2. 상품 & 옵션
         Product product = productJpaRepository.save(Product.builder()
                 .name("쿠폰 상품")
                 .price(originalPrice)
@@ -404,38 +435,25 @@ public class PaymentControllerTest {
                 .updatedAt("2025-04-16T00:00:00")
                 .build());
 
-        // 3. 장바구니 항목 저장
         OrderItem item = orderItemJpaRepository.save(OrderItem.of(
-                randomUserId,
-                product.getId(),
-                option.getId(),
-                originalPrice,
-                1
+                randomUserId, product.getId(), option.getId(), originalPrice, 1
         ));
 
-        // 4. 쿠폰 발급 (FIXED: 1000원 할인)
         Coupon coupon = couponJpaRepository.save(Coupon.builder()
                 .type(CouponType.FIXED)
                 .description("테스트 쿠폰")
                 .discount(discountAmount)
                 .quantity(10)
-                .issued(1)
+                .state(1)
                 .expirationDays(7)
                 .createdAt("2025-04-16T00:00:00")
                 .updatedAt("2025-04-16T00:00:00")
                 .build());
 
-        CouponIssue issue = couponIssueJpaRepository.save(CouponIssue.builder()
-                .userId(randomUserId)
-                .couponId(coupon.getId())
-                .state(0)
-                .startAt(nowPlus(-3))
-                .endAt(nowPlus(3))
-                .createdAt("2025-04-01T00:00:00")
-                .updatedAt("2025-04-01T00:00:00")
-                .build());
+        couponRedisRepository.saveCouponInfo(coupon.getId(), CouponJsonMapper.toCouponJson(coupon));
+        couponRedisRepository.saveStock(coupon.getId(), coupon.getQuantity());
+        couponRedisRepository.addCouponForUser(randomUserId, coupon.getId(), 0);
 
-        // 5. Payload 구성
         String payload = """
         {
           "products": [
@@ -446,78 +464,82 @@ public class PaymentControllerTest {
               "quantity": 1
             }
           ],
-          "couponIssueId": %d
+          "couponId": %d
         }
-        """.formatted(product.getId(), option.getId(), item.getId(), issue.getId());
+        """.formatted(product.getId(), option.getId(), item.getId(), coupon.getId());
 
-        // when & then
         mockMvc.perform(post("/v1/payment")
                         .header("userId", randomUserId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(payload))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value(1))
+                .andExpect(jsonPath("$.total_price").value(originalPrice - discountAmount))
                 .andExpect(jsonPath("$.orderId").exists())
-                .andExpect(jsonPath("$.paymentId").exists())
-                .andExpect(jsonPath("$.total_price").value(originalPrice - discountAmount));
+                .andExpect(jsonPath("$.paymentId").exists());
     }
 
     @Test
     @DisplayName("결제 실패 시 모든 상태가 rollback 되어야 한다")
     void rollback_on_payment_failure() throws Exception {
         long randomUserId = ThreadLocalRandom.current().nextInt(1, 100_000);
-        long productPrice = 5000L;
-        int discount = 1000;
 
-        // 유저 포인트 세팅
+        // 유저 포인트 저장
         userPointJpaRepository.save(UserPoint.builder()
                 .userId(randomUserId)
                 .point(10000L)
                 .build());
 
-        // 상품 및 옵션 생성
+        // 상품 저장
         Product product = productJpaRepository.save(Product.builder()
-                .name("롤백 테스트 상품").price(productPrice).state(1)
-                .createdAt("2025-04-16T00:00:00").updatedAt("2025-04-16T00:00:00")
+                .name("롤백 테스트 상품").price(5000L).state(1)
+                .createdAt("2025-04-16T00:00:00")
+                .updatedAt("2025-04-16T00:00:00")
                 .build());
 
+        // 옵션 저장
         OrderOption option = orderOptionJpaRepository.save(OrderOption.builder()
                 .productId(product.getId())
                 .size(270)
                 .stockQuantity(1)
-                .createdAt("2025-04-16T00:00:00").updatedAt("2025-04-16T00:00:00")
+                .createdAt("2025-04-16T00:00:00")
+                .updatedAt("2025-04-16T00:00:00")
                 .build());
 
-        // 장바구니 아이템
+        // 장바구니 저장
         OrderItem item = orderItemJpaRepository.save(OrderItem.of(
-                randomUserId, product.getId(), option.getId(), productPrice, 1
+                randomUserId, product.getId(), option.getId(), 5000L, 1
         ));
 
-        // 쿠폰 발급
+        // Redis에 옵션 재고 저장
+        couponRedisRepository.saveStock(option.getId(), option.getStockQuantity());
+
+        // 쿠폰 저장
         Coupon coupon = couponJpaRepository.save(Coupon.builder()
                 .type(CouponType.FIXED)
                 .description("롤백 쿠폰")
-                .discount(discount)
+                .discount(1000)
                 .quantity(10)
-                .issued(1)
+                .state(1)
                 .expirationDays(7)
                 .createdAt("2025-04-16T00:00:00")
                 .updatedAt("2025-04-16T00:00:00")
                 .build());
 
+        // 쿠폰 발급 (이미 사용불가 상태로 설정)
         CouponIssue issue = couponIssueJpaRepository.save(CouponIssue.builder()
                 .userId(randomUserId)
                 .couponId(coupon.getId())
-                .state(0)
+                .state(1) // 사용 불가 상태
                 .startAt("2025-04-01T00:00:00")
                 .endAt("2025-04-30T23:59:59")
                 .createdAt("2025-04-01T00:00:00")
                 .updatedAt("2025-04-01T00:00:00")
                 .build());
 
-        // 쿠폰을 사용불가로 만들기 → 결제 실패 유도
-        issue.updateState(1);
-        couponIssueJpaRepository.save(issue);
+        // Redis에 쿠폰 정보 저장
+        couponRedisRepository.saveCouponInfo(coupon.getId(), CouponJsonMapper.toCouponJson(coupon));
+        couponRedisRepository.addCouponForUser(randomUserId, coupon.getId(), 1);
 
         String payload = """
         {
@@ -529,26 +551,24 @@ public class PaymentControllerTest {
               "quantity": 1
             }
           ],
-          "couponIssueId": %d
+          "couponId": %d
         }
         """.formatted(product.getId(), option.getId(), item.getId(), issue.getId());
 
-        // when & then
+        // 결제 시도 → 실패해야 함 (쿠폰 사용불가 상태)
         mockMvc.perform(post("/v1/payment")
                         .header("userId", randomUserId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(payload))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value("사용할 수 없는 쿠폰입니다."));
+                .andExpect(jsonPath("$.message").value("이미 사용된 쿠폰입니다."));
 
-        // 검증
-        OrderOption afterOption = orderOptionJpaRepository.findById(option.getId()).get();
-        UserPoint afterPoint = userPointJpaRepository.findById(randomUserId).get();
-        CouponIssue afterIssue = couponIssueJpaRepository.findById(issue.getId()).get();
+        // 롤백 검증
+        OrderOption afterOption = orderOptionJpaRepository.findById(option.getId()).orElseThrow();
+        UserPoint afterPoint = userPointJpaRepository.findById(randomUserId).orElseThrow();
 
-        assertThat(afterOption.getStockQuantity()).isEqualTo(1);
-        assertThat(afterPoint.getPoint()).isEqualTo(10000L);
-        assertThat(afterIssue.getState()).isEqualTo(1);  // 이미 사용불가였으므로 유지됨
+        assertThat(afterOption.getStockQuantity()).isEqualTo(1); // 재고 롤백
+        assertThat(afterPoint.getPoint()).isEqualTo(10000L);     // 포인트 롤백
     }
 
 }

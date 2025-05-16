@@ -60,6 +60,9 @@ dependencies {
 	// MapStruct 의존성
 	implementation("org.mapstruct:mapstruct:1.5.2.Final")
 	annotationProcessor("org.mapstruct:mapstruct-processor:1.5.2.Final")
+
+	// Resilience4j 의존성
+	implementation("io.github.resilience4j:resilience4j-spring-boot3:2.2.0")
 }
 
 tasks.withType<Test> {

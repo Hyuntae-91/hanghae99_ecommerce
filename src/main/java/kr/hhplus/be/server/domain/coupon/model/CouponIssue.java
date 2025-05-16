@@ -45,7 +45,7 @@ public class CouponIssue {
 
     public void updateState(int state) {
         this.state = state;
-        this.updatedAt = LocalDateTime.now().toString(); // 업데이트 시간도 갱신
+        this.updatedAt = LocalDateTime.now().toString();
     }
 
     public void validateUsable() {
@@ -109,6 +109,21 @@ public class CouponIssue {
                 createdAt,
                 updatedAt
         );
+    }
+
+    public static CouponIssue createNew(Long userId, Coupon coupon, Integer state) {
+        String now = LocalDateTime.now().toString();
+        String end = LocalDateTime.now().plusDays(coupon.getExpirationDays()).toString();
+
+        return CouponIssue.builder()
+                .userId(userId)
+                .couponId(coupon.getId())
+                .state(state)
+                .startAt(now)
+                .endAt(end)
+                .createdAt(now)
+                .updatedAt(now)
+                .build();
     }
 
 }

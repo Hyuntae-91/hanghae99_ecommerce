@@ -30,7 +30,7 @@ public class Coupon {
     private Integer quantity;
 
     @Column(nullable = false)
-    private Integer issued;
+    private Integer state;
 
     @Column(name = "expiration_days", nullable = false)
     private Integer expirationDays;
@@ -41,15 +41,10 @@ public class Coupon {
     @Column(name = "updated_at")
     private String updatedAt;
 
-    public void increaseIssued() {
-        validateIssuable();
-        this.issued += 1;
-        this.updatedAt = java.time.LocalDateTime.now().toString();
-    }
-
-    public void validateIssuable() {
-        if (this.issued >= this.quantity) {
-            throw new InvalidCouponUseException("쿠폰 발급 수량을 초과했습니다.");
-        }
+    public long calculateDiscount(long originalPrice) {
+        return switch (type) {
+            case FIXED -> Math.min(discount, originalPrice);
+            case PERCENT -> Math.min(originalPrice * discount / 100, originalPrice);
+        };
     }
 }

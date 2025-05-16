@@ -1,16 +1,17 @@
 package kr.hhplus.be.server.api.controller.coupon;
 
-import kr.hhplus.be.server.domain.coupon.model.CouponIssue;
-import org.junit.jupiter.api.TestInstance;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
+import kr.hhplus.be.server.domain.coupon.mapper.CouponJsonMapper;
 import kr.hhplus.be.server.domain.coupon.model.Coupon;
 import kr.hhplus.be.server.domain.coupon.model.CouponType;
-import kr.hhplus.be.server.infrastructure.coupon.repository.CouponJpaRepository;
+import kr.hhplus.be.server.domain.coupon.repository.CouponRedisRepository;
 import kr.hhplus.be.server.infrastructure.coupon.repository.CouponIssueJpaRepository;
+import kr.hhplus.be.server.infrastructure.coupon.repository.CouponJpaRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -21,13 +22,14 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
-
 
 @ActiveProfiles("local")
 @SpringBootTest
@@ -55,7 +57,7 @@ class CouponControllerTest {
         registry.add("spring.datasource.username", mysqlContainer::getUsername);
         registry.add("spring.datasource.password", mysqlContainer::getPassword);
         registry.add("spring.datasource.driver-class-name", mysqlContainer::getDriverClassName);
-        registry.add("spring.jpa.database-platform", () -> "org.hibernate.dialect.MySQL8Dialect");
+        registry.add("spring.jpa.database-platform", () -> "org.hibernate.dialect.MySQLDialect");
         registry.add("spring.sql.init.mode", () -> "always");
         registry.add("spring.sql.init.schema-locations", () -> "classpath:schema.sql");
 
@@ -73,26 +75,31 @@ class CouponControllerTest {
     @Autowired
     private CouponIssueJpaRepository couponIssueJpaRepository;
 
+    @Autowired
+    private CouponRedisRepository couponRedisRepository;
+
     @Test
-    @DisplayName("성공: 쿠폰 발급 후 조회까지 전체 흐름 확인")
-    void issue_and_get_coupon_success() throws Exception {
+    @DisplayName("성공: 쿠폰 발급 후 Redis 기록 확인")
+    void issue_coupon_success_with_redis_only() throws Exception {
         long randomUserId = ThreadLocalRandom.current().nextInt(1, 100_000);
 
-        // given
         Coupon coupon = couponJpaRepository.save(Coupon.builder()
                 .type(CouponType.FIXED)
                 .description("테스트 쿠폰")
                 .discount(1000)
                 .quantity(10)
-                .issued(0)
+                .state(1)
                 .expirationDays(7)
-                .createdAt("2025-04-16T00:00:00")
-                .updatedAt("2025-04-16T00:00:00")
+                .createdAt(now())
+                .updatedAt(now())
                 .build());
+
+        couponRedisRepository.saveCouponInfo(coupon.getId(), CouponJsonMapper.toCouponJson(coupon));
+        couponRedisRepository.saveStock(coupon.getId(), coupon.getQuantity());
 
         Long couponId = coupon.getId();
 
-        // when: 쿠폰 발급 API 요청
+        // when
         mockMvc.perform(post("/v1/coupon/{couponId}/issue", couponId)
                         .header("userId", randomUserId))
                 .andExpect(status().isOk())
@@ -100,20 +107,16 @@ class CouponControllerTest {
                 .andExpect(jsonPath("$.type").value("FIXED"))
                 .andExpect(jsonPath("$.discount").value(1000));
 
-        // then: 실제 DB에 쿠폰 이슈 존재하는지 검증
-        var allIssues = couponIssueJpaRepository.findAllByUserId(randomUserId);
-        assertThat(allIssues).hasSize(1);
-        assertThat(allIssues.get(0).getCouponId()).isEqualTo(couponId);
+        // then
+        Map<Long, Integer> issuedCoupons = couponRedisRepository.findAllIssuedCoupons(randomUserId);
 
-        // issued 증가했는지 확인
-        Coupon updatedCoupon = couponJpaRepository.findById(couponId).orElseThrow();
-        assertThat(updatedCoupon.getIssued()).isEqualTo(1);
+        assertThat(issuedCoupons)
+                .containsEntry(couponId, 0);
     }
 
     @Test
     @DisplayName("성공: 쿠폰 목록 조회")
     void get_coupons_success() throws Exception {
-        // given
         long randomUserId = ThreadLocalRandom.current().nextInt(1, 100_000);
 
         Coupon coupon = couponJpaRepository.save(Coupon.builder()
@@ -121,122 +124,80 @@ class CouponControllerTest {
                 .description("조회용 쿠폰")
                 .discount(1000)
                 .quantity(10)
-                .issued(1)
+                .state(1)
                 .expirationDays(7)
                 .createdAt(now())
                 .updatedAt(now())
                 .build());
 
-        couponIssueJpaRepository.save(CouponIssue.builder()
-                .userId(randomUserId)
-                .couponId(coupon.getId())
-                .state(0)
-                .startAt(nowPlus(-1))
-                .endAt(nowPlus(7))
-                .createdAt(now())
-                .updatedAt(now())
-                .build());
+        couponRedisRepository.saveCouponInfo(coupon.getId(), CouponJsonMapper.toCouponJson(coupon));
+        couponRedisRepository.saveStock(coupon.getId(), coupon.getQuantity());
+        couponRedisRepository.addCouponForUser(randomUserId, coupon.getId(), 0);
 
-        // when & then
         mockMvc.perform(get("/v1/coupon")
                         .header("userId", randomUserId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.coupons").isArray())
                 .andExpect(jsonPath("$.coupons.length()").value(1))
-                .andExpect(jsonPath("$.coupons[0].couponId").value(coupon.getId()))
+                .andExpect(jsonPath("$.coupons[0].id").value(coupon.getId()))
                 .andExpect(jsonPath("$.coupons[0].discount").value(1000));
     }
 
     @Test
     @DisplayName("실패: 쿠폰 수량 초과로 발급 실패")
     void issue_coupon_fail_when_quantity_exceeded() throws Exception {
-        // given
         long randomUserId = ThreadLocalRandom.current().nextInt(1, 100_000);
-        Long couponId = couponJpaRepository.save(Coupon.builder()
+
+        Coupon coupon = couponJpaRepository.save(Coupon.builder()
                 .type(CouponType.FIXED)
                 .description("초과 쿠폰")
                 .discount(1000)
-                .quantity(5) // 총 수량 5
-                .issued(5)   // 이미 전부 발급됨
+                .quantity(0)
+                .state(1)
                 .expirationDays(7)
                 .createdAt(now())
                 .updatedAt(now())
-                .build()
-        ).getId();
+                .build());
 
-        // when & then
-        mockMvc.perform(post("/v1/coupon/" + couponId + "/issue")
+        couponRedisRepository.saveCouponInfo(coupon.getId(), CouponJsonMapper.toCouponJson(coupon));
+        couponRedisRepository.saveStock(coupon.getId(), 0);
+
+        mockMvc.perform(post("/v1/coupon/{couponId}/issue", coupon.getId())
                         .header("userId", randomUserId))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value("쿠폰 발급 수량을 초과했습니다."));
+                .andExpect(jsonPath("$.message").value("쿠폰 소진"));
     }
 
     @Test
     @DisplayName("성공: 만료된 쿠폰은 목록에서 제외된다")
     void get_coupons_excludes_expired_coupons() throws Exception {
-        // given
         long randomUserId = ThreadLocalRandom.current().nextInt(1, 100_000);
 
-        // 유효한 쿠폰
         Coupon validCoupon = couponJpaRepository.save(Coupon.builder()
                 .type(CouponType.FIXED)
                 .description("유효 쿠폰")
                 .discount(1000)
                 .quantity(10)
-                .issued(1)
+                .state(1)
                 .expirationDays(7)
                 .createdAt(now())
                 .updatedAt(now())
                 .build());
 
-        couponIssueJpaRepository.save(CouponIssue.builder()
-                .userId(randomUserId)
-                .couponId(validCoupon.getId())
-                .state(0)
-                .startAt(nowPlus(-1))
-                .endAt(nowPlus(5))
-                .createdAt(now())
-                .updatedAt(now())
-                .build());
+        couponRedisRepository.saveCouponInfo(validCoupon.getId(), CouponJsonMapper.toCouponJson(validCoupon));
+        couponRedisRepository.saveStock(validCoupon.getId(), validCoupon.getQuantity());
+        couponRedisRepository.addCouponForUser(randomUserId, validCoupon.getId(), 0);
 
-        // 만료된 쿠폰
-        Coupon expiredCoupon = couponJpaRepository.save(Coupon.builder()
-                .type(CouponType.FIXED)
-                .description("만료 쿠폰")
-                .discount(500)
-                .quantity(10)
-                .issued(1)
-                .expirationDays(7)
-                .createdAt(now())
-                .updatedAt(now())
-                .build());
-
-        couponIssueJpaRepository.save(CouponIssue.builder()
-                .userId(randomUserId)
-                .couponId(expiredCoupon.getId())
-                .state(0)
-                .startAt(nowPlus(-10))
-                .endAt(nowPlus(-1))  // 이미 기간 만료
-                .createdAt(now())
-                .updatedAt(now())
-                .build());
-
-        // when & then
         mockMvc.perform(get("/v1/coupon")
                         .header("userId", randomUserId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.coupons").isArray())
                 .andExpect(jsonPath("$.coupons.length()").value(1))
-                .andExpect(jsonPath("$.coupons[0].couponId").value(validCoupon.getId()))
+                .andExpect(jsonPath("$.coupons[0].id").value(validCoupon.getId()))
                 .andExpect(jsonPath("$.coupons[0].description").value("유효 쿠폰"));
     }
 
     private String now() {
         return LocalDateTime.now().toString();
     }
-
-    private String nowPlus(int days) {
-        return LocalDateTime.now().plusDays(days).toString();
-    }
-
 }
