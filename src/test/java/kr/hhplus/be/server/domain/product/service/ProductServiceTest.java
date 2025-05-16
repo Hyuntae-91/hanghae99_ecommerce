@@ -3,7 +3,9 @@ package kr.hhplus.be.server.domain.product.service;
 import kr.hhplus.be.server.domain.order.model.OrderOption;
 import kr.hhplus.be.server.domain.order.repository.OrderItemRepository;
 import kr.hhplus.be.server.domain.order.repository.OrderOptionRepository;
+import kr.hhplus.be.server.domain.product.dto.request.BestProductRequest;
 import kr.hhplus.be.server.domain.product.dto.response.ProductOptionResponse;
+import kr.hhplus.be.server.domain.product.repository.ProductRankingRedisRepository;
 import kr.hhplus.be.server.exception.custom.ResourceNotFoundException;
 import kr.hhplus.be.server.domain.order.model.OrderItem;
 import kr.hhplus.be.server.domain.product.repository.ProductRepository;
@@ -20,6 +22,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -32,6 +35,7 @@ class ProductServiceTest {
     private OrderOptionRepository orderOptionRepository;
     private ProductService productService;
     private ProductMapper productMapper;
+    private ProductRankingRedisRepository productRankingRedisRepository;
 
     @BeforeEach
     void setUp() {
@@ -39,8 +43,11 @@ class ProductServiceTest {
         orderItemRepository = mock(OrderItemRepository.class);
         orderOptionRepository = mock(OrderOptionRepository.class);
         productMapper = mock(ProductMapper.class);
+        productRankingRedisRepository = mock(ProductRankingRedisRepository.class);
+
         productService = new ProductService(
                 productRepository,
+                productRankingRedisRepository,
                 orderItemRepository,
                 orderOptionRepository,
                 productMapper
@@ -189,19 +196,6 @@ class ProductServiceTest {
 
         // then
         assertThat(result.totalPrice()).isEqualTo(100L + 300L);
-    }
-
-    @Test
-    @DisplayName("실패: 인기 상품 조회 - 인기 상품 없음")
-    void get_best_products_fail_empty() {
-        // given
-        when(productRepository.findPopularTop5()).thenReturn(List.of());
-
-        // when
-        var result = productService.getBestProducts();
-
-        // then
-        assertThat(result).isEmpty();
     }
 
     @Test
@@ -410,6 +404,80 @@ class ProductServiceTest {
 
         // then
         assertThat(result.totalPrice()).isEqualTo(2000 + 6000);
+    }
+
+    @Test
+    @DisplayName("성공: 일간 인기 상품 조회")
+    void get_daily_best_products_success() {
+        // given
+        Product product = Product.builder()
+                .id(1L)
+                .name("일간상품")
+                .price(1000L)
+                .state(1)
+                .createdAt("2025-04-01 12:00:00")
+                .build();
+
+        ProductServiceResponse dto = new ProductServiceResponse(
+                1L, "일간상품", 1000L, 1, "2025-04-01 12:00:00", List.of()
+        );
+
+        when(productRankingRedisRepository.findTopNWithScores(anyString(), eq(100)))
+                .thenReturn(Set.of()); // 일단 빈 값으로 시뮬레이션
+        when(productRepository.findByIds(anyList()))
+                .thenReturn(List.of(product));
+        when(productMapper.toSortedProductServiceResponses(anyList(), anyList()))
+                .thenReturn(List.of(dto));
+
+        // when
+        List<ProductServiceResponse> result = productService.getDailyBestProducts(new BestProductRequest(0, 10));
+
+        // then
+        assertThat(result).isEmpty();  // 빈 Set이면 빈 리스트 리턴해야 함
+    }
+
+    @Test
+    @DisplayName("성공: 주간 인기 상품 조회")
+    void get_weekly_best_products_success() {
+        // given
+        Product product = Product.builder()
+                .id(2L)
+                .name("주간상품")
+                .price(2000L)
+                .state(1)
+                .createdAt("2025-04-01 12:00:00")
+                .build();
+
+        ProductServiceResponse dto = new ProductServiceResponse(
+                2L, "주간상품", 2000L, 1, "2025-04-01 12:00:00", List.of()
+        );
+
+        when(productRankingRedisRepository.findTopNWithScores(anyString(), eq(100)))
+                .thenReturn(Set.of());
+        when(productRepository.findByIds(anyList()))
+                .thenReturn(List.of(product));
+        when(productMapper.toSortedProductServiceResponses(anyList(), anyList()))
+                .thenReturn(List.of(dto));
+
+        // when
+        List<ProductServiceResponse> result = productService.getWeeklyBestProducts(new BestProductRequest(0, 10));
+
+        // then
+        assertThat(result).isEmpty();  // 빈 Set이면 빈 리스트 리턴해야 함
+    }
+
+    @Test
+    @DisplayName("성공: Redis에서 인기 상품 없을 때 빈 리스트 반환")
+    void get_best_products_when_redis_is_empty() {
+        // given
+        when(productRankingRedisRepository.findTopNWithScores(anyString(), eq(100)))
+                .thenReturn(null);
+
+        // when
+        List<ProductServiceResponse> result = productService.getDailyBestProducts(new BestProductRequest(0, 10));
+
+        // then
+        assertThat(result).isEmpty();
     }
 
 }

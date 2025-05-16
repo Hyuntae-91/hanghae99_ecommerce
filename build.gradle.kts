@@ -48,6 +48,7 @@ dependencies {
 	testImplementation("org.testcontainers:redis:1.19.3")
 	testImplementation("org.junit.jupiter:junit-jupiter:5.10.0")
 	testImplementation("org.mockito:mockito-core:5.11.0")
+	testImplementation("org.mockito:mockito-inline:5.2.0")
 
 	// Swagger
 	implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.2.0")
