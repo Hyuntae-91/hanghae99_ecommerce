@@ -1,6 +1,6 @@
 package kr.hhplus.be.server.domain.product.model;
 
-import kr.hhplus.be.server.domain.product.model.mapper.ProductScoreMapper;
+import kr.hhplus.be.server.domain.product.mapper.ProductScoreMapper;
 import org.springframework.data.redis.core.ZSetOperations;
 
 import java.util.*;
@@ -9,7 +9,14 @@ import java.util.stream.Collectors;
 
 public class ProductRanking {
 
+    public static final int MAX_RANK_SIZE = 100;
+
     private final List<ProductScore> scores;
+
+    private static final String PRODUCT_CURRENT_KEY = "product:score:current";
+    private static final String PRODUCT_WEEK_KEY = "product:score:week";
+    private static final String PRODUCT_SNAPSHOT_KEY_PREFIX = "product:score:";
+    private static final String PRODUCT_TEMP_KEY_PREFIX = "product:score:temp:";
 
     public ProductRanking(List<ProductScore> scores) {
         this.scores = scores;
@@ -86,5 +93,28 @@ public class ProductRanking {
         List<ProductScore> slicedScores = scores.subList(fromIndex, toIndex);
 
         return new ProductRanking(slicedScores);
+    }
+
+    public List<Long> productIds() {
+        return scores().stream()
+                .map(ProductScore::productId)
+                .toList();
+    }
+
+    public static ProductRanking empty() {
+        return new ProductRanking(List.of());
+    }
+
+    public ProductRanking filterTopAndThreshold(int topN) {
+        List<ProductScore> topScores = this.topN(topN);
+        List<Long> topIds = ProductScoreMapper.toProductIdSet(topScores);
+
+        List<ProductScore> filtered = scores.stream()
+                .filter(score -> topIds.contains(score.productId()))
+                .filter(score -> !score.isBelowThreshold())
+                .map(ProductScore::decay)
+                .toList();
+
+        return new ProductRanking(filtered);
     }
 }

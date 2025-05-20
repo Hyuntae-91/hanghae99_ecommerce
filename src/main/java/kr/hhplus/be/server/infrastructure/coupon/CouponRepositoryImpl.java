@@ -7,6 +7,8 @@ import kr.hhplus.be.server.infrastructure.coupon.repository.CouponJpaRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
+
 @Repository
 @RequiredArgsConstructor
 public class CouponRepositoryImpl implements CouponRepository {
@@ -28,5 +30,10 @@ public class CouponRepositoryImpl implements CouponRepository {
     @Override
     public Coupon save(Coupon coupon) {
         return couponJpaRepository.save(coupon);
+    }
+
+    @Override
+    public List<Coupon> findActiveCoupons() {
+        return couponJpaRepository.findByState(1);
     }
 }

@@ -98,7 +98,7 @@ CREATE TABLE coupon
     description VARCHAR(100),
     discount int not null,
     quantity int default 0 not null,
-    issued int not null,
+    state tinyint default 1 not null comment '-1: 비유효쿠폰, 1: 유효쿠폰',
     expiration_days int not null,
     created_at timestamp default CURRENT_TIMESTAMP not null,
     updated_at timestamp default CURRENT_TIMESTAMP not null on update CURRENT_TIMESTAMP

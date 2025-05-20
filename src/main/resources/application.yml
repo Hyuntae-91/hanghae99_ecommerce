@@ -42,3 +42,33 @@ spring:
     idle-timeout: 300000         # 커넥션 유휴 타임아웃 (ms)
     max-lifetime: 1800000        # 커넥션 최대 생명 주기 (ms)
     connection-timeout: 300000    # 커넥션 가져오기 최대 대기 시간 (ms)
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      couponIssue:
+        registerHealthIndicator: true
+        slidingWindowSize: 10              # 최근 10번의 호출을 기준으로
+        minimumNumberOfCalls: 5           # 최소 5번 이상 호출 시 판단
+        failureRateThreshold: 50          # 실패율이 50% 넘으면 OPEN
+        waitDurationInOpenState: 10s      # OPEN 상태를 10초 유지
+        permittedNumberOfCallsInHalfOpenState: 3
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+      payment:
+        slidingWindowType: COUNT_BASED         # 고정된 호출 수 기준 (COUNT_BASED 또는 TIME_BASED)
+        slidingWindowSize: 10                  # 최근 10번의 호출을 기준으로
+        minimumNumberOfCalls: 5                # 최소 5번의 호출 이후부터 실패율 계산
+        failureRateThreshold: 50               # 실패율이 50% 이상이면 open
+        waitDurationInOpenState: 10s           # open 상태에서 10초 후 half-open으로 이동
+        permittedNumberOfCallsInHalfOpenState: 3  # half-open에서 테스트할 호출 수
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+      dailyBestProducts:
+        slidingWindowSize: 10
+        failureRateThreshold: 50
+        minimumNumberOfCalls: 5
+        waitDurationInOpenState: 10s
+      weeklyBestProducts:
+        slidingWindowSize: 10
+        failureRateThreshold: 50
+        minimumNumberOfCalls: 5
+        waitDurationInOpenState: 10s

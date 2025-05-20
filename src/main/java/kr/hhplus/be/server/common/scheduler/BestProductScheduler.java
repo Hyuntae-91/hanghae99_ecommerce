@@ -15,4 +15,9 @@ public class BestProductScheduler {
     public void calculateProductRanking() {
         productRankingService.updateDailyProductRanking();
     }
+
+    @Scheduled(cron = "0 50 23 * * *")
+    public void calculateWeeklyProductRanking() {
+        productRankingService.generateWeeklyRanking();
+    }
 }

@@ -1,107 +1,104 @@
 package kr.hhplus.be.server.domain.coupon.service.model;
 
-import kr.hhplus.be.server.domain.coupon.repository.CouponIssueRepository;
-import kr.hhplus.be.server.domain.coupon.repository.CouponRepository;
-import kr.hhplus.be.server.domain.coupon.service.CouponService;
-import kr.hhplus.be.server.domain.coupon.dto.request.IssueNewCouponServiceRequest;
 import kr.hhplus.be.server.domain.coupon.model.Coupon;
 import kr.hhplus.be.server.domain.coupon.model.CouponType;
-import kr.hhplus.be.server.exception.custom.InvalidCouponUseException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
-import static org.mockito.Mockito.when;
 
-@ExtendWith(MockitoExtension.class)
 class CouponTest {
 
-    @Mock
-    private CouponRepository couponRepository;
-
-    @Mock
-    private CouponIssueRepository couponIssueRepository;
-
-    @InjectMocks
-    private CouponService couponService;
-
-    private static String now() {
-        return java.time.LocalDateTime.now().toString();
-    }
-
     @Test
-    @DisplayName("성공: 쿠폰 발급 수량 증가")
-    void increase_issued_success() {
+    @DisplayName("성공: FIXED 타입 쿠폰 할인 계산")
+    void calculateDiscount_fixedType() {
         // given
         Coupon coupon = Coupon.builder()
                 .id(1L)
                 .type(CouponType.FIXED)
-                .description("테스트 쿠폰")
-                .discount(1000)
-                .quantity(10)
-                .issued(5)
-                .expirationDays(7)
-                .createdAt(now())
-                .updatedAt(now())
+                .description("5000원 할인")
+                .discount(5000)
+                .quantity(100)
+                .state(1)
+                .expirationDays(30)
+                .createdAt("2025-05-15T00:00:00")
+                .updatedAt("2025-05-15T00:00:00")
                 .build();
 
         // when
-        coupon.increaseIssued();
+        long discount = coupon.calculateDiscount(10000L);
 
         // then
-        assertThat(coupon.getIssued()).isEqualTo(6);
-        assertThat(coupon.getUpdatedAt()).isNotNull();
+        assertThat(discount).isEqualTo(5000L);
     }
 
     @Test
-    @DisplayName("실패: 쿠폰 발급 수량 초과")
-    void increase_issued_fail_when_exceed_quantity() {
+    @DisplayName("성공: PERCENT 타입 쿠폰 할인 계산")
+    void calculateDiscount_percentType() {
         // given
         Coupon coupon = Coupon.builder()
-                .id(1L)
-                .type(CouponType.FIXED)
-                .description("테스트 쿠폰")
-                .discount(1000)
-                .quantity(5)
-                .issued(5) // 이미 최대 수량
-                .expirationDays(7)
-                .createdAt(now())
-                .updatedAt(now())
+                .id(2L)
+                .type(CouponType.PERCENT)
+                .description("10% 할인")
+                .discount(10)
+                .quantity(100)
+                .state(1)
+                .expirationDays(30)
+                .createdAt("2025-05-15T00:00:00")
+                .updatedAt("2025-05-15T00:00:00")
                 .build();
 
+        // when
+        long discount = coupon.calculateDiscount(20000L);
+
         // then
-        assertThatThrownBy(coupon::increaseIssued)
-                .isInstanceOf(InvalidCouponUseException.class)
-                .hasMessageContaining("쿠폰 발급 수량을 초과했습니다.");
+        assertThat(discount).isEqualTo(2000L);
     }
 
     @Test
-    @DisplayName("실패: 쿠폰 발급 수량 초과 시 예외 발생")
-    void issue_new_coupon_fail_when_exceeds_quantity() {
+    @DisplayName("성공: FIXED 타입 쿠폰이 원래 가격보다 클 때 할인은 원래 가격까지")
+    void calculateDiscount_fixedType_discountExceedsPrice() {
         // given
         Coupon coupon = Coupon.builder()
-                .id(1L)
+                .id(3L)
                 .type(CouponType.FIXED)
-                .description("테스트 쿠폰")
-                .discount(1000)
-                .quantity(5)
-                .issued(5) // 초과 상태
-                .expirationDays(7)
-                .createdAt(now())
-                .updatedAt(now())
+                .description("15000원 할인")
+                .discount(15000)
+                .quantity(100)
+                .state(1)
+                .expirationDays(30)
+                .createdAt("2025-05-15T00:00:00")
+                .updatedAt("2025-05-15T00:00:00")
                 .build();
 
-        when(couponRepository.findWithLockById(1L)).thenReturn(coupon);
+        // when
+        long discount = coupon.calculateDiscount(10000L);
 
         // then
-        assertThatThrownBy(() ->
-                couponService.issueNewCoupon(new IssueNewCouponServiceRequest(1L, 1L)))
-                .isInstanceOf(InvalidCouponUseException.class)
-                .hasMessageContaining("쿠폰 발급 수량을 초과했습니다.");
+        assertThat(discount).isEqualTo(10000L);
+    }
+
+    @Test
+    @DisplayName("성공: PERCENT 타입 쿠폰이 100% 이상이어도 할인은 원래 가격까지")
+    void calculateDiscount_percentType_discountExceeds100Percent() {
+        // given
+        Coupon coupon = Coupon.builder()
+                .id(4L)
+                .type(CouponType.PERCENT)
+                .description("150% 할인")
+                .discount(150)
+                .quantity(100)
+                .state(1)
+                .expirationDays(30)
+                .createdAt("2025-05-15T00:00:00")
+                .updatedAt("2025-05-15T00:00:00")
+                .build();
+
+        // when
+        long discount = coupon.calculateDiscount(20000L);
+
+        // then
+        assertThat(discount).isEqualTo(20000L);
     }
 }
+
