@@ -18,7 +18,7 @@ public interface PaymentFacadeMapper {
     List<PaymentProductFacadeDto> toFacadeDtoList(List<PaymentProductDto> dtoList);
 
     @Mapping(source = "products", target = "products")
-    @Mapping(source = "couponIssueId", target = "couponIssueId")
+    @Mapping(source = "couponId", target = "couponId")
     @Mapping(target = "userId", ignore = true)
     PaymentFacadeRequest toFacadeRequest(PaymentRequest request);
 
@@ -32,7 +32,16 @@ public interface PaymentFacadeMapper {
     CreateOrderServiceRequest toServiceRequest(PaymentFacadeRequest request);
 
     @Mapping(source = "totalPrice", target = "originalPrice")
-    ApplyCouponDiscountServiceRequest toApplyCouponDiscountServiceRequest(Long couponIssueId, Long totalPrice);
+    ApplyCouponDiscountServiceRequest toApplyCouponDiscountServiceRequest(Long couponId, Long userId, Long totalPrice);
 
+    @Mapping(source = "productId", target = "productId")
+    default List<Long> extractProductIds(PaymentFacadeRequest request) {
+        if (request.products() == null || request.products().isEmpty()) {
+            return List.of();
+        }
+        return request.products().stream()
+                .map(PaymentProductFacadeDto::productId)
+                .toList();
+    }
 }
 

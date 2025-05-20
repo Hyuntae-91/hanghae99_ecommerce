@@ -48,6 +48,7 @@ dependencies {
 	testImplementation("org.testcontainers:redis:1.19.3")
 	testImplementation("org.junit.jupiter:junit-jupiter:5.10.0")
 	testImplementation("org.mockito:mockito-core:5.11.0")
+	testImplementation("org.mockito:mockito-inline:5.2.0")
 
 	// Swagger
 	implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.2.0")
@@ -59,6 +60,9 @@ dependencies {
 	// MapStruct 의존성
 	implementation("org.mapstruct:mapstruct:1.5.2.Final")
 	annotationProcessor("org.mapstruct:mapstruct-processor:1.5.2.Final")
+
+	// Resilience4j 의존성
+	implementation("io.github.resilience4j:resilience4j-spring-boot3:2.2.0")
 }
 
 tasks.withType<Test> {

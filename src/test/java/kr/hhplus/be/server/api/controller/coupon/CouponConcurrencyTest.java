@@ -1,8 +1,9 @@
 package kr.hhplus.be.server.api.controller.coupon;
 
+import kr.hhplus.be.server.domain.coupon.mapper.CouponJsonMapper;
 import kr.hhplus.be.server.domain.coupon.model.Coupon;
 import kr.hhplus.be.server.domain.coupon.model.CouponType;
-import kr.hhplus.be.server.infrastructure.coupon.repository.CouponIssueJpaRepository;
+import kr.hhplus.be.server.domain.coupon.repository.CouponRedisRepository;
 import kr.hhplus.be.server.infrastructure.coupon.repository.CouponJpaRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -20,13 +21,11 @@ import org.testcontainers.containers.MySQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
-import java.sql.Connection;
-import java.sql.DriverManager;
+import java.util.Map;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadLocalRandom;
 
-import java.util.concurrent.CountDownLatch;
-
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 
 @ActiveProfiles("local")
@@ -34,7 +33,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 @AutoConfigureMockMvc
 @Testcontainers
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-public class CouponConcurrencyTest {
+class CouponConcurrencyTest {
 
     @Container
     static final MySQLContainer<?> mysqlContainer = new MySQLContainer<>("mysql:8.0")
@@ -55,7 +54,7 @@ public class CouponConcurrencyTest {
         registry.add("spring.datasource.username", mysqlContainer::getUsername);
         registry.add("spring.datasource.password", mysqlContainer::getPassword);
         registry.add("spring.datasource.driver-class-name", mysqlContainer::getDriverClassName);
-        registry.add("spring.jpa.database-platform", () -> "org.hibernate.dialect.MySQL8Dialect");
+        registry.add("spring.jpa.database-platform", () -> "org.hibernate.dialect.MySQLDialect");
         registry.add("spring.sql.init.mode", () -> "always");
         registry.add("spring.sql.init.schema-locations", () -> "classpath:schema.sql");
 
@@ -71,29 +70,31 @@ public class CouponConcurrencyTest {
     private CouponJpaRepository couponJpaRepository;
 
     @Autowired
-    private CouponIssueJpaRepository couponIssueJpaRepository;
+    private CouponRedisRepository couponRedisRepository;
 
     private String nowPlus(int days) {
         return java.time.LocalDateTime.now().plusDays(days).toString();
     }
 
     @Test
-    @DisplayName("동시성 테스트: 20명의 유저가 동시에 쿠폰 발급 요청을 보냈을 때 실제 발급된 수가 초과될 수 있다")
-    void concurrent_coupon_issue_test() throws InterruptedException {
+    @DisplayName("동시성 테스트: 20명 요청, 쿠폰 수량 3개")
+    void concurrent_coupon_issue_test_limit_3() throws InterruptedException {
         long randomUserId = ThreadLocalRandom.current().nextInt(1, 100_000);
-        // 발급 가능한 수량이 3개인 쿠폰 등록
-        Coupon coupon = Coupon.builder()
+
+        Coupon coupon = couponJpaRepository.save(Coupon.builder()
                 .type(CouponType.FIXED)
-                .description("동시성 테스트 쿠폰")
+                .description("동시성 테스트 쿠폰 3개")
                 .discount(1000)
                 .quantity(3)
-                .issued(0)
+                .state(1)
                 .expirationDays(7)
                 .createdAt(nowPlus(-1))
                 .updatedAt(nowPlus(1))
-                .build();
-        Coupon getCoupon = couponJpaRepository.save(coupon);
-        Long couponId = getCoupon.getId();
+                .build());
+
+        // Redis 초기화
+        couponRedisRepository.saveCouponInfo(coupon.getId(), CouponJsonMapper.toCouponJson(coupon));
+        couponRedisRepository.saveStock(coupon.getId(), coupon.getQuantity());
 
         int threadCount = 20;
         CountDownLatch latch = new CountDownLatch(threadCount);
@@ -102,7 +103,7 @@ public class CouponConcurrencyTest {
             final long uid = randomUserId + i;
             new Thread(() -> {
                 try {
-                    mockMvc.perform(post("/v1/coupon/" + couponId + "/issue")
+                    mockMvc.perform(post("/v1/coupon/{couponId}/issue", coupon.getId())
                                     .header("userId", uid)
                                     .contentType(MediaType.APPLICATION_JSON))
                             .andReturn();
@@ -116,30 +117,38 @@ public class CouponConcurrencyTest {
 
         latch.await();
 
-        long actualIssued = couponIssueJpaRepository.findAll().stream()
-                .filter(issue -> issue.getCouponId().equals(couponId))
-                .count();
+        long issuedCount = 0;
+        for (int i = 0; i < threadCount; i++) {
+            long userId = randomUserId + i;
+            Map<Long, Integer> userCoupons = couponRedisRepository.findAllIssuedCoupons(userId);
+            if (userCoupons.getOrDefault(coupon.getId(), -1) == 0) { // 0이면 발급 성공
+                issuedCount++;
+            }
+        }
 
-        assertThat(actualIssued).isEqualTo(3);
+        // 발급된 유저 수 검증
+        assertThat(issuedCount).isEqualTo(3); // 또는 15
     }
 
     @Test
-    @DisplayName("동시성 테스트: 20명의 유저가 동시에 쿠폰 발급 요청을 보냈을 때 실제 발급된 수가 초과될 수 있다")
-    void concurrent_coupon_issue_test_2() throws InterruptedException {
+    @DisplayName("동시성 테스트: 20명 요청, 쿠폰 수량 15개")
+    void concurrent_coupon_issue_test_limit_15() throws InterruptedException {
         long randomUserId = ThreadLocalRandom.current().nextInt(1, 100_000);
-        // 발급 가능한 수량이 15개인 쿠폰 등록
-        Coupon coupon = Coupon.builder()
+
+        Coupon coupon = couponJpaRepository.save(Coupon.builder()
                 .type(CouponType.FIXED)
-                .description("동시성 테스트 쿠폰")
+                .description("동시성 테스트 쿠폰 15개")
                 .discount(1000)
                 .quantity(15)
-                .issued(0)
+                .state(1)
                 .expirationDays(7)
                 .createdAt(nowPlus(-1))
                 .updatedAt(nowPlus(1))
-                .build();
-        Coupon getCoupon = couponJpaRepository.save(coupon);
-        Long couponId = getCoupon.getId();
+                .build());
+
+        // Redis 초기화
+        couponRedisRepository.saveCouponInfo(coupon.getId(), CouponJsonMapper.toCouponJson(coupon));
+        couponRedisRepository.saveStock(coupon.getId(), coupon.getQuantity());
 
         int threadCount = 20;
         CountDownLatch latch = new CountDownLatch(threadCount);
@@ -148,7 +157,7 @@ public class CouponConcurrencyTest {
             final long uid = randomUserId + i;
             new Thread(() -> {
                 try {
-                    mockMvc.perform(post("/v1/coupon/" + couponId + "/issue")
+                    mockMvc.perform(post("/v1/coupon/{couponId}/issue", coupon.getId())
                                     .header("userId", uid)
                                     .contentType(MediaType.APPLICATION_JSON))
                             .andReturn();
@@ -162,10 +171,17 @@ public class CouponConcurrencyTest {
 
         latch.await();
 
-        long actualIssued = couponIssueJpaRepository.findAll().stream()
-                .filter(issue -> issue.getCouponId().equals(couponId))
-                .count();
+        // 모든 유저에 대해 Redis 발급 여부 체크
+        long issuedCount = 0;
+        for (int i = 0; i < threadCount; i++) {
+            long uid = randomUserId + i;
+            Map<Long, Integer> issued = couponRedisRepository.findAllIssuedCoupons(uid);
+            if (issued.getOrDefault(coupon.getId(), -1) == 0) {
+                issuedCount++;
+            }
+        }
 
-        assertThat(actualIssued).isEqualTo(15);
+        assertThat(issuedCount).isEqualTo(15);
     }
+
 }

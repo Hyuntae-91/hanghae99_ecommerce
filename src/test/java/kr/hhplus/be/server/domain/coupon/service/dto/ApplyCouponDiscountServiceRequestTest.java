@@ -4,47 +4,80 @@ import kr.hhplus.be.server.domain.coupon.dto.request.ApplyCouponDiscountServiceR
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class ApplyCouponDiscountServiceRequestTest {
 
     @Test
-    @DisplayName("성공: 정상 입력")
-    void success_create_request() {
-        ApplyCouponDiscountServiceRequest request = new ApplyCouponDiscountServiceRequest(1L, 5000L);
-        assertThat(request.couponIssueId()).isEqualTo(1L);
-        assertThat(request.originalPrice()).isEqualTo(5000L);
+    @DisplayName("성공: ApplyCouponDiscountServiceRequest 정상 생성 (couponId 존재)")
+    void createApplyCouponDiscountServiceRequest_success_withCoupon() {
+        // given
+        Long couponId = 5L;
+        Long userId = 1L;
+        Long originalPrice = 10000L;
+
+        // when
+        ApplyCouponDiscountServiceRequest request = new ApplyCouponDiscountServiceRequest(couponId, userId, originalPrice);
+
+        // then
+        assertThat(request.couponId()).isEqualTo(couponId);
+        assertThat(request.userId()).isEqualTo(userId);
+        assertThat(request.originalPrice()).isEqualTo(originalPrice);
     }
 
     @Test
-    @DisplayName("성공: couponIssueId가 null인 경우")
-    void success_when_couponIssueId_is_null() {
-        ApplyCouponDiscountServiceRequest request = new ApplyCouponDiscountServiceRequest(null, 5000L);
-        assertThat(request.couponIssueId()).isNull();
-        assertThat(request.originalPrice()).isEqualTo(5000L);
+    @DisplayName("성공: ApplyCouponDiscountServiceRequest 정상 생성 (couponId 없음)")
+    void createApplyCouponDiscountServiceRequest_success_withoutCoupon() {
+        // given
+        Long userId = 1L;
+        Long originalPrice = 10000L;
+
+        // when
+        ApplyCouponDiscountServiceRequest request = new ApplyCouponDiscountServiceRequest(null, userId, originalPrice);
+
+        // then
+        assertThat(request.couponId()).isNull();
+        assertThat(request.userId()).isEqualTo(userId);
+        assertThat(request.originalPrice()).isEqualTo(originalPrice);
     }
 
     @Test
-    @DisplayName("실패: couponIssueId가 0 이하인 경우")
-    void fail_when_couponIssueId_is_invalid() {
-        assertThatThrownBy(() -> new ApplyCouponDiscountServiceRequest(0L, 5000L))
+    @DisplayName("예외: couponId가 1 미만이면 예외 발생")
+    void createApplyCouponDiscountServiceRequest_invalidCouponId() {
+        // given
+        Long couponId = 0L;
+        Long userId = 1L;
+        Long originalPrice = 10000L;
+
+        // when, then
+        assertThatThrownBy(() -> new ApplyCouponDiscountServiceRequest(couponId, userId, originalPrice))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("couponIssueId는 1 이상이어야 합니다.");
+                .hasMessageContaining("couponId는 1 이상이어야 합니다.");
     }
 
     @Test
-    @DisplayName("실패: originalPrice가 null인 경우")
-    void fail_when_originalPrice_is_null() {
-        assertThatThrownBy(() -> new ApplyCouponDiscountServiceRequest(1L, null))
+    @DisplayName("예외: userId가 null이거나 1 미만이면 예외 발생")
+    void createApplyCouponDiscountServiceRequest_invalidUserId() {
+        // when, then
+        assertThatThrownBy(() -> new ApplyCouponDiscountServiceRequest(5L, null, 10000L))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("userId는 1 이상이어야 합니다.");
+
+        assertThatThrownBy(() -> new ApplyCouponDiscountServiceRequest(5L, 0L, 10000L))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("userId는 1 이상이어야 합니다.");
+    }
+
+    @Test
+    @DisplayName("예외: originalPrice가 null이거나 0 미만이면 예외 발생")
+    void createApplyCouponDiscountServiceRequest_invalidOriginalPrice() {
+        // when, then
+        assertThatThrownBy(() -> new ApplyCouponDiscountServiceRequest(5L, 1L, null))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("originalPrice는 0 이상이어야 합니다.");
-    }
 
-    @Test
-    @DisplayName("실패: originalPrice가 음수인 경우")
-    void fail_when_originalPrice_is_negative() {
-        assertThatThrownBy(() -> new ApplyCouponDiscountServiceRequest(1L, -1000L))
+        assertThatThrownBy(() -> new ApplyCouponDiscountServiceRequest(5L, 1L, -1L))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("originalPrice는 0 이상이어야 합니다.");
     }

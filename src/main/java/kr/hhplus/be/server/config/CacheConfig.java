@@ -3,7 +3,6 @@ package kr.hhplus.be.server.config;
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.PropertyAccessor;
-import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.jsontype.impl.LaissezFaireSubTypeValidator;
@@ -20,8 +19,6 @@ import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSeriali
 import org.springframework.data.redis.serializer.RedisSerializationContext;
 
 import java.time.Duration;
-import java.util.HashMap;
-import java.util.Map;
 
 @Configuration
 @EnableCaching
@@ -46,12 +43,8 @@ public class CacheConfig {
                 .entryTtl(Duration.ofMinutes(30))
                 .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(serializer));
 
-        Map<String, RedisCacheConfiguration> configs = new HashMap<>();
-        configs.put("bestProducts", defaultConfig.entryTtl(Duration.ofMinutes(370)));
-
         return RedisCacheManager.builder(connectionFactory)
                 .cacheDefaults(defaultConfig)
-                .withInitialCacheConfigurations(configs)
                 .build();
     }
 

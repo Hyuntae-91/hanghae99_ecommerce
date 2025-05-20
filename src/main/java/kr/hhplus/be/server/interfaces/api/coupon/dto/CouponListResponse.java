@@ -10,14 +10,10 @@ public record CouponListResponse(
     public static CouponListResponse from(GetCouponsServiceResponse serviceResponse) {
         List<CouponResponse> responses = serviceResponse.coupons().stream()
                 .map(coupon -> new CouponResponse(
-                        coupon.couponId(),
-                        coupon.type(),
-                        coupon.description(),
+                        coupon.id(),
                         coupon.discount(),
-                        coupon.state(),
-                        coupon.startAt(),
-                        coupon.endAt(),
-                        coupon.createdAt()
+                        coupon.description(),
+                        coupon.expirationDays()
                 ))
                 .toList();
 

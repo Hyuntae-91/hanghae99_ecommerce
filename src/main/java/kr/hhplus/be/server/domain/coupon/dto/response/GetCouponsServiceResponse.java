@@ -3,7 +3,7 @@ package kr.hhplus.be.server.domain.coupon.dto.response;
 import java.util.List;
 
 public record GetCouponsServiceResponse(
-        List<CouponIssueDto> coupons
+        List<CouponDto> coupons
 ) {
     public GetCouponsServiceResponse {
         if (coupons == null || coupons.isEmpty()) {

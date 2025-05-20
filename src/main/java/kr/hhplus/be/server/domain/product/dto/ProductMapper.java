@@ -9,11 +9,15 @@ import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 @Mapper(componentModel = "spring")
 public interface ProductMapper {
 
     @Mapping(target = "options", ignore = true)
+    @Mapping(target = "withOptions", ignore = true)
     ProductServiceResponse productToProductServiceResponse(Product product);
 
     List<ProductServiceResponse> productsToProductServiceResponses(List<Product> products);

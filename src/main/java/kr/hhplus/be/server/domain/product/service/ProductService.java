@@ -4,10 +4,9 @@ import kr.hhplus.be.server.domain.order.model.OrderItem;
 import kr.hhplus.be.server.domain.order.model.OrderOption;
 import kr.hhplus.be.server.domain.order.repository.OrderItemRepository;
 import kr.hhplus.be.server.domain.order.repository.OrderOptionRepository;
-import kr.hhplus.be.server.domain.product.dto.response.ProductOptionResponse;
+import kr.hhplus.be.server.domain.product.assembler.ProductAssembler;
 import kr.hhplus.be.server.domain.product.repository.ProductRepository;
 import kr.hhplus.be.server.domain.product.model.ProductStates;
-import kr.hhplus.be.server.domain.product.dto.*;
 import kr.hhplus.be.server.domain.product.dto.request.ProductListServiceRequest;
 import kr.hhplus.be.server.domain.product.dto.request.ProductOptionKeyDto;
 import kr.hhplus.be.server.domain.product.dto.request.ProductServiceRequest;
@@ -15,11 +14,12 @@ import kr.hhplus.be.server.domain.product.dto.response.ProductServiceResponse;
 import kr.hhplus.be.server.domain.product.dto.response.ProductTotalPriceResponse;
 import kr.hhplus.be.server.domain.product.model.Product;
 import lombok.RequiredArgsConstructor;
-import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
+
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -30,27 +30,18 @@ public class ProductService {
     private final ProductRepository productRepository;
     private final OrderItemRepository orderItemRepository;
     private final OrderOptionRepository orderOptionRepository;
-    private final ProductMapper productMapper;
-
-    private ProductServiceResponse toResponseWithOptions(Product product) {
-        List<OrderOption> orderOptions = orderOptionRepository.findByProductId(product.getId());
-        List<ProductOptionResponse> optionResponses = productMapper.toProductOptionResponseList(orderOptions);
-        return productMapper.productToProductServiceResponse(product).withOptions(optionResponses);
-    }
+    private final ProductAssembler productAssembler;
 
     public ProductServiceResponse getProductById(ProductServiceRequest requestDto) {
         Product product = productRepository.findById(requestDto.productId());
-
         List<OrderOption> orderOptions = orderOptionRepository.findByProductId(product.getId());
-        List<ProductOptionResponse> optionResponses = productMapper.toProductOptionResponseList(orderOptions);
-
-        ProductServiceResponse baseResponse = productMapper.productToProductServiceResponse(product);
-        return baseResponse.withOptions(optionResponses);
+        return productAssembler.toResponseWithOptions(product, orderOptions);
     }
 
     public List<ProductServiceResponse> getProductByIds(List<ProductOptionKeyDto> requestDto) {
-        List<Product> productList = productRepository.findByIds(productMapper.extractProductIds(requestDto));
-        return productMapper.productsToProductServiceResponses(productList);
+        List<Long> productIds = productAssembler.extractProductIds(requestDto);
+        List<Product> productList = productRepository.findByIds(productIds);
+        return productAssembler.toResponses(productList);
     }
 
     @Cacheable(
@@ -58,10 +49,7 @@ public class ProductService {
             key = "'productList::page=' + #root.args[0].page() + ':size=' + #root.args[0].size() + ':sort=' + #root.args[0].sort()"
     )
     public List<ProductServiceResponse> getProductList(ProductListServiceRequest requestDto) {
-        List<Integer> excludedStates = List.of(
-                ProductStates.DELETED.getCode(),
-                ProductStates.SOLD_OUT.getCode()
-        );
+        List<Integer> excludedStates = ProductStates.excludedInProductList();
 
         List<Product> productList = productRepository.findByStateNotIn(
                 requestDto.page(),
@@ -69,28 +57,14 @@ public class ProductService {
                 requestDto.sort(),
                 excludedStates
         );
+        List<ProductServiceResponse> result = new ArrayList<>();
+        for (Product product : productList) {
+            List<OrderOption> options = orderOptionRepository.findByProductId(product.getId());
+            ProductServiceResponse response = productAssembler.toResponseWithOptions(product, options);
+            result.add(response);
+        }
 
-        return productList.stream()
-                .map(this::toResponseWithOptions)
-                .toList();
-    }
-
-    public List<ProductServiceResponse> getBestProducts() {
-        log.info("============ " + "[Cache miss]" + " ============");
-        List<Product> bestProducts = productRepository.findPopularTop5();
-
-        return bestProducts.stream()
-                .map(this::toResponseWithOptions)
-                .toList();
-    }
-
-    public List<ProductServiceResponse> calculateBestProducts() {
-        log.info("[Scheduler] Calculating best products");
-        List<Product> bestProducts = productRepository.findPopularTop5();
-
-        return bestProducts.stream()
-                .map(this::toResponseWithOptions)
-                .toList();
+        return result;
     }
 
     public ProductTotalPriceResponse calculateTotalPrice(List<ProductOptionKeyDto> requestDto) {
@@ -100,6 +74,6 @@ public class ProductService {
             total += item.calculateTotalPrice();
         }
 
-        return new ProductTotalPriceResponse(total);
+        return ProductTotalPriceResponse.from(total);
     }
 }

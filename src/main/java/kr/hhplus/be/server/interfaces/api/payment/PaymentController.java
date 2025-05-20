@@ -33,7 +33,7 @@ public class PaymentController implements PaymentApi {
         }
 
         PaymentFacadeRequest facadeRequest = paymentFacadeMapper.toFacadeRequest(request);
-        facadeRequest = new PaymentFacadeRequest(userId, facadeRequest.products(), facadeRequest.couponIssueId());
+        facadeRequest = new PaymentFacadeRequest(userId, facadeRequest.products(), facadeRequest.couponId());
         PaymentServiceResponse result = paymentFacade.pay(facadeRequest);
         return ResponseEntity.ok(PaymentResponse.from(result));
     }

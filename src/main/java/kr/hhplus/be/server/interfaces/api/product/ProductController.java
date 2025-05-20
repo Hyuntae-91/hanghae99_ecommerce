@@ -1,10 +1,13 @@
 package kr.hhplus.be.server.interfaces.api.product;
 
 import jakarta.validation.Valid;
+import kr.hhplus.be.server.domain.product.dto.request.BestProductRequest;
+import kr.hhplus.be.server.domain.product.service.ProductRankingService;
 import kr.hhplus.be.server.domain.product.service.ProductService;
 import kr.hhplus.be.server.domain.product.dto.request.ProductListServiceRequest;
 import kr.hhplus.be.server.domain.product.dto.request.ProductServiceRequest;
 import kr.hhplus.be.server.exception.ErrorResponse;
+import kr.hhplus.be.server.interfaces.api.product.dto.request.PageableRequest;
 import kr.hhplus.be.server.interfaces.api.product.dto.response.ProductResponse;
 import kr.hhplus.be.server.interfaces.api.product.dto.request.ProductsRequest;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +20,7 @@ import org.springframework.web.bind.annotation.*;
 public class ProductController implements ProductApi {
 
     private final ProductService productService;
+    private final ProductRankingService productRankingService;
 
     @Override
     public ResponseEntity<?> getProduct(@PathVariable("productId") Long productId) {
@@ -39,13 +43,17 @@ public class ProductController implements ProductApi {
     }
 
     @Override
-    public ResponseEntity<?> getBestProducts() {
-        return ResponseEntity.ok(ProductResponse.fromList(productService.getBestProducts()));
+    public ResponseEntity<?> getDailyBestProducts(PageableRequest request) {
+        return ResponseEntity.ok(ProductResponse.fromList(
+                productRankingService.getDailyBestProducts(new BestProductRequest(request.page(), request.size()))
+        ));
     }
 
     @Override
-    public ResponseEntity<Void> calculateBestProducts() {
-        productService.calculateBestProducts();
-        return ResponseEntity.ok().build();
+    public ResponseEntity<?> getWeeklyBestProducts(PageableRequest request) {
+        return ResponseEntity.ok(ProductResponse.fromList(
+                productRankingService.getWeeklyBestProducts(new BestProductRequest(request.page(), request.size()))
+        ));
     }
+
 }
