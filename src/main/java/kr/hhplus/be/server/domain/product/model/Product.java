@@ -3,6 +3,9 @@ package kr.hhplus.be.server.domain.product.model;
 import jakarta.persistence.*;
 import kr.hhplus.be.server.domain.order.model.OrderItem;
 import kr.hhplus.be.server.domain.order.model.OrderOption;
+import kr.hhplus.be.server.domain.product.dto.ProductMapper;
+import kr.hhplus.be.server.domain.product.dto.response.ProductOptionResponse;
+import kr.hhplus.be.server.domain.product.dto.response.ProductServiceResponse;
 import lombok.*;
 
 import java.util.ArrayList;

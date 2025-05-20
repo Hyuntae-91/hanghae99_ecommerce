@@ -34,22 +34,4 @@ public interface ProductMapper {
                 .map(ProductOptionKeyDto::productId)
                 .toList();
     }
-
-    default List<ProductServiceResponse> toSortedProductServiceResponses(
-            List<Product> products,
-            List<Long> orderIds
-    ) {
-        if (products == null || products.isEmpty() || orderIds == null || orderIds.isEmpty()) {
-            return List.of();
-        }
-
-        Map<Long, Product> productMap = products.stream()
-                .collect(Collectors.toMap(Product::getId, p -> p));
-
-        return orderIds.stream()
-                .map(productMap::get)
-                .filter(Objects::nonNull)
-                .map(this::productToProductServiceResponse)
-                .toList();
-    }
 }

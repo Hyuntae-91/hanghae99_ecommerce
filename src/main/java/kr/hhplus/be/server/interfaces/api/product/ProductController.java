@@ -2,6 +2,7 @@ package kr.hhplus.be.server.interfaces.api.product;
 
 import jakarta.validation.Valid;
 import kr.hhplus.be.server.domain.product.dto.request.BestProductRequest;
+import kr.hhplus.be.server.domain.product.service.ProductRankingService;
 import kr.hhplus.be.server.domain.product.service.ProductService;
 import kr.hhplus.be.server.domain.product.dto.request.ProductListServiceRequest;
 import kr.hhplus.be.server.domain.product.dto.request.ProductServiceRequest;
@@ -19,6 +20,7 @@ import org.springframework.web.bind.annotation.*;
 public class ProductController implements ProductApi {
 
     private final ProductService productService;
+    private final ProductRankingService productRankingService;
 
     @Override
     public ResponseEntity<?> getProduct(@PathVariable("productId") Long productId) {
@@ -43,14 +45,14 @@ public class ProductController implements ProductApi {
     @Override
     public ResponseEntity<?> getDailyBestProducts(PageableRequest request) {
         return ResponseEntity.ok(ProductResponse.fromList(
-                productService.getDailyBestProducts(new BestProductRequest(request.page(), request.size()))
+                productRankingService.getDailyBestProducts(new BestProductRequest(request.page(), request.size()))
         ));
     }
 
     @Override
     public ResponseEntity<?> getWeeklyBestProducts(PageableRequest request) {
         return ResponseEntity.ok(ProductResponse.fromList(
-                productService.getWeeklyBestProducts(new BestProductRequest(request.page(), request.size()))
+                productRankingService.getWeeklyBestProducts(new BestProductRequest(request.page(), request.size()))
         ));
     }
 
