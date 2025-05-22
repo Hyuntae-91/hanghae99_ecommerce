@@ -11,13 +11,13 @@ import org.springframework.transaction.event.TransactionalEventListener;
 @Slf4j
 @Component
 @RequiredArgsConstructor
+@Async
 public class ProductScoreUpdateEventListener {
 
     private final RedisTemplate<String, Object> redisTemplate;
     private static final String PRODUCT_CURRENT_KEY = "product:score:current";
     private static final double SALE_SCORE = 5.0;
 
-    @Async
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handleProductSoldEvent(ProductSoldEvent event) {
         for (Long productId : event.productIds()) {
