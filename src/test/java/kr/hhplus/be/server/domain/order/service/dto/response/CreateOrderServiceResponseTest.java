@@ -1,4 +1,4 @@
-package kr.hhplus.be.server.domain.order.service.dto;
+package kr.hhplus.be.server.domain.order.service.dto.response;
 
 import kr.hhplus.be.server.domain.order.dto.response.CreateOrderServiceResponse;
 import org.junit.jupiter.api.DisplayName;

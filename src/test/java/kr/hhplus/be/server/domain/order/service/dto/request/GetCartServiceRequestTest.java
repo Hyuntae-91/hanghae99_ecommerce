@@ -1,4 +1,4 @@
-package kr.hhplus.be.server.domain.order.service.dto;
+package kr.hhplus.be.server.domain.order.service.dto.request;
 
 import kr.hhplus.be.server.domain.order.dto.request.GetCartServiceRequest;
 import org.junit.jupiter.api.DisplayName;
