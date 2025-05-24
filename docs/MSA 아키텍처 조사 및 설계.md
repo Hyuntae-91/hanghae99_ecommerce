@@ -158,43 +158,47 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
     participant 사용자
+    participant 주문
     participant 상품
     participant 쿠폰
-    participant 잔액
-    participant 주문
+    participant 포인트
     participant 결제
-    participant 외부서비스
+    participant 외부시스템
 
-    사용자->>상품: 상품 가격 계산 요청
-    상품-->>쿠폰: 가격 계산 완료 이벤트 발행
+    사용자->>주문: 주문 생성 요청
+    주문-->>주문: 주문 생성 및 장바구니 반영, 재고차감
+    주문-->>상품: OrderCreatedEvent 발행
+
+    상품-->>상품: 총 상품 금액 계산
+    상품-->>쿠폰: ProductTotalPriceCompletedEvent 발행
 
     쿠폰-->>쿠폰: 쿠폰 할인 적용
-    쿠폰-->>잔액: 최종 결제 금액 포함 이벤트 발행
+    쿠폰-->>포인트: ApplyCouponDiscountCompletedEvent 발행
 
-    잔액-->>잔액: 포인트 사용 가능 여부 확인 및 차감
-    잔액-->>상품: 포인트 차감 완료 이벤트 발행
+    포인트-->>포인트: 잔액 검증 및 차감
+    포인트-->>결제: PointUsedCompletedEvent 발행
 
-    상품-->>상품: 상품 수량 차감
-    상품-->>주문: 상품 차감 완료 이벤트 발행
-
-    주문-->>주문: 주문 생성
-    주문-->>결제: 주문 생성 완료 이벤트 발행
-
+    결제-->>결제: 결제 시도
     alt 결제 성공
-        결제-->>결제: 결제 수행
-        결제-->>외부서비스: 결제 완료 이벤트 발행
-        결제-->>상품: 판매 상품 점수 증가 이벤트 발행
+        결제-->>상품: PaymentCompletedEvent 발행
+        상품-->>상품: 상품 판매 score 증가
+        결제-->>주문: PaymentCompletedEvent 발행
+        주문-->>주문: 주문 상태 업데이트 (결제 완료)
+        결제-->>외부시스템: 외부 플랫폼 전송 (Mock or 실제)
     else 결제 실패
-        결제-->>주문: 주문 취소 이벤트 발행
-        주문-->>잔액: 포인트 복구 이벤트 발행
-        주문-->>쿠폰: 쿠폰 복구 이벤트 발행
-        주문-->>상품: 상품 복구 이벤트 발행
+        결제-->>주문: PaymentFailedEvent 발행
+        주문-->>포인트: 포인트 복구
+        주문-->>쿠폰: 쿠폰 복구
     end
 
 ```
+![](./image/8weeks/Application_event_Design.png)
+
 현재 시스템의 도메인 구분은 DDD 원칙을 기반으로 나뉘어 있으므로, 
 이를 기반으로 서비스 단위로 분리하고, 도메인 간 통신을 **비동기 이벤트 기반**으로 
 구성하여 MSA 구조에 적합한 아키텍처로 전환하고자 한다.
+
+먼저, 8주차에는 Application event 를 활용하여, 하나의 Transaction 으로 묶고, 동기 형태로 설계하였다
 
 ## 서비스 분리 기준
 
