@@ -1,4 +1,4 @@
-package kr.hhplus.be.server.domain.product.event;
+package kr.hhplus.be.server.domain.product.dto.event;
 
 import java.util.List;
 
