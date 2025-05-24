@@ -1,4 +1,4 @@
-package kr.hhplus.be.server.domain.point.service.dto;
+package kr.hhplus.be.server.domain.point.service.dto.response;
 
 import kr.hhplus.be.server.domain.point.dto.response.PointHistoryServiceResponse;
 import org.junit.jupiter.api.Test;

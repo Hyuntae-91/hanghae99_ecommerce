@@ -1,4 +1,4 @@
-package kr.hhplus.be.server.domain.point.service.dto;
+package kr.hhplus.be.server.domain.point.service.dto.request;
 
 import kr.hhplus.be.server.domain.point.dto.request.PointChargeServiceRequest;
 import org.junit.jupiter.api.Test;
