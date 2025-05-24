@@ -9,63 +9,72 @@ import static org.assertj.core.api.Assertions.*;
 class OrderTest {
 
     @Test
-    @DisplayName("성공: Order 객체가 정상적으로 생성")
-    void createOrder_doesNotThrow() {
-        assertThatCode(() -> {
-            Order order = Order.create(1L, 10000L, 1L);
-            assertThat(order.getUserId()).isEqualTo(1L);
-            assertThat(order.getTotalPrice()).isEqualTo(10000L);
-            assertThat(order.getCouponIssueId()).isEqualTo(1L);
-            assertThat(order.getState()).isEqualTo(0);  // 초기 state는 0 (생성)
-        }).doesNotThrowAnyException();
-    }
+    @DisplayName("성공: Order 객체가 정상적으로 생성됨")
+    void createOrder_success() {
+        Order order = Order.create(1L, 10000L);
 
-    @Test
-    @DisplayName("성공: cancel() 호출 시 상태가 -1로 변경")
-    void cancelOrder_changesStateToMinusOne() {
-        // given
-        Order order = Order.create(1L, 10000L, 1L);
-
-        // when
-        order.cancel();
-
-        // then
-        assertThat(order.getState()).isEqualTo(-1);  // 상태가 -1로 변경되어야 함
+        assertThat(order.getUserId()).isEqualTo(1L);
+        assertThat(order.getTotalPrice()).isEqualTo(10000L);
+        assertThat(order.getCouponIssueId()).isEqualTo(-1L);  // 기본값
+        assertThat(order.getState()).isEqualTo(0);  // 기본 생성 상태
+        assertThat(order.getCreatedAt()).isNotNull();
+        assertThat(order.getUpdatedAt()).isNotNull();
     }
 
     @Test
     @DisplayName("성공: applyTotalPrice() 호출 시 totalPrice가 업데이트됨")
-    void applyTotalPrice_updatesTotalPrice() {
-        // given
-        Order order = Order.create(1L, 10000L, 1L);
+    void applyTotalPrice_updates_value() {
+        Order order = Order.create(1L, 10000L);
 
-        // when
-        order.applyTotalPrice(12000L);
+        order.applyTotalPrice(15000L);
 
-        // then
-        assertThat(order.getTotalPrice()).isEqualTo(12000L);  // totalPrice가 12000으로 업데이트 되어야 함
+        assertThat(order.getTotalPrice()).isEqualTo(15000L);
     }
 
     @Test
     @DisplayName("성공: applyCoupon() 호출 시 couponIssueId가 업데이트됨")
-    void applyCoupon_updatesCouponIssueId() {
-        // given
-        Order order = Order.create(1L, 10000L, 1L);
+    void applyCoupon_updates_value() {
+        Order order = Order.create(1L, 10000L);
 
-        // when
-        order.applyCoupon(2L);
+        order.applyCoupon(3L);
 
-        // then
-        assertThat(order.getCouponIssueId()).isEqualTo(2L);  // couponIssueId가 2로 업데이트 되어야 함
+        assertThat(order.getCouponIssueId()).isEqualTo(3L);
     }
 
     @Test
-    @DisplayName("실패: Order 객체 생성 시 필수 값이 누락되면 예외 발생")
-    void createOrder_missingFields_throwsException() {
-        assertThatThrownBy(() -> Order.create(null, 10000L, 1L))
-                .isInstanceOf(IllegalArgumentException.class);
+    @DisplayName("성공: updateState() 호출 시 state가 변경됨")
+    void updateState_changes_value() {
+        Order order = Order.create(1L, 10000L);
 
-        assertThatThrownBy(() -> Order.create(1L, null, 1L))
-                .isInstanceOf(IllegalArgumentException.class);
+        order.updateState(1);
+
+        assertThat(order.getState()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("실패: Order 생성 시 userId가 null이면 예외 발생")
+    void createOrder_fails_when_userId_is_null() {
+        assertThatThrownBy(() -> Order.create(null, 10000L))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("userId와 totalPrice는 필수 값입니다.");
+    }
+
+    @Test
+    @DisplayName("실패: Order 생성 시 totalPrice가 null이면 예외 발생")
+    void createOrder_fails_when_totalPrice_is_null() {
+        assertThatThrownBy(() -> Order.create(1L, null))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("userId와 totalPrice는 필수 값입니다.");
+    }
+
+    @Test
+    @DisplayName("성공: Order.of 정적 메서드로 생성")
+    void createOrder_using_of() {
+        Order order = Order.of(2L, 20000L, 1);
+
+        assertThat(order.getUserId()).isEqualTo(2L);
+        assertThat(order.getTotalPrice()).isEqualTo(20000L);
+        assertThat(order.getState()).isEqualTo(1);
+        assertThat(order.getCouponIssueId()).isEqualTo(-1L);
     }
 }

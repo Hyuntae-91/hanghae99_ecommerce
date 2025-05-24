@@ -1,5 +1,6 @@
 package kr.hhplus.be.server.domain.product.service;
 
+import kr.hhplus.be.server.domain.product.dto.event.ProductTotalPriceRequestedEvent;
 import kr.hhplus.be.server.domain.order.model.OrderItem;
 import kr.hhplus.be.server.domain.order.model.OrderOption;
 import kr.hhplus.be.server.domain.order.repository.OrderItemRepository;
@@ -15,6 +16,7 @@ import kr.hhplus.be.server.domain.product.dto.response.ProductTotalPriceResponse
 import kr.hhplus.be.server.domain.product.model.Product;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -31,6 +33,7 @@ public class ProductService {
     private final OrderItemRepository orderItemRepository;
     private final OrderOptionRepository orderOptionRepository;
     private final ProductAssembler productAssembler;
+    private final ApplicationEventPublisher eventPublisher;
 
     public ProductServiceResponse getProductById(ProductServiceRequest requestDto) {
         Product product = productRepository.findById(requestDto.productId());
@@ -67,13 +70,17 @@ public class ProductService {
         return result;
     }
 
-    public ProductTotalPriceResponse calculateTotalPrice(List<ProductOptionKeyDto> requestDto) {
+    public ProductTotalPriceResponse calculateTotalPrice(ProductTotalPriceRequestedEvent requestDto) {
         long total = 0;
-        for (ProductOptionKeyDto dto : requestDto) {
+        for (ProductOptionKeyDto dto : requestDto.items()) {
             OrderItem item = orderItemRepository.findById(dto.itemId());
             total += item.calculateTotalPrice();
         }
 
         return ProductTotalPriceResponse.from(total);
+    }
+
+    public void updateProductsScore(List<Long> productIds) {
+        productRepository.updateProductsScore(productIds);
     }
 }

@@ -6,7 +6,7 @@ import kr.hhplus.be.server.exception.custom.PointNotEnoughException;
 import kr.hhplus.be.server.exception.custom.ResourceNotFoundException;
 import kr.hhplus.be.server.domain.point.repository.PointHistoryRepository;
 import kr.hhplus.be.server.domain.point.repository.PointRepository;
-import kr.hhplus.be.server.domain.point.dto.UserPointMapper;
+import kr.hhplus.be.server.domain.point.mapper.UserPointMapper;
 import kr.hhplus.be.server.domain.point.dto.request.PointChargeServiceRequest;
 import kr.hhplus.be.server.domain.point.dto.request.UserPointServiceRequest;
 import kr.hhplus.be.server.domain.point.dto.response.PointChargeServiceResponse;
@@ -148,6 +148,17 @@ class PointServiceTest {
             verify(pointRepository).savePoint(userPoint);
             verify(pointHistoryRepository).saveHistory(userId, chargeAmount, PointHistoryType.CHARGE);
         }
+
+        @Test
+        @DisplayName("실패: 포인트 0 이하 충전 시 예외 발생")
+        void charge_invalidPoint() {
+            Long userId = 1L;
+
+            assertThatThrownBy(() ->
+                    pointService.charge(new PointChargeServiceRequest(userId, 0L))
+            ).isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("충전 포인트는 0보다 커야 합니다.");
+        }
     }
 
     @Nested
@@ -209,8 +220,8 @@ class PointServiceTest {
 
             // when & then
             assertThatThrownBy(() -> pointService.use(new PointUseServiceRequest(userId, useAmount)))
-                    .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessageContaining("잔액이 부족합니다.");
+                    .isInstanceOf(PointNotEnoughException.class)
+                    .hasMessageContaining("포인트가 부족합니다.");
         }
     }
 

@@ -1,7 +1,7 @@
 package kr.hhplus.be.server.domain.point.service;
 
 import kr.hhplus.be.server.common.aop.lock.DistributedLock;
-import kr.hhplus.be.server.domain.point.dto.UserPointMapper;
+import kr.hhplus.be.server.domain.point.mapper.UserPointMapper;
 import kr.hhplus.be.server.domain.point.dto.request.PointChargeServiceRequest;
 import kr.hhplus.be.server.domain.point.dto.request.PointUseServiceRequest;
 import kr.hhplus.be.server.domain.point.dto.request.PointValidateUsableRequest;
@@ -50,6 +50,7 @@ public class PointService {
     @CacheEvict(value = "userPoint", key = "#root.args[0].userId()")
     public PointUseServiceResponse use(PointUseServiceRequest reqService) {
         UserPoint userPoint = pointRepository.findWithLockByUserId(reqService.userId());
+        userPoint.validateUsableBalance(reqService.point());
         userPoint.use(reqService.point());
         pointRepository.savePoint(userPoint);
         pointHistoryRepository.saveHistory(reqService.userId(), reqService.point(), PointHistoryType.USE);

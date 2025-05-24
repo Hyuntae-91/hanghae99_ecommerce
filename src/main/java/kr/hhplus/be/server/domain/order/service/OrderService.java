@@ -1,21 +1,24 @@
 package kr.hhplus.be.server.domain.order.service;
 
+import kr.hhplus.be.server.domain.order.dto.event.OrderCreatedEvent;
 import kr.hhplus.be.server.domain.order.dto.request.*;
 import kr.hhplus.be.server.domain.order.dto.response.AddCartServiceResponse;
 import kr.hhplus.be.server.domain.order.dto.response.CartItemResponse;
 import kr.hhplus.be.server.domain.order.dto.response.CartItemServiceResponse;
 import kr.hhplus.be.server.domain.order.dto.response.CreateOrderServiceResponse;
+import kr.hhplus.be.server.domain.order.mapper.OrderMapper;
 import kr.hhplus.be.server.domain.order.model.Order;
 import kr.hhplus.be.server.domain.order.model.OrderItem;
 import kr.hhplus.be.server.domain.order.model.OrderOption;
 import kr.hhplus.be.server.domain.order.repository.OrderItemRepository;
 import kr.hhplus.be.server.domain.order.repository.OrderOptionRepository;
 import kr.hhplus.be.server.domain.order.repository.OrderRepository;
-import kr.hhplus.be.server.exception.custom.AlreadyOrderedException;
+import kr.hhplus.be.server.domain.product.dto.request.ProductOptionKeyDto;
 import kr.hhplus.be.server.exception.custom.OrderItemNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,6 +34,8 @@ public class OrderService {
     private final OrderRepository orderRepository;
     private final OrderItemRepository orderItemRepository;
     private final OrderOptionRepository orderOptionRepository;
+    private final ApplicationEventPublisher eventPublisher;
+    private final OrderMapper orderMapper;
 
     private record CartItemResponseBundle(List<CartItemResponse> items, long totalPrice) {}
 
@@ -75,6 +80,7 @@ public class OrderService {
         return new AddCartServiceResponse(bundle.items, bundle.totalPrice());
     }
 
+    @Transactional
     @CacheEvict(value = "userCart", key = "#root.args[0].userId()")
     public CreateOrderServiceResponse createOrder(CreateOrderServiceRequest requestDto) {
         // 1. 유효성 검사된 요청에서 optionId 목록과 수량 Map 추출
@@ -89,32 +95,17 @@ public class OrderService {
                 ));
 
         // 3. 유저 장바구니에서 OrderItem 조회
-        List<OrderItem> cartItems = orderItemRepository.findCartByUserId(requestDto.userId());
+        List<OrderItem> cartItems = orderItemRepository.findCartByUserIdAndOptionIds(requestDto.userId(), optionIds);
         if (cartItems.isEmpty()) {
             throw new OrderItemNotFoundException("주문 항목이 존재하지 않습니다.");
         }
 
-        // 4. 사용자가 주문하려는 optionId 기준으로 필터링
-        List<OrderItem> selectedItems = cartItems.stream()
-                .filter(item -> lockedOptionMap.containsKey(item.getOptionId()))
-                .toList();
-
-        if (selectedItems.isEmpty()) {
-            throw new OrderItemNotFoundException("선택한 옵션에 해당하는 장바구니 항목이 없습니다.");
-        }
-
-        // 5. 중복 주문 여부 확인
-        boolean hasDuplicate = selectedItems.stream().anyMatch(item -> item.getOrderId() != null);
-        if (hasDuplicate) {
-            throw new AlreadyOrderedException("이미 주문된 항목이 포함되어 있습니다.");
-        }
-
-        // 6. Order 생성 및 저장
-        Order order = Order.of(requestDto.userId(), requestDto.couponIssueId(), 0L, 0);
+        // 4. Order 생성 및 저장
+        Order order = Order.of(requestDto.userId(), requestDto.couponId(), 0);
         Order savedOrder = orderRepository.save(order);
 
-        // 7. 각 OrderItem 업데이트 및 재고 차감
-        for (OrderItem item : selectedItems) {
+        // 5. 각 OrderItem 업데이트 및 재고 차감
+        for (OrderItem item : cartItems) {
             Long optionId = item.getOptionId();
             OrderOption lockedOption = lockedOptionMap.get(optionId);
             int qty = quantityMap.getOrDefault(optionId, item.getQuantity());
@@ -123,13 +114,21 @@ public class OrderService {
             item.applyQuantity(qty);
             item.applyOrderId(savedOrder.getId());
         }
+        orderItemRepository.saveAll(cartItems);
 
-        orderItemRepository.saveAll(selectedItems);
+        List<ProductOptionKeyDto> items = orderMapper.toProductOptionKeyDtoList(cartItems);
+        eventPublisher.publishEvent(new OrderCreatedEvent(
+                    savedOrder.getId(), requestDto.userId(), requestDto.couponId(), items
+                )
+        );
+
         return new CreateOrderServiceResponse(savedOrder.getId());
     }
 
-    public void updateTotalPrice(UpdateOrderServiceRequest request) {
+    public void updateOrder(UpdateOrderServiceRequest request) {
         Order order = orderRepository.getById(request.orderId());
         order.applyTotalPrice(request.totalPrice());
+        order.updateState(1);
+        orderRepository.save(order);
     }
 }

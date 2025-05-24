@@ -13,5 +13,7 @@ public interface OrderItemRepository {
 
     List<OrderItem> findCartByUserId(Long userId);
 
+    List<OrderItem> findCartByUserIdAndOptionIds(Long userId, List<Long> optionIds);
+
     List<OrderItem> saveAll(List<OrderItem> orderItems);
 }

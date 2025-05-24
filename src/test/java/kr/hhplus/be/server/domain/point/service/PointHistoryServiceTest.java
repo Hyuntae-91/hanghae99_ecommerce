@@ -2,7 +2,7 @@ package kr.hhplus.be.server.domain.point.service;
 
 import kr.hhplus.be.server.domain.point.repository.PointRepository;
 import kr.hhplus.be.server.exception.custom.ResourceNotFoundException;
-import kr.hhplus.be.server.domain.point.dto.UserPointMapper;
+import kr.hhplus.be.server.domain.point.mapper.UserPointMapper;
 import kr.hhplus.be.server.domain.point.dto.request.PointHistoryServiceRequest;
 import kr.hhplus.be.server.domain.point.dto.response.PointHistoryServiceResponse;
 import kr.hhplus.be.server.domain.point.model.PointHistory;

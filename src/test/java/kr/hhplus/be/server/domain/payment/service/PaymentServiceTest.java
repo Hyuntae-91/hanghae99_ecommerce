@@ -25,64 +25,60 @@ class PaymentServiceTest {
     }
 
     @Test
-    @DisplayName("성공: 재고, 포인트 충분한 경우 결제 성공")
+    @DisplayName("성공: 결제 정상 처리 시 상태값 1로 저장되고 응답 반환")
     void pay_success() {
         // given
-        Long userId = 1L;
-        Long orderId = 10L;
-        long totalPrice = 5000L;
+        Long orderId = 1L;
+        Long totalPrice = 5000L;
 
-        Payment expectedPayment = Payment.of(orderId, 1, totalPrice);
-        when(paymentRepository.save(any(Payment.class))).thenReturn(expectedPayment);
+        // 결제 저장 결과에 ID 부여
+        Payment savedPayment = Payment.of(orderId, 1, totalPrice);
+        savedPayment.setId(100L); // ID 설정 추가
+
+        when(paymentRepository.save(any(Payment.class))).thenReturn(savedPayment);
 
         PaymentServiceRequest request = new PaymentServiceRequest(
-                userId,
-                totalPrice,
-                orderId
+                10L, totalPrice, orderId
         );
 
         // when
         PaymentServiceResponse result = paymentService.pay(request);
 
         // then
+        assertThat(result.paymentId()).isEqualTo(100L);
         assertThat(result.status()).isEqualTo(1);
         assertThat(result.orderId()).isEqualTo(orderId);
+        assertThat(result.totalPrice()).isEqualTo(totalPrice);
         verify(paymentRepository, times(1)).save(any(Payment.class));
     }
 
     @Test
-    @DisplayName("성공: 결제 실패 시 status -1로 저장됨")
-    void pay_fail_and_saves_failed_payment() {
+    @DisplayName("실패: 결제 중 예외 발생 시 상태 -1 결제 저장 후 예외 재전파")
+    void pay_failure_should_save_failed_payment_and_throw() {
         // given
-        Long userId = 1L;
-        Long orderId = 10L;
-        long totalPrice = 9999L;
+        Long orderId = 2L;
+        Long totalPrice = 10000L;
 
-        Payment expectedFailedPayment = Payment.builder()
-                .id(1L)
-                .orderId(orderId)
-                .state(-1)
-                .totalPrice(totalPrice)
-                .createdAt(java.time.LocalDateTime.now().toString())
-                .updatedAt(java.time.LocalDateTime.now().toString())
-                .build();
+        // 첫 save는 예외 발생 (정상 시도)
+        doThrow(new RuntimeException("DB 장애"))
+                .when(paymentRepository).save(argThat(p -> p != null && p.getState() == 1));
 
-        when(paymentRepository.save(any(Payment.class)))
-                .thenThrow(new RuntimeException("DB 에러"))
-                .thenReturn(expectedFailedPayment);
+        // 실패 결제는 정상 저장되도록 설정 (id 설정 필요)
+        Payment failedPayment = Payment.of(orderId, -1, totalPrice);
+        failedPayment.setId(99L); // ID 설정
 
-        PaymentServiceRequest request = new PaymentServiceRequest(
-                userId,
-                totalPrice,
-                orderId
-        );
+        when(paymentRepository.save(argThat(p -> p != null && p.getState() == -1)))
+                .thenReturn(failedPayment);
 
-        // when
-        PaymentServiceResponse result = paymentService.pay(request);
+        PaymentServiceRequest request = new PaymentServiceRequest(10L, totalPrice, orderId);
 
-        // then
-        assertThat(result.status()).isEqualTo(-1);
-        verify(paymentRepository, atLeastOnce()).save(any(Payment.class));
+        // when & then
+        assertThatThrownBy(() -> paymentService.pay(request))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("DB 장애");
+
+        // verify
+        verify(paymentRepository, times(2)).save(any(Payment.class));
+        verify(paymentRepository).save(argThat(p -> p != null && p.getState() == -1));
     }
-
 }

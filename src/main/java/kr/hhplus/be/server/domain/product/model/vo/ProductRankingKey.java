@@ -44,4 +44,8 @@ public class ProductRankingKey {
         return Objects.equals(value, that.value);
     }
 
+    @Override
+    public int hashCode() {
+        return Objects.hash(value);
+    }
 }

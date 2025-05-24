@@ -1,5 +1,6 @@
 package kr.hhplus.be.server.domain.product.service;
 
+import kr.hhplus.be.server.domain.product.dto.event.ProductTotalPriceRequestedEvent;
 import kr.hhplus.be.server.domain.order.model.OrderOption;
 import kr.hhplus.be.server.domain.order.repository.OrderItemRepository;
 import kr.hhplus.be.server.domain.order.repository.OrderOptionRepository;
@@ -18,6 +19,7 @@ import kr.hhplus.be.server.domain.product.model.Product;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.util.List;
 
@@ -32,6 +34,7 @@ class ProductServiceTest {
     private OrderOptionRepository orderOptionRepository;
     private ProductService productService;
     private ProductAssembler productAssembler;
+    private ApplicationEventPublisher eventPublisher;
 
     @BeforeEach
     void setUp() {
@@ -39,12 +42,14 @@ class ProductServiceTest {
         orderItemRepository = mock(OrderItemRepository.class);
         orderOptionRepository = mock(OrderOptionRepository.class);
         productAssembler = mock(ProductAssembler.class);
+        eventPublisher = mock(ApplicationEventPublisher.class);
 
         productService = new ProductService(
                 productRepository,
                 orderItemRepository,
                 orderOptionRepository,
-                productAssembler
+                productAssembler,
+                eventPublisher
         );
     }
 
@@ -176,9 +181,11 @@ class ProductServiceTest {
     @DisplayName("성공: 인기 상품 총액 계산")
     void calculate_total_price_success() {
         // given
-        ProductOptionKeyDto item1 = new ProductOptionKeyDto(1L, 11L, 1L); // itemId: 1L
-        ProductOptionKeyDto item2 = new ProductOptionKeyDto(1L, 12L, 2L); // itemId: 2L
-        List<ProductOptionKeyDto> request = List.of(item1, item2);
+        ProductOptionKeyDto item1 = new ProductOptionKeyDto(1L, 11L, 1L);
+        ProductOptionKeyDto item2 = new ProductOptionKeyDto(1L, 12L, 2L);
+        List<ProductOptionKeyDto> items = List.of(item1, item2);
+
+        ProductTotalPriceRequestedEvent event = new ProductTotalPriceRequestedEvent(items);
 
         // OrderItem mock
         OrderItem orderItem1 = OrderItem.of(1L, 1L, 11L, 100L, 1);
@@ -190,7 +197,7 @@ class ProductServiceTest {
         when(orderItemRepository.findById(2L)).thenReturn(orderItem2);
 
         // when
-        ProductTotalPriceResponse result = productService.calculateTotalPrice(request);
+        ProductTotalPriceResponse result = productService.calculateTotalPrice(event);
 
         // then
         assertThat(result.totalPrice()).isEqualTo(400L);
@@ -211,28 +218,25 @@ class ProductServiceTest {
     @DisplayName("실패: OrderItem이 존재하지 않으면 ResourceNotFoundException 발생")
     void calculateTotalPrice_when_orderItem_not_found_should_throw_exception() {
         // given
-        ProductOptionKeyDto item = new ProductOptionKeyDto(1L, 1L, 1L); // itemId = 1
-        List<ProductOptionKeyDto> request = List.of(item);
+        ProductOptionKeyDto item = new ProductOptionKeyDto(1L, 1L, 1L);
+        List<ProductOptionKeyDto> items = List.of(item);
+
+        ProductTotalPriceRequestedEvent event = new ProductTotalPriceRequestedEvent(items);
 
         when(orderItemRepository.findById(1L))
                 .thenThrow(new ResourceNotFoundException("OrderItem not found: 1"));
 
         // when & then
-        assertThrows(ResourceNotFoundException.class, () -> productService.calculateTotalPrice(request));
+        assertThrows(ResourceNotFoundException.class, () -> productService.calculateTotalPrice(event));
     }
 
-
     @Test
-    @DisplayName("성공: OrderItem이 없으면 총합은 0으로 계산된다")
-    void calculateTotalPrice_when_no_orderItems_should_return_zero() {
-        // given
-        List<ProductOptionKeyDto> request = List.of();
-
-        // when
-        ProductTotalPriceResponse result = productService.calculateTotalPrice(request);
-
-        // then
-        assertThat(result.totalPrice()).isEqualTo(0L);
+    @DisplayName("실패: 빈 주문 항목 리스트는 예외를 발생시킨다")
+    void calculateTotalPrice_when_items_empty_should_throw_exception() {
+        List<ProductOptionKeyDto> items = List.of();
+        assertThrows(IllegalArgumentException.class, () ->
+                new ProductTotalPriceRequestedEvent(items)
+        );
     }
 
     @Test
@@ -281,9 +285,11 @@ class ProductServiceTest {
     @DisplayName("성공: 요청된 itemId들에 대해서만 총합 계산")
     void calculateTotalPrice_with_selected_items_only() {
         // given
-        ProductOptionKeyDto item1 = new ProductOptionKeyDto(1L, 11L, 1L); // itemId = 1
-        ProductOptionKeyDto item2 = new ProductOptionKeyDto(1L, 12L, 2L); // itemId = 2
-        List<ProductOptionKeyDto> request = List.of(item1, item2);
+        ProductOptionKeyDto item1 = new ProductOptionKeyDto(1L, 11L, 1L);
+        ProductOptionKeyDto item2 = new ProductOptionKeyDto(1L, 12L, 2L);
+        List<ProductOptionKeyDto> items = List.of(item1, item2);
+
+        ProductTotalPriceRequestedEvent event = new ProductTotalPriceRequestedEvent(items);
 
         OrderItem orderItem1 = OrderItem.of(1L, 1L, 11L, 100L, 1);
         OrderItem orderItem2 = OrderItem.of(1L, 1L, 12L, 300L, 1);
@@ -295,7 +301,7 @@ class ProductServiceTest {
         when(orderItemRepository.findById(2L)).thenReturn(orderItem2);
 
         // when
-        ProductTotalPriceResponse result = productService.calculateTotalPrice(request);
+        ProductTotalPriceResponse result = productService.calculateTotalPrice(event);
 
         // then
         assertThat(result.totalPrice()).isEqualTo(400L);
@@ -323,9 +329,11 @@ class ProductServiceTest {
     @DisplayName("성공: 총 금액 계산")
     void calculateTotalPrice_success() {
         // given
-        ProductOptionKeyDto item1 = new ProductOptionKeyDto(1L, 1L, 1L); // itemId: 1L
-        ProductOptionKeyDto item2 = new ProductOptionKeyDto(2L, 2L, 2L); // itemId: 2L
-        List<ProductOptionKeyDto> request = List.of(item1, item2);
+        ProductOptionKeyDto item1 = new ProductOptionKeyDto(1L, 1L, 1L);
+        ProductOptionKeyDto item2 = new ProductOptionKeyDto(2L, 2L, 2L);
+        List<ProductOptionKeyDto> items = List.of(item1, item2);
+
+        ProductTotalPriceRequestedEvent event = new ProductTotalPriceRequestedEvent(items);
 
         // OrderItem(amount, quantity): 1000 * 2 = 2000, 2000 * 3 = 6000
         OrderItem orderItem1 = OrderItem.of(1L, 1L, 1L, 1000L, 2);
@@ -337,10 +345,23 @@ class ProductServiceTest {
         when(orderItemRepository.findById(2L)).thenReturn(orderItem2);
 
         // when
-        ProductTotalPriceResponse result = productService.calculateTotalPrice(request);
+        ProductTotalPriceResponse result = productService.calculateTotalPrice(event);
 
         // then
         assertThat(result.totalPrice()).isEqualTo(2000 + 6000);
     }
 
+
+    @Test
+    @DisplayName("성공: 상품 점수 업데이트")
+    void update_products_score_success() {
+        // given
+        List<Long> productIds = List.of(1L, 2L, 3L);
+
+        // when
+        productService.updateProductsScore(productIds);
+
+        // then
+        verify(productRepository).updateProductsScore(productIds);
+    }
 }

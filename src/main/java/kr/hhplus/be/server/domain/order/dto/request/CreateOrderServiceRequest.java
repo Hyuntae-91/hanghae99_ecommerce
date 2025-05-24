@@ -6,7 +6,7 @@ import java.util.stream.Collectors;
 
 public record CreateOrderServiceRequest(
         Long userId,
-        Long couponIssueId,
+        Long couponId,
         List<CreateOrderOptionDto> options
 ) {
     public CreateOrderServiceRequest {

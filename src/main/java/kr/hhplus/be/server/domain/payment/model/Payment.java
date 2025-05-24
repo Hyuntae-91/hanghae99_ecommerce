@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 @Getter
+@Setter
 @Entity
 @Table(name = "payment")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)

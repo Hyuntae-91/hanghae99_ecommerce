@@ -30,4 +30,6 @@ public interface ProductRepository {
     boolean copyKey(String originalKey, String copyKey);
 
     void replaceNewRanking(String key, List<ProductScore> scores);
+
+    void updateProductsScore(List<Long> productIds);
 }
