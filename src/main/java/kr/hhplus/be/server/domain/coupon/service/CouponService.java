@@ -138,6 +138,6 @@ public class CouponService {
         log.warn("Coupon issue fallback triggered for userId={}, couponId={}, reason={}",
                 request.userId(), request.couponId(), t.getMessage());
 
-        throw new IllegalStateException("현재 쿠폰 발급이 불가능합니다. 잠시 후 다시 시도해주세요.");
+        throw new IllegalArgumentException(t.getMessage());
     }
 }

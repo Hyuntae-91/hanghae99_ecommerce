@@ -4,7 +4,6 @@ import kr.hhplus.be.server.domain.coupon.mapper.CouponJsonMapper;
 import kr.hhplus.be.server.domain.coupon.model.Coupon;
 import kr.hhplus.be.server.domain.coupon.model.CouponType;
 import kr.hhplus.be.server.domain.coupon.repository.CouponRedisRepository;
-import kr.hhplus.be.server.infrastructure.coupon.repository.CouponIssueJpaRepository;
 import kr.hhplus.be.server.infrastructure.coupon.repository.CouponJpaRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -24,7 +23,6 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -73,17 +71,16 @@ class CouponControllerTest {
     private CouponJpaRepository couponJpaRepository;
 
     @Autowired
-    private CouponIssueJpaRepository couponIssueJpaRepository;
-
-    @Autowired
     private CouponRedisRepository couponRedisRepository;
 
     @Test
     @DisplayName("성공: 쿠폰 발급 후 Redis 기록 확인")
     void issue_coupon_success_with_redis_only() throws Exception {
         long randomUserId = ThreadLocalRandom.current().nextInt(1, 100_000);
+        long randomCouponId = ThreadLocalRandom.current().nextInt(1, 100_000);
 
         Coupon coupon = couponJpaRepository.save(Coupon.builder()
+                .id(randomCouponId)
                 .type(CouponType.FIXED)
                 .description("테스트 쿠폰")
                 .discount(1000)
@@ -118,8 +115,10 @@ class CouponControllerTest {
     @DisplayName("성공: 쿠폰 목록 조회")
     void get_coupons_success() throws Exception {
         long randomUserId = ThreadLocalRandom.current().nextInt(1, 100_000);
+        long randomCouponId = ThreadLocalRandom.current().nextInt(1, 100_000);
 
         Coupon coupon = couponJpaRepository.save(Coupon.builder()
+                .id(randomCouponId)
                 .type(CouponType.FIXED)
                 .description("조회용 쿠폰")
                 .discount(1000)
@@ -147,8 +146,10 @@ class CouponControllerTest {
     @DisplayName("실패: 쿠폰 수량 초과로 발급 실패")
     void issue_coupon_fail_when_quantity_exceeded() throws Exception {
         long randomUserId = ThreadLocalRandom.current().nextInt(1, 100_000);
+        long randomCouponId = ThreadLocalRandom.current().nextInt(1, 100_000);
 
         Coupon coupon = couponJpaRepository.save(Coupon.builder()
+                .id(randomCouponId)
                 .type(CouponType.FIXED)
                 .description("초과 쿠폰")
                 .discount(1000)
@@ -172,8 +173,10 @@ class CouponControllerTest {
     @DisplayName("성공: 만료된 쿠폰은 목록에서 제외된다")
     void get_coupons_excludes_expired_coupons() throws Exception {
         long randomUserId = ThreadLocalRandom.current().nextInt(1, 100_000);
+        long randomCouponId = ThreadLocalRandom.current().nextInt(1, 100_000);
 
         Coupon validCoupon = couponJpaRepository.save(Coupon.builder()
+                .id(randomCouponId)
                 .type(CouponType.FIXED)
                 .description("유효 쿠폰")
                 .discount(1000)

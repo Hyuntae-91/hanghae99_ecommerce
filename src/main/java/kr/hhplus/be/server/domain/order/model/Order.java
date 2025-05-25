@@ -22,7 +22,7 @@ public class Order {
 
     private Long userId;
 
-    private int state; // 0: 생성, -1: 취소
+    private int state; // 0: 생성, -1: 취소, 1: 결제완료
 
     private Long totalPrice;
 
@@ -32,7 +32,7 @@ public class Order {
 
     private String updatedAt;
 
-    public static Order create(Long userId, Long totalPrice, Long couponIssueId) {
+    public static Order create(Long userId, Long totalPrice) {
         String now = LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
         if (userId == null || totalPrice == null) {
             throw new IllegalArgumentException("userId와 totalPrice는 필수 값입니다.");
@@ -41,16 +41,14 @@ public class Order {
         return Order.builder()
                 .userId(userId)
                 .totalPrice(totalPrice)
-                .couponIssueId(couponIssueId)
+                .couponIssueId(-1L)
                 .state(0)
                 .createdAt(now)
                 .updatedAt(now)
                 .build();
     }
 
-    public void cancel() {
-        this.state = -1;
-    }
+    public void updateState(Integer state) { this.state = state; }
 
     public void applyTotalPrice(long totalPrice) {
         this.totalPrice = totalPrice;
@@ -60,11 +58,11 @@ public class Order {
         this.couponIssueId = couponIssueId;
     }
 
-    public static Order of(Long userId, Long couponIssueId, Long totalPrice, int state) {
+    public static Order of(Long userId, Long totalPrice, int state) {
         String now = LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
         return Order.builder()
                 .userId(userId)
-                .couponIssueId(couponIssueId)
+                .couponIssueId(-1L)
                 .totalPrice(totalPrice)
                 .state(state)
                 .createdAt(now)

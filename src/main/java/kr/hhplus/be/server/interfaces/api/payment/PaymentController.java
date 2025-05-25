@@ -1,9 +1,8 @@
 package kr.hhplus.be.server.interfaces.api.payment;
 
-import kr.hhplus.be.server.application.payment.PaymentFacade;
-import kr.hhplus.be.server.application.payment.dto.PaymentFacadeMapper;
-import kr.hhplus.be.server.application.payment.dto.PaymentFacadeRequest;
-import kr.hhplus.be.server.domain.payment.dto.response.PaymentServiceResponse;
+import kr.hhplus.be.server.domain.order.dto.response.CreateOrderServiceResponse;
+import kr.hhplus.be.server.domain.order.mapper.OrderMapper;
+import kr.hhplus.be.server.domain.order.service.OrderService;
 import kr.hhplus.be.server.exception.ErrorResponse;
 import kr.hhplus.be.server.interfaces.api.payment.dto.request.PaymentRequest;
 import kr.hhplus.be.server.interfaces.api.payment.dto.response.PaymentResponse;
@@ -19,8 +18,8 @@ import org.springframework.http.ResponseEntity;
 @RequiredArgsConstructor
 public class PaymentController implements PaymentApi {
 
-    private final PaymentFacade paymentFacade;
-    private final PaymentFacadeMapper paymentFacadeMapper;
+    private final OrderService orderService;
+    private final OrderMapper orderMapper;
 
     @Override
     public ResponseEntity<?> requestPayment(
@@ -32,10 +31,7 @@ public class PaymentController implements PaymentApi {
                     .body(new ErrorResponse(400, "Missing userId header"));
         }
 
-        PaymentFacadeRequest facadeRequest = paymentFacadeMapper.toFacadeRequest(request);
-        facadeRequest = new PaymentFacadeRequest(userId, facadeRequest.products(), facadeRequest.couponId());
-        PaymentServiceResponse result = paymentFacade.pay(facadeRequest);
-        return ResponseEntity.ok(PaymentResponse.from(result));
+        CreateOrderServiceResponse orderIdDto = orderService.createOrder(orderMapper.toServiceRequest(userId, request));
+        return ResponseEntity.ok(PaymentResponse.from(orderIdDto));
     }
 }
-

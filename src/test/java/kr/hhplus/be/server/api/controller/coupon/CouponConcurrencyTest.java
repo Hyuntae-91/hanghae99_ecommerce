@@ -80,8 +80,10 @@ class CouponConcurrencyTest {
     @DisplayName("동시성 테스트: 20명 요청, 쿠폰 수량 3개")
     void concurrent_coupon_issue_test_limit_3() throws InterruptedException {
         long randomUserId = ThreadLocalRandom.current().nextInt(1, 100_000);
+        long randomCouponId = ThreadLocalRandom.current().nextInt(1, 100_000);
 
         Coupon coupon = couponJpaRepository.save(Coupon.builder()
+                .id(randomCouponId)
                 .type(CouponType.FIXED)
                 .description("동시성 테스트 쿠폰 3개")
                 .discount(1000)
@@ -93,8 +95,8 @@ class CouponConcurrencyTest {
                 .build());
 
         // Redis 초기화
-        couponRedisRepository.saveCouponInfo(coupon.getId(), CouponJsonMapper.toCouponJson(coupon));
-        couponRedisRepository.saveStock(coupon.getId(), coupon.getQuantity());
+        couponRedisRepository.saveCouponInfo(randomCouponId, CouponJsonMapper.toCouponJson(coupon));
+        couponRedisRepository.saveStock(randomCouponId, coupon.getQuantity());
 
         int threadCount = 20;
         CountDownLatch latch = new CountDownLatch(threadCount);
@@ -103,7 +105,7 @@ class CouponConcurrencyTest {
             final long uid = randomUserId + i;
             new Thread(() -> {
                 try {
-                    mockMvc.perform(post("/v1/coupon/{couponId}/issue", coupon.getId())
+                    mockMvc.perform(post("/v1/coupon/{couponId}/issue", randomCouponId)
                                     .header("userId", uid)
                                     .contentType(MediaType.APPLICATION_JSON))
                             .andReturn();
@@ -121,7 +123,7 @@ class CouponConcurrencyTest {
         for (int i = 0; i < threadCount; i++) {
             long userId = randomUserId + i;
             Map<Long, Integer> userCoupons = couponRedisRepository.findAllIssuedCoupons(userId);
-            if (userCoupons.getOrDefault(coupon.getId(), -1) == 0) { // 0이면 발급 성공
+            if (userCoupons.getOrDefault(randomCouponId, -1) == 0) { // 0이면 발급 성공
                 issuedCount++;
             }
         }
@@ -134,8 +136,10 @@ class CouponConcurrencyTest {
     @DisplayName("동시성 테스트: 20명 요청, 쿠폰 수량 15개")
     void concurrent_coupon_issue_test_limit_15() throws InterruptedException {
         long randomUserId = ThreadLocalRandom.current().nextInt(1, 100_000);
+        long randomCouponId = ThreadLocalRandom.current().nextInt(1, 100_000);
 
         Coupon coupon = couponJpaRepository.save(Coupon.builder()
+                .id(randomCouponId)
                 .type(CouponType.FIXED)
                 .description("동시성 테스트 쿠폰 15개")
                 .discount(1000)
@@ -147,8 +151,8 @@ class CouponConcurrencyTest {
                 .build());
 
         // Redis 초기화
-        couponRedisRepository.saveCouponInfo(coupon.getId(), CouponJsonMapper.toCouponJson(coupon));
-        couponRedisRepository.saveStock(coupon.getId(), coupon.getQuantity());
+        couponRedisRepository.saveCouponInfo(randomCouponId, CouponJsonMapper.toCouponJson(coupon));
+        couponRedisRepository.saveStock(randomCouponId, coupon.getQuantity());
 
         int threadCount = 20;
         CountDownLatch latch = new CountDownLatch(threadCount);
@@ -157,7 +161,7 @@ class CouponConcurrencyTest {
             final long uid = randomUserId + i;
             new Thread(() -> {
                 try {
-                    mockMvc.perform(post("/v1/coupon/{couponId}/issue", coupon.getId())
+                    mockMvc.perform(post("/v1/coupon/{couponId}/issue", randomCouponId)
                                     .header("userId", uid)
                                     .contentType(MediaType.APPLICATION_JSON))
                             .andReturn();
@@ -176,7 +180,7 @@ class CouponConcurrencyTest {
         for (int i = 0; i < threadCount; i++) {
             long uid = randomUserId + i;
             Map<Long, Integer> issued = couponRedisRepository.findAllIssuedCoupons(uid);
-            if (issued.getOrDefault(coupon.getId(), -1) == 0) {
+            if (issued.getOrDefault(randomCouponId, -1) == 0) {
                 issuedCount++;
             }
         }

@@ -18,7 +18,6 @@ import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -124,6 +123,14 @@ public class ProductRepositoryImpl implements ProductRepository {
         redisTemplate.delete(key);  // 기존 키 삭제
         for (ProductScore score : scores) {
             redisTemplate.opsForZSet().add(key, score.productId().toString(), score.score());
+        }
+    }
+
+    @Override
+    public void updateProductsScore(List<Long> productIds) {
+        for (Long productId : productIds) {
+            redisTemplate.opsForZSet().incrementScore(ProductRankingKey.currentKey(), productId.toString(), ProductScore.SALE_SCORE);
+            log.info("[ProductScoreUpdateEventListener] Increased score for productId={} by {}", productId, ProductScore.SALE_SCORE);
         }
     }
 }
