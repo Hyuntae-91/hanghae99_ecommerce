@@ -5,9 +5,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Repository
@@ -25,7 +23,7 @@ public class CouponRedisRepositoryImpl implements CouponRedisRepository {
 
     @Override
     public boolean addCouponForUser(Long userId, Long couponId, Integer use) {
-        String key = getIssuedKey(userId);
+        String key = getIssuedKey(couponId, userId);
         Boolean exists = redisTemplate.opsForHash().hasKey(key, couponId.toString());
         if (Boolean.TRUE.equals(exists)) {
             return false; // 이미 발급된 경우
@@ -60,20 +58,29 @@ public class CouponRedisRepositoryImpl implements CouponRedisRepository {
 
     @Override
     public Map<Long, Integer> findAllIssuedCoupons(Long userId) {
-        String key = getIssuedKey(userId);
+        String pattern = "coupon:issued:*:" + userId;
+        Set<String> keys = redisTemplate.keys(pattern);
 
-        Map<Object, Object> rawEntries = redisTemplate.opsForHash().entries(key);
-        return rawEntries.entrySet().stream()
-                .collect(Collectors.toMap(
-                        e -> Long.parseLong(e.getKey().toString()),
-                        e -> Integer.parseInt(e.getValue().toString())
-                ));
+        if (keys == null || keys.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        Map<Long, Integer> result = new HashMap<>();
+        for (String key : keys) {
+            Map<Object, Object> entries = redisTemplate.opsForHash().entries(key);
+            for (Map.Entry<Object, Object> entry : entries.entrySet()) {
+                Long couponId = Long.parseLong(entry.getKey().toString());
+                Integer use = Integer.parseInt(entry.getValue().toString());
+                result.put(couponId, use);
+            }
+        }
+        return result;
     }
 
 
     @Override
     public void updateCouponUse(Long userId, Long couponId) {
-        String key = getIssuedKey(userId);
+        String key = getIssuedKey(couponId, userId);
         String field = String.valueOf(couponId);
 
         redisTemplate.opsForHash().put(key, field, "1");
@@ -81,7 +88,7 @@ public class CouponRedisRepositoryImpl implements CouponRedisRepository {
 
     @Override
     public void rollbackCoupon(Long userId, Long couponId) {
-        String key = getIssuedKey(userId);
+        String key = getIssuedKey(couponId, userId);
         String field = String.valueOf(couponId);
 
         // 발급된 쿠폰을 다시 미사용(0)으로 복구
@@ -101,7 +108,7 @@ public class CouponRedisRepositoryImpl implements CouponRedisRepository {
         return "coupon:stock:" + couponId;
     }
 
-    private String getIssuedKey(Long userId) {
-        return "coupon:issued:" + userId;
+    private String getIssuedKey(Long couponId, Long userId) {
+        return "coupon:issued:" + couponId + ":" + userId;
     }
 }

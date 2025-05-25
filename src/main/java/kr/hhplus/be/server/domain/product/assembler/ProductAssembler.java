@@ -1,7 +1,7 @@
 package kr.hhplus.be.server.domain.product.assembler;
 
 import kr.hhplus.be.server.domain.order.model.OrderOption;
-import kr.hhplus.be.server.domain.product.dto.ProductMapper;
+import kr.hhplus.be.server.domain.product.mapper.ProductMapper;
 import kr.hhplus.be.server.domain.product.model.Product;
 import kr.hhplus.be.server.domain.product.dto.response.ProductServiceResponse;
 import kr.hhplus.be.server.domain.product.dto.response.ProductOptionResponse;

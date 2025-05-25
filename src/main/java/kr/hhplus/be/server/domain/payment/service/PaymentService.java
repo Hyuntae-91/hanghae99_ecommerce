@@ -23,7 +23,6 @@ public class PaymentService {
     }
 
     public PaymentServiceResponse pay(PaymentServiceRequest request) {
-        Long userId = request.userId();
         long totalPrice = request.totalPrice();
         long orderId = request.orderId();
 
@@ -36,7 +35,7 @@ public class PaymentService {
             // 결제 실패 처리: status -1
             Payment failedPayment = Payment.of(orderId, -1, totalPrice);
             Payment savedFailed = paymentRepository.save(failedPayment);
-            return toResponse(savedFailed);
+            throw e;
         }
     }
 }

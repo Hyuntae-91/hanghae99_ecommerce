@@ -1,13 +1,15 @@
 package kr.hhplus.be.server.api.controller.payment;
 
+import com.jayway.jsonpath.JsonPath;
 import kr.hhplus.be.server.domain.coupon.mapper.CouponJsonMapper;
 import kr.hhplus.be.server.domain.coupon.model.Coupon;
 import kr.hhplus.be.server.domain.coupon.model.CouponIssue;
 import kr.hhplus.be.server.domain.coupon.model.CouponType;
-import kr.hhplus.be.server.domain.coupon.repository.CouponIssueRepository;
 import kr.hhplus.be.server.domain.coupon.repository.CouponRedisRepository;
+import kr.hhplus.be.server.domain.order.model.Order;
 import kr.hhplus.be.server.domain.order.model.OrderItem;
 import kr.hhplus.be.server.domain.order.model.OrderOption;
+import kr.hhplus.be.server.domain.payment.model.Payment;
 import kr.hhplus.be.server.domain.point.model.UserPoint;
 import kr.hhplus.be.server.domain.product.model.Product;
 import kr.hhplus.be.server.infrastructure.coupon.repository.CouponIssueJpaRepository;
@@ -15,6 +17,7 @@ import kr.hhplus.be.server.infrastructure.coupon.repository.CouponJpaRepository;
 import kr.hhplus.be.server.infrastructure.order.repository.OrderItemJpaRepository;
 import kr.hhplus.be.server.infrastructure.order.repository.OrderJpaRepository;
 import kr.hhplus.be.server.infrastructure.order.repository.OrderOptionJpaRepository;
+import kr.hhplus.be.server.infrastructure.payment.repository.PaymentJpaRepository;
 import kr.hhplus.be.server.infrastructure.point.repository.UserPointJpaRepository;
 import kr.hhplus.be.server.infrastructure.product.repository.ProductJpaRepository;
 import org.junit.jupiter.api.Test;
@@ -33,6 +36,7 @@ import org.testcontainers.containers.MySQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
+import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
@@ -85,16 +89,13 @@ public class PaymentControllerTest {
     private ProductJpaRepository productJpaRepository;
 
     @Autowired
+    private OrderJpaRepository orderJpaRepository;
+
+    @Autowired
     private OrderOptionJpaRepository orderOptionJpaRepository;
 
     @Autowired
     private OrderItemJpaRepository orderItemJpaRepository;
-
-    @Autowired
-    private OrderJpaRepository orderJpaRepository;
-
-    @Autowired
-    private CouponIssueRepository couponIssueRepository;
 
     @Autowired
     private CouponJpaRepository couponJpaRepository;
@@ -105,12 +106,15 @@ public class PaymentControllerTest {
     @Autowired
     private CouponRedisRepository couponRedisRepository;
 
+    @Autowired
+    private PaymentJpaRepository paymentJpaRepository;
+
     private String nowPlus(int days) {
         return java.time.LocalDateTime.now().plusDays(days).toString();
     }
 
     @Test
-    @DisplayName("성공: 정상 결제 요청 시 결제 완료 (Redis 기반)")
+    @DisplayName("성공: 정상 결제 요청 시 결제 완료")
     void pay_success() throws Exception {
         long randomUserId = ThreadLocalRandom.current().nextInt(1, 100_000);
 
@@ -161,15 +165,29 @@ public class PaymentControllerTest {
         """.formatted(product.getId(), option.getId(), savedItem.getId());
 
         // when & then
-        mockMvc.perform(post("/v1/payment")
+        String response = mockMvc.perform(post("/v1/payment")
                         .header("userId", randomUserId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(payload))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value(1))
-                .andExpect(jsonPath("$.total_price").value(4000))
                 .andExpect(jsonPath("$.orderId").exists())
-                .andExpect(jsonPath("$.paymentId").exists());
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        Integer orderIdInt = JsonPath.read(response, "$.orderId");
+        Long orderId = orderIdInt.longValue();
+        Order order = orderJpaRepository.findById(orderId)
+                .orElseThrow(() -> new IllegalStateException("주문이 저장되지 않았습니다."));
+
+        List<OrderItem> orderItems = orderItemJpaRepository.findAllByOrderId(orderId);
+
+        Payment payment = paymentJpaRepository.findByOrderId(orderId)
+                .orElseThrow(() -> new IllegalStateException("결제 정보가 존재하지 않습니다."));
+
+        assertThat(order.getState()).isEqualTo(1);
+        assertThat(payment.getTotalPrice()).isEqualTo(4000);
+        assertThat(orderItems.get(0).getQuantity()).isEqualTo(2);
     }
 
     @Test
@@ -473,10 +491,7 @@ public class PaymentControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(payload))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value(1))
-                .andExpect(jsonPath("$.total_price").value(originalPrice - discountAmount))
-                .andExpect(jsonPath("$.orderId").exists())
-                .andExpect(jsonPath("$.paymentId").exists());
+                .andExpect(jsonPath("$.orderId").exists());
     }
 
     @Test

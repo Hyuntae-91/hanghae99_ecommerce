@@ -14,4 +14,7 @@ public interface OrderItemJpaRepository extends JpaRepository<OrderItem, Long> {
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     List<OrderItem> findAllByIdIn(List<Long> ids);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    List<OrderItem> findByUserIdAndOptionIdIn(Long userId, List<Long> optionIds);
 }
