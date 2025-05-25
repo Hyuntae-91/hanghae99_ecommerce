@@ -9,9 +9,9 @@ import org.springframework.transaction.event.TransactionalEventListener;
 
 @Slf4j
 @Component
-@Async
 public class MockDataPlatformListener {
 
+    @Async
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handle(PaymentCompletedEvent event) {
         try {

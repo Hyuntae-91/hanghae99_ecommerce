@@ -13,11 +13,11 @@ import org.springframework.transaction.event.TransactionalEventListener;
 @Component
 @RequiredArgsConstructor
 @Slf4j
-@Async
 public class CouponRollbackEventListener {
 
     private final CouponRedisRepository couponRedisRepository;
 
+    @Async
     @TransactionalEventListener(phase = TransactionPhase.AFTER_ROLLBACK)
     public void handleCouponRollback(CouponRollbackEvent event) {
         Long userId = event.userId();

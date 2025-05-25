@@ -12,11 +12,11 @@ import org.springframework.transaction.event.TransactionalEventListener;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-@Async
 public class ProductScoreUpdateEventListener {
 
     private final ProductService productService;
 
+    @Async
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handleProductSoldEvent(PaymentCompletedEvent event) {
         productService.updateProductsScore(event.productIds());
