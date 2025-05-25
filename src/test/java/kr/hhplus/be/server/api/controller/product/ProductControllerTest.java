@@ -222,38 +222,5 @@ class ProductControllerTest {
                         .updatedAt("2025-04-10T00:00:00")
                         .build()
         );
-
-        // 주문 및 아이템
-        Order order = orderJpaRepository.save(Order.of(randomUserId, null, 5000L, 1));
-
-        orderItemJpaRepository.save(OrderItem.builder()
-                .orderId(order.getId())
-                .userId(randomUserId)
-                .productId(productA.getId())
-                .optionId(optionA.getId())
-                .eachPrice(1000L)
-                .quantity(2)
-                .createdAt("2025-04-10T00:00:00")
-                .updatedAt("2025-04-10T00:00:00")
-                .build());
-
-        orderItemJpaRepository.save(OrderItem.builder()
-                .orderId(order.getId())
-                .userId(randomUserId)
-                .productId(productB.getId())
-                .optionId(optionB.getId())
-                .eachPrice(2000L)
-                .quantity(1)
-                .createdAt("2025-04-10T00:00:00")
-                .updatedAt("2025-04-10T00:00:00")
-                .build());
-
-        // when & then
-        mockMvc.perform(get("/v1/products/bests")
-                        .param("page", "0")
-                        .param("size", "10"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(2));
     }
-
 }

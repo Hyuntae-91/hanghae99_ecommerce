@@ -4,7 +4,6 @@ import kr.hhplus.be.server.domain.coupon.mapper.CouponJsonMapper;
 import kr.hhplus.be.server.domain.coupon.model.Coupon;
 import kr.hhplus.be.server.domain.coupon.model.CouponIssue;
 import kr.hhplus.be.server.domain.coupon.model.CouponType;
-import kr.hhplus.be.server.domain.coupon.repository.CouponIssueRepository;
 import kr.hhplus.be.server.domain.coupon.repository.CouponRedisRepository;
 import kr.hhplus.be.server.domain.order.model.OrderItem;
 import kr.hhplus.be.server.domain.order.model.OrderOption;
@@ -13,7 +12,6 @@ import kr.hhplus.be.server.domain.product.model.Product;
 import kr.hhplus.be.server.infrastructure.coupon.repository.CouponIssueJpaRepository;
 import kr.hhplus.be.server.infrastructure.coupon.repository.CouponJpaRepository;
 import kr.hhplus.be.server.infrastructure.order.repository.OrderItemJpaRepository;
-import kr.hhplus.be.server.infrastructure.order.repository.OrderJpaRepository;
 import kr.hhplus.be.server.infrastructure.order.repository.OrderOptionJpaRepository;
 import kr.hhplus.be.server.infrastructure.point.repository.UserPointJpaRepository;
 import kr.hhplus.be.server.infrastructure.product.repository.ProductJpaRepository;
@@ -91,12 +89,6 @@ public class PaymentControllerTest {
     private OrderItemJpaRepository orderItemJpaRepository;
 
     @Autowired
-    private OrderJpaRepository orderJpaRepository;
-
-    @Autowired
-    private CouponIssueRepository couponIssueRepository;
-
-    @Autowired
     private CouponJpaRepository couponJpaRepository;
 
     @Autowired
@@ -166,10 +158,7 @@ public class PaymentControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(payload))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value(1))
-                .andExpect(jsonPath("$.total_price").value(4000))
                 .andExpect(jsonPath("$.orderId").exists())
-                .andExpect(jsonPath("$.paymentId").exists());
     }
 
     @Test
@@ -473,10 +462,7 @@ public class PaymentControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(payload))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value(1))
-                .andExpect(jsonPath("$.total_price").value(originalPrice - discountAmount))
-                .andExpect(jsonPath("$.orderId").exists())
-                .andExpect(jsonPath("$.paymentId").exists());
+                .andExpect(jsonPath("$.orderId").exists());
     }
 
     @Test

@@ -45,7 +45,7 @@ dependencies {
 	testImplementation("org.springframework.boot:spring-boot-testcontainers")
 	testImplementation("org.testcontainers:junit-jupiter")
 	testImplementation("org.testcontainers:mysql")
-	testImplementation("org.testcontainers:redis:1.19.3")
+	testImplementation("org.testcontainers:testcontainers:1.19.3")
 	testImplementation("org.junit.jupiter:junit-jupiter:5.10.0")
 	testImplementation("org.mockito:mockito-core:5.11.0")
 	testImplementation("org.mockito:mockito-inline:5.2.0")
