@@ -1,4 +1,4 @@
-package kr.hhplus.be.server.api.controller.point;
+package kr.hhplus.be.server.interfaces.api.point;
 
 import kr.hhplus.be.server.domain.point.model.PointHistory;
 import kr.hhplus.be.server.domain.point.model.PointHistoryType;

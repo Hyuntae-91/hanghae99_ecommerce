@@ -1,4 +1,4 @@
-package kr.hhplus.be.server.api.controller.coupon;
+package kr.hhplus.be.server.interfaces.api.coupon;
 
 import kr.hhplus.be.server.domain.coupon.mapper.CouponJsonMapper;
 import kr.hhplus.be.server.domain.coupon.model.Coupon;

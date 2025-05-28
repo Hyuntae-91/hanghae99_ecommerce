@@ -1,4 +1,4 @@
-package kr.hhplus.be.server.api.controller.coupon;
+package kr.hhplus.be.server.interfaces.api.coupon;
 
 import kr.hhplus.be.server.domain.coupon.mapper.CouponJsonMapper;
 import kr.hhplus.be.server.domain.coupon.model.Coupon;
@@ -19,6 +19,8 @@ import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.MySQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
+import org.testcontainers.containers.KafkaContainer;
+import org.testcontainers.utility.DockerImageName;
 
 import java.time.LocalDateTime;
 import java.util.Map;
@@ -45,6 +47,10 @@ class CouponControllerTest {
     @Container
     static final GenericContainer<?> redisContainer = new GenericContainer<>("redis:7.0")
             .withExposedPorts(6379);
+
+    @Container
+    static final KafkaContainer kafkaContainer =
+            new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.5.1"));
 
     @DynamicPropertySource
     static void overrideProperties(DynamicPropertyRegistry registry) {

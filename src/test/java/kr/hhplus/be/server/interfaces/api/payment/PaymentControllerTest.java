@@ -1,4 +1,4 @@
-package kr.hhplus.be.server.api.controller.payment;
+package kr.hhplus.be.server.interfaces.api.payment;
 
 import com.jayway.jsonpath.JsonPath;
 import kr.hhplus.be.server.domain.coupon.mapper.CouponJsonMapper;

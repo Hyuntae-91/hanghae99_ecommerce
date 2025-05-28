@@ -1,4 +1,4 @@
-package kr.hhplus.be.server.api.controller.point;
+package kr.hhplus.be.server.interfaces.api.point;
 
 import kr.hhplus.be.server.domain.point.dto.request.UserPointServiceRequest;
 import kr.hhplus.be.server.domain.point.dto.response.UserPointServiceResponse;

@@ -1,6 +1,5 @@
-package kr.hhplus.be.server.api.controller.product;
+package kr.hhplus.be.server.interfaces.api.product;
 
-import kr.hhplus.be.server.domain.order.model.Order;
 import kr.hhplus.be.server.domain.order.model.OrderItem;
 import kr.hhplus.be.server.domain.order.model.OrderOption;
 import kr.hhplus.be.server.domain.order.repository.OrderOptionRepository;

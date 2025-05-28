@@ -1,4 +1,4 @@
-package kr.hhplus.be.server.api.controller.order;
+package kr.hhplus.be.server.interfaces.api.order;
 
 import kr.hhplus.be.server.domain.order.model.OrderItem;
 import kr.hhplus.be.server.domain.order.model.OrderOption;
