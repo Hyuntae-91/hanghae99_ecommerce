@@ -52,6 +52,7 @@ public interface ProductMapper {
                 event.orderId(),
                 event.userId(),
                 event.couponId(),
+                event.couponIssueId(),
                 response.totalPrice(),
                 productIds
         );

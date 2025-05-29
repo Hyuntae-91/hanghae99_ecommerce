@@ -1,5 +1,8 @@
 package kr.hhplus.be.server.infrastructure.coupon;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import kr.hhplus.be.server.domain.coupon.dto.response.CouponIssueRedisDto;
 import kr.hhplus.be.server.domain.coupon.repository.CouponRedisRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -22,15 +25,51 @@ public class CouponRedisRepositoryImpl implements CouponRedisRepository {
     }
 
     @Override
-    public boolean addCouponForUser(Long userId, Long couponId, Integer use) {
-        String key = getIssuedKey(couponId, userId);
+    public boolean addCouponForUser(Long userId, Long couponId, Long couponIssueId, Integer use) {
+        String key = getIssuedKey(userId);
         Boolean exists = redisTemplate.opsForHash().hasKey(key, couponId.toString());
         if (Boolean.TRUE.equals(exists)) {
             return false; // 이미 발급된 경우
         }
 
-        redisTemplate.opsForHash().put(key, couponId.toString(), use.toString());
+        String value = String.format(
+                "{\"couponIssueId\":%s,\"use\":%d}",
+                couponIssueId != null ? couponIssueId.toString() : "null",
+                use
+        );
+        redisTemplate.opsForHash().put(key, couponId.toString(), value);
         return true;
+    }
+
+    @Override
+    public boolean updateCouponIssueId(Long userId, Long couponId, Long newCouponIssueId) {
+        String key = getIssuedKey(userId);
+        Object raw = redisTemplate.opsForHash().get(key, couponId.toString());
+        if (raw == null) {
+            return false;
+        }
+
+        try {
+            String json = raw.toString();
+            Map<String, Object> map = new HashMap<>();
+            json = json.replaceAll("[{}\"]", "");
+            for (String entry : json.split(",")) {
+                String[] kv = entry.split(":");
+                map.put(kv[0], kv[1].equals("null") ? null : kv[1]);
+            }
+
+            Integer use = map.get("use") != null ? Integer.parseInt((String) map.get("use")) : 0;
+
+            String updated = String.format(
+                    "{\"couponIssueId\":%s,\"use\":%d}",
+                    newCouponIssueId != null ? newCouponIssueId.toString() : "null",
+                    use
+            );
+            redisTemplate.opsForHash().put(key, couponId.toString(), updated);
+            return true;
+        } catch (Exception e) {
+            throw new RuntimeException("couponIssueId 갱신 실패", e);
+        }
     }
 
     @Override
@@ -57,42 +96,67 @@ public class CouponRedisRepositoryImpl implements CouponRedisRepository {
     }
 
     @Override
-    public Map<Long, Integer> findAllIssuedCoupons(Long userId) {
-        String pattern = "coupon:issued:*:" + userId;
+    public Map<Long, CouponIssueRedisDto> findAllIssuedCoupons(Long userId) {
+        String pattern = "coupon:issued:" + userId;
         Set<String> keys = redisTemplate.keys(pattern);
 
-        if (keys == null || keys.isEmpty()) {
+        if (keys.isEmpty()) {
             return Collections.emptyMap();
         }
 
-        Map<Long, Integer> result = new HashMap<>();
+        Map<Long, CouponIssueRedisDto> result = new HashMap<>();
+        ObjectMapper objectMapper = new ObjectMapper();
+
         for (String key : keys) {
             Map<Object, Object> entries = redisTemplate.opsForHash().entries(key);
             for (Map.Entry<Object, Object> entry : entries.entrySet()) {
                 Long couponId = Long.parseLong(entry.getKey().toString());
-                Integer use = Integer.parseInt(entry.getValue().toString());
-                result.put(couponId, use);
+                Object value = entry.getValue();
+
+                try {
+                    CouponIssueRedisDto dto = objectMapper.readValue(value.toString(), CouponIssueRedisDto.class);
+                    result.put(couponId, dto);
+                } catch (JsonProcessingException e) {
+                    throw new IllegalStateException("JSON 파싱 실패: " + value, e);
+                }
             }
         }
+
         return result;
     }
 
-
     @Override
-    public void updateCouponUse(Long userId, Long couponId) {
-        String key = getIssuedKey(couponId, userId);
+    public void updateCouponUse(Long userId, Long couponId, int status) {
+        String key = getIssuedKey(userId);
         String field = String.valueOf(couponId);
 
-        redisTemplate.opsForHash().put(key, field, "1");
-    }
+        Object raw = redisTemplate.opsForHash().get(key, field);
+        if (raw == null) {
+            throw new IllegalStateException("해당 쿠폰이 존재하지 않습니다.");
+        }
+        try {
+            String json = raw.toString();
+            json = json.replaceAll("[{}\"]", "");
+            Map<String, String> map = new HashMap<>();
+            for (String entry : json.split(",")) {
+                String[] kv = entry.split(":");
+                map.put(kv[0], kv[1]);
+            }
 
-    @Override
-    public void rollbackCoupon(Long userId, Long couponId) {
-        String key = getIssuedKey(couponId, userId);
-        String field = String.valueOf(couponId);
+            String couponIssueIdStr = map.get("couponIssueId");
+            Long couponIssueId = "null".equals(couponIssueIdStr) ? null : Long.parseLong(couponIssueIdStr);
 
-        // 발급된 쿠폰을 다시 미사용(0)으로 복구
-        redisTemplate.opsForHash().put(key, field, "0");
+            // 갱신된 JSON 생성
+            String updated = String.format(
+                    "{\"couponIssueId\":%s,\"use\":%d}",
+                    couponIssueId != null ? couponIssueId.toString() : "null",
+                    status
+            );
+            redisTemplate.opsForHash().put(key, field, updated);
+
+        } catch (Exception e) {
+            throw new RuntimeException("쿠폰 사용 상태 갱신 실패", e);
+        }
     }
 
     @Override
@@ -108,7 +172,7 @@ public class CouponRedisRepositoryImpl implements CouponRedisRepository {
         return "coupon:stock:" + couponId;
     }
 
-    private String getIssuedKey(Long couponId, Long userId) {
-        return "coupon:issued:" + couponId + ":" + userId;
+    private String getIssuedKey(Long userId) {
+        return "coupon:issued:" + userId;
     }
 }

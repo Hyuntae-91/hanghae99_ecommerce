@@ -1,6 +1,8 @@
 package kr.hhplus.be.server.domain.coupon.service;
 
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import kr.hhplus.be.server.application.publisher.MessagePublisher;
+import kr.hhplus.be.server.common.constants.Topics;
 import kr.hhplus.be.server.domain.coupon.dto.request.*;
 import kr.hhplus.be.server.domain.coupon.dto.response.*;
 import kr.hhplus.be.server.domain.coupon.mapper.CouponJsonMapper;
@@ -9,6 +11,8 @@ import kr.hhplus.be.server.domain.coupon.model.CouponIssue;
 import kr.hhplus.be.server.domain.coupon.repository.CouponIssueRepository;
 import kr.hhplus.be.server.domain.coupon.repository.CouponRedisRepository;
 import kr.hhplus.be.server.domain.coupon.repository.CouponRepository;
+import kr.hhplus.be.server.interfaces.event.coupon.payload.CouponIssuePayload;
+import kr.hhplus.be.server.interfaces.event.coupon.payload.CouponUsePayload;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
@@ -27,6 +31,8 @@ public class CouponService {
     private final CouponRepository couponRepository;
     private final CouponIssueRepository couponIssueRepository;
     private final CouponRedisRepository couponRedisRepository;
+    private final MessagePublisher<CouponIssuePayload> couponIssuePayloadPublisher;
+    private final MessagePublisher<CouponUsePayload> couponUsePayloadPublisher;
 
     public void syncAllActiveCouponsToRedis() {
         List<Coupon> activeCoupons = couponRepository.findActiveCoupons();
@@ -49,15 +55,15 @@ public class CouponService {
         Long userId = request.userId();
 
         // 1. userId 기준 발급받은 쿠폰 목록 조회 (Redis)
-        Map<Long, Integer> issuedCoupons = couponRedisRepository.findAllIssuedCoupons(userId);
+        Map<Long, CouponIssueRedisDto> issuedCoupons = couponRedisRepository.findAllIssuedCoupons(userId);
         if (issuedCoupons == null || issuedCoupons.isEmpty()) {
             return new GetCouponsServiceResponse(List.of());
         }
 
         // 2. 사용 가능한 쿠폰만 필터링
         List<Long> availableCouponIds = issuedCoupons.entrySet().stream()
-                .filter(entry -> Integer.parseInt(String.valueOf(entry.getValue())) == 0) // 사용 가능(0)인 쿠폰만
-                .map(entry -> Long.parseLong(String.valueOf(entry.getKey())))
+                .filter(entry -> entry.getValue().getUse() == 0) // 사용 가능(0)인 쿠폰만
+                .map(Map.Entry::getKey)
                 .toList();
 
         if (availableCouponIds.isEmpty()) {
@@ -75,7 +81,6 @@ public class CouponService {
     }
 
     @CircuitBreaker(name = "couponIssue", fallbackMethod = "fallbackIssueCoupon")
-    @CacheEvict(value = "getCoupon", key = "#root.args[0].userId()")
     public IssueNewCouponServiceResponse issueNewCoupon(IssueNewCouponServiceRequest request) {
         boolean stockAvailable = couponRedisRepository.decreaseStock(request.couponId());
         if (!stockAvailable) {
@@ -83,7 +88,12 @@ public class CouponService {
         }
 
         // 2. 발급 기록 추가 (중복 발급 방지)
-        boolean success = couponRedisRepository.addCouponForUser(request.userId(), request.couponId(), 0);
+        boolean success = couponRedisRepository.addCouponForUser(
+                request.userId(),
+                request.couponId(),
+                null,
+                0
+        );
         if (!success) {
             throw new IllegalArgumentException("이미 발급된 유저입니다.");
         }
@@ -93,7 +103,26 @@ public class CouponService {
                 .orElseThrow(() -> new IllegalStateException("쿠폰 정보가 존재하지 않습니다."));
         Coupon coupon = CouponJsonMapper.fromCouponJson(couponJson);
 
+        // 4. 쿠폰 이슈 이벤트 발행
+        CouponIssuePayload event = new CouponIssuePayload(
+                request.userId(),
+                request.couponId()
+        );
+        couponIssuePayloadPublisher.publish(Topics.COUPON_ISSUE_TOPIC, null, event);
+
         return IssueNewCouponServiceResponse.from(coupon);
+    }
+
+    @CacheEvict(value = "getCoupon", key = "#root.args[0].userId()")
+    public void issueNewCouponToDb(IssueNewCouponServiceRequest request) {
+        // 1. 쿠폰 상세 정보 조회
+        String couponJson = couponRedisRepository.findCouponInfo(request.couponId())
+                .orElseThrow(() -> new IllegalArgumentException("쿠폰 정보가 존재하지 않습니다."));
+        Coupon coupon = CouponJsonMapper.fromCouponJson(couponJson);
+
+        // 2. 쿠폰 issue 정보 redis 에 저장
+        CouponIssue couponIssue = couponIssueRepository.save(CouponIssue.createNew(request.userId(), coupon, 0));
+        couponRedisRepository.updateCouponIssueId(request.userId(), request.couponId(), couponIssue.getId());
     }
 
     public ApplyCouponDiscountServiceResponse applyCouponDiscount(ApplyCouponDiscountServiceRequest request) {
@@ -103,14 +132,14 @@ public class CouponService {
             Long userId = request.userId();
 
             // 1. 발급 내역 전체 조회
-            Map<Long, Integer> issuedCoupons = couponRedisRepository.findAllIssuedCoupons(userId);
+            Map<Long, CouponIssueRedisDto> issuedCoupons = couponRedisRepository.findAllIssuedCoupons(userId);
 
             // 2. couponId로 발급 내역 검색
-            Integer use = issuedCoupons.get(couponId);
-            if (use == null) {
+            CouponIssueRedisDto couponIssue = issuedCoupons.get(couponId);
+            if (couponIssue == null) {
                 throw new IllegalArgumentException("발급된 쿠폰이 없습니다.");
             }
-            if (use == 1) {
+            if (couponIssue.getUse() == 1) {
                 throw new IllegalArgumentException("이미 사용된 쿠폰입니다.");
             }
 
@@ -124,14 +153,22 @@ public class CouponService {
             long discountAmount = coupon.calculateDiscount(finalPrice);
             finalPrice = Math.max(0, finalPrice - discountAmount);
 
-            // 5. 쿠폰 사용 처리 (use = 1 업데이트)
-            couponRedisRepository.updateCouponUse(userId, couponId);
-
-            // 6. CouponIssue 생성 후 DB 저장
-            CouponIssue issue = CouponIssue.createNew(userId, coupon, 1);
-            couponIssueRepository.save(issue);
+            // 5. 쿠폰 사용 이벤트 발행
+            CouponUsePayload event = new CouponUsePayload(userId, request.couponIssueId());
+            couponUsePayloadPublisher.publish(Topics.COUPON_USE_TOPIC, null, event);
         }
         return new ApplyCouponDiscountServiceResponse(finalPrice);
+    }
+
+    @CacheEvict(value = "getCoupon", key = "#root.args[0].userId()")
+    public void applyCouponUse(CouponUseRequest request) {
+        // 1. 쿠폰 사용 처리 (use = 1 업데이트)
+        couponRedisRepository.updateCouponUse(request.userId(), request.couponIssueId(), request.state());
+
+        // 2. CouponIssue 사용 DB 저장
+        CouponIssue couponIssue = couponIssueRepository.findById(request.couponIssueId());
+        couponIssue.updateState(request.state());
+        couponIssueRepository.save(couponIssue);
     }
 
     public IssueNewCouponServiceResponse fallbackIssueCoupon(IssueNewCouponServiceRequest request, Throwable t) {

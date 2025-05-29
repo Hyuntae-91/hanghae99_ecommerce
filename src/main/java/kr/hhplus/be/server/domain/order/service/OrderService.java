@@ -101,7 +101,7 @@ public class OrderService {
         }
 
         // 4. Order 생성 및 저장
-        Order order = Order.of(requestDto.userId(), requestDto.couponId(), 0);
+        Order order = Order.of(requestDto.userId(), 0L, 0);
         Order savedOrder = orderRepository.save(order);
 
         // 5. 각 OrderItem 업데이트 및 재고 차감
@@ -118,7 +118,7 @@ public class OrderService {
 
         List<ProductOptionKeyDto> items = orderMapper.toProductOptionKeyDtoList(cartItems);
         eventPublisher.publishEvent(new OrderCreatedEvent(
-                    savedOrder.getId(), requestDto.userId(), requestDto.couponId(), items
+                    savedOrder.getId(), requestDto.userId(), requestDto.couponId(), requestDto.couponIssueId(), items
                 )
         );
 
