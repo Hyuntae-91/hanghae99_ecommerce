@@ -14,7 +14,10 @@ public record PaymentRequest(
         List<PaymentProductDto> products,
 
         @Schema(description = "사용할 쿠폰 ID", example = "1", nullable = true)
-        Long couponId
+        Long couponId,
+
+        @Schema(description = "사용할 쿠폰 이슈 ID", example = "1", nullable = true)
+        Long couponIssueId
 
 ) {
 }

@@ -1,5 +1,6 @@
 package kr.hhplus.be.server.interfaces.api.coupon;
 
+import kr.hhplus.be.server.domain.coupon.dto.response.CouponIssueRedisDto;
 import kr.hhplus.be.server.domain.coupon.mapper.CouponJsonMapper;
 import kr.hhplus.be.server.domain.coupon.model.Coupon;
 import kr.hhplus.be.server.domain.coupon.model.CouponType;
@@ -122,8 +123,9 @@ class CouponConcurrencyTest {
         long issuedCount = 0;
         for (int i = 0; i < threadCount; i++) {
             long userId = randomUserId + i;
-            Map<Long, Integer> userCoupons = couponRedisRepository.findAllIssuedCoupons(userId);
-            if (userCoupons.getOrDefault(randomCouponId, -1) == 0) { // 0이면 발급 성공
+            Map<Long, CouponIssueRedisDto> userCoupons = couponRedisRepository.findAllIssuedCoupons(userId);
+            CouponIssueRedisDto dto = userCoupons.get(randomCouponId);
+            if (dto != null && dto.getUse() == 0) { // 0이면 발급 성공
                 issuedCount++;
             }
         }
@@ -179,8 +181,9 @@ class CouponConcurrencyTest {
         long issuedCount = 0;
         for (int i = 0; i < threadCount; i++) {
             long uid = randomUserId + i;
-            Map<Long, Integer> issued = couponRedisRepository.findAllIssuedCoupons(uid);
-            if (issued.getOrDefault(randomCouponId, -1) == 0) {
+            Map<Long, CouponIssueRedisDto> issued = couponRedisRepository.findAllIssuedCoupons(uid);
+            CouponIssueRedisDto dto = issued.get(randomCouponId);
+            if (dto != null && dto.getUse() == 0) {
                 issuedCount++;
             }
         }

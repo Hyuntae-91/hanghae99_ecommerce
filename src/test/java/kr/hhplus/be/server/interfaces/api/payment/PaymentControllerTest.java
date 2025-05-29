@@ -400,7 +400,7 @@ public class PaymentControllerTest {
                 .updatedAt("2025-04-01T00:00:00")
                 .build());
 
-        couponRedisRepository.addCouponForUser(randomUserId, coupon.getId(), 1);
+        couponRedisRepository.addCouponForUser(randomUserId, coupon.getId(), 1L,1);
 
         String payload = """
         {
@@ -470,7 +470,7 @@ public class PaymentControllerTest {
 
         couponRedisRepository.saveCouponInfo(coupon.getId(), CouponJsonMapper.toCouponJson(coupon));
         couponRedisRepository.saveStock(coupon.getId(), coupon.getQuantity());
-        couponRedisRepository.addCouponForUser(randomUserId, coupon.getId(), 0);
+        couponRedisRepository.addCouponForUser(randomUserId, coupon.getId(), 1L,0);
 
         String payload = """
         {
@@ -554,7 +554,7 @@ public class PaymentControllerTest {
 
         // Redis에 쿠폰 정보 저장
         couponRedisRepository.saveCouponInfo(coupon.getId(), CouponJsonMapper.toCouponJson(coupon));
-        couponRedisRepository.addCouponForUser(randomUserId, coupon.getId(), 1);
+        couponRedisRepository.addCouponForUser(randomUserId, coupon.getId(), 1L,1);
 
         String payload = """
         {

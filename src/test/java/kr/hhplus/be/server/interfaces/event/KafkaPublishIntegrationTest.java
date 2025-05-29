@@ -1,6 +1,8 @@
 package kr.hhplus.be.server.interfaces.event;
 
 import jakarta.transaction.Transactional;
+import kr.hhplus.be.server.common.constants.Groups;
+import kr.hhplus.be.server.common.constants.Topics;
 import kr.hhplus.be.server.domain.order.model.Order;
 import kr.hhplus.be.server.domain.payment.dto.event.PaymentCompletedEvent;
 import kr.hhplus.be.server.infrastructure.order.repository.OrderJpaRepository;
@@ -24,6 +26,7 @@ import org.testcontainers.shaded.org.awaitility.Awaitility;
 import org.testcontainers.utility.DockerImageName;
 
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -39,6 +42,15 @@ public class KafkaPublishIntegrationTest {
         public TestKafkaConsumer testKafkaConsumer() {
             return new TestKafkaConsumer();
         }
+    }
+
+    @DynamicPropertySource
+    static void overrideProperties(DynamicPropertyRegistry registry) {
+        kafkaContainer.start();
+        registry.add("spring.kafka.bootstrap-servers", kafkaContainer::getBootstrapServers);
+
+        registry.add("test.kafka.topic", () -> Topics.MOCK_API_TOPIC);
+        registry.add("test.kafka.group", () -> "test-consumer-group");
     }
 
     @Autowired

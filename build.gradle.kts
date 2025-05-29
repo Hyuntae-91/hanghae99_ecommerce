@@ -66,8 +66,10 @@ dependencies {
 
 	// Kafka 의존성
 	implementation("org.springframework.kafka:spring-kafka")
+	testImplementation("org.springframework.kafka:spring-kafka-test")
 	testImplementation("org.testcontainers:kafka:1.19.3")
 	testImplementation("org.testcontainers:junit-jupiter:1.19.3")
+	testImplementation("org.assertj:assertj-core")
 }
 
 tasks.withType<Test> {

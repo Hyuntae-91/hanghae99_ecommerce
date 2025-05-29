@@ -1,7 +1,8 @@
 package kr.hhplus.be.server.domain.coupon.event;
 
 import kr.hhplus.be.server.domain.coupon.dto.event.CouponRollbackEvent;
-import kr.hhplus.be.server.domain.coupon.repository.CouponRedisRepository;
+import kr.hhplus.be.server.domain.coupon.dto.request.CouponUseRequest;
+import kr.hhplus.be.server.domain.coupon.service.CouponService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
@@ -15,25 +16,17 @@ import org.springframework.transaction.event.TransactionalEventListener;
 @Slf4j
 public class CouponRollbackEventListener {
 
-    private final CouponRedisRepository couponRedisRepository;
+    private final CouponService couponService;
 
     @Async
     @TransactionalEventListener(phase = TransactionPhase.AFTER_ROLLBACK)
     public void handleCouponRollback(CouponRollbackEvent event) {
-        Long userId = event.userId();
-        Long couponId = event.couponId();
-        if (couponId == null) {
-            log.warn("CouponRollbackEvent received with null couponIssueId");
-            return;
-        }
-
         try {
-            // 롤백 로직: Redis에 저장된 쿠폰 사용 기록을 초기화
-            couponRedisRepository.rollbackCoupon(userId, couponId);
-
-            log.info("쿠폰 롤백 완료 - couponIssueId={}", couponId);
+            // 롤백 로직: 쿠폰 사용 기록을 초기화
+            couponService.applyCouponUse(new CouponUseRequest(event.userId(), event.couponIssueId(), 0));
+            log.info("쿠폰 롤백 완료 - couponIssueId={}", event.couponIssueId());
         } catch (Exception e) {
-            log.error("쿠폰 롤백 실패 - couponIssueId={}", couponId, e);
+            log.error("쿠폰 롤백 실패 - couponIssueId={}", event.couponIssueId(), e);
             throw e;
         }
     }

@@ -15,7 +15,7 @@ class CreateOrderServiceRequestTest {
     @DisplayName("성공: 유효한 값으로 생성")
     void create_valid_request() {
         List<CreateOrderOptionDto> options = List.of(new CreateOrderOptionDto(1L, 2));
-        CreateOrderServiceRequest request = new CreateOrderServiceRequest(1L, 0L, options);
+        CreateOrderServiceRequest request = new CreateOrderServiceRequest(1L, 0L, 1L, options);
 
         assertThat(request.userId()).isEqualTo(1L);
         assertThat(request.options()).hasSize(1);
@@ -25,7 +25,7 @@ class CreateOrderServiceRequestTest {
     @DisplayName("실패: userId가 null")
     void create_fail_when_user_id_is_null() {
         List<CreateOrderOptionDto> options = List.of(new CreateOrderOptionDto(1L, 2));
-        assertThatThrownBy(() -> new CreateOrderServiceRequest(null, 0L, options))
+        assertThatThrownBy(() -> new CreateOrderServiceRequest(null, 0L, 1L, options))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("userId는 1 이상이어야 합니다.");
     }
@@ -34,7 +34,7 @@ class CreateOrderServiceRequestTest {
     @DisplayName("실패: userId가 1보다 작음")
     void create_fail_when_user_id_less_than_1() {
         List<CreateOrderOptionDto> options = List.of(new CreateOrderOptionDto(1L, 2));
-        assertThatThrownBy(() -> new CreateOrderServiceRequest(0L, 0L, options))
+        assertThatThrownBy(() -> new CreateOrderServiceRequest(0L, 0L, 1L, options))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("userId는 1 이상이어야 합니다.");
     }
@@ -42,7 +42,7 @@ class CreateOrderServiceRequestTest {
     @Test
     @DisplayName("실패: options가 null")
     void create_fail_when_options_is_null() {
-        assertThatThrownBy(() -> new CreateOrderServiceRequest(1L, 0L, null))
+        assertThatThrownBy(() -> new CreateOrderServiceRequest(1L, 0L, 1L,null))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("orders 는 비어 있을 수 없습니다.");
     }
@@ -50,7 +50,7 @@ class CreateOrderServiceRequestTest {
     @Test
     @DisplayName("실패: options가 비어있음")
     void create_fail_when_options_is_empty() {
-        assertThatThrownBy(() -> new CreateOrderServiceRequest(1L, 0L, List.of()))
+        assertThatThrownBy(() -> new CreateOrderServiceRequest(1L, 0L, 1L, List.of()))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("orders 는 비어 있을 수 없습니다.");
     }
@@ -62,7 +62,7 @@ class CreateOrderServiceRequestTest {
                 new CreateOrderOptionDto(1L, 2),
                 new CreateOrderOptionDto(2L, 3)
         );
-        CreateOrderServiceRequest request = new CreateOrderServiceRequest(1L, 0L, options);
+        CreateOrderServiceRequest request = new CreateOrderServiceRequest(1L, 0L, 1L, options);
 
         List<Long> result = request.extractOptionIds();
 
@@ -76,7 +76,7 @@ class CreateOrderServiceRequestTest {
                 new CreateOrderOptionDto(1L, 2),
                 new CreateOrderOptionDto(2L, 3)
         );
-        CreateOrderServiceRequest request = new CreateOrderServiceRequest(1L, 0L, options);
+        CreateOrderServiceRequest request = new CreateOrderServiceRequest(1L, 0L, 1L, options);
 
         var map = request.toQuantityMap();
 

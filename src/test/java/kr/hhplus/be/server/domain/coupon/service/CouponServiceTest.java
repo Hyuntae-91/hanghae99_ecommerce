@@ -1,5 +1,6 @@
 package kr.hhplus.be.server.domain.coupon.service;
 
+import kr.hhplus.be.server.application.publisher.MessagePublisher;
 import kr.hhplus.be.server.domain.coupon.dto.request.*;
 import kr.hhplus.be.server.domain.coupon.dto.response.*;
 import kr.hhplus.be.server.domain.coupon.repository.CouponIssueRepository;
@@ -7,6 +8,8 @@ import kr.hhplus.be.server.domain.coupon.repository.CouponRedisRepository;
 import kr.hhplus.be.server.domain.coupon.repository.CouponRepository;
 import kr.hhplus.be.server.domain.coupon.model.Coupon;
 import kr.hhplus.be.server.domain.coupon.model.CouponType;
+import kr.hhplus.be.server.interfaces.event.coupon.payload.CouponIssuePayload;
+import kr.hhplus.be.server.interfaces.event.coupon.payload.CouponUsePayload;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -27,13 +30,24 @@ class CouponServiceTest {
     private CouponIssueRepository couponIssueRepository;
     private CouponRedisRepository couponRedisRepository;
     private CouponService couponService;
+    private MessagePublisher<CouponIssuePayload> couponIssuePayloadPublisher;
+    private MessagePublisher<CouponUsePayload> couponUsePayloadPublisher;
 
     @BeforeEach
     void setUp() {
         couponRepository = mock(CouponRepository.class);
         couponIssueRepository = mock(CouponIssueRepository.class);
         couponRedisRepository = mock(CouponRedisRepository.class);
-        couponService = new CouponService(couponRepository, couponIssueRepository, couponRedisRepository);
+        couponIssuePayloadPublisher = mock(MessagePublisher.class);
+        couponUsePayloadPublisher = mock(MessagePublisher.class);
+
+        couponService = new CouponService(
+                couponRepository,
+                couponIssueRepository,
+                couponRedisRepository,
+                couponIssuePayloadPublisher,
+                couponUsePayloadPublisher
+        );
     }
 
     private String now() {
@@ -99,9 +113,12 @@ class CouponServiceTest {
             // given
             Long userId = 1L;
             Long couponId = 10L;
+            Long couponIssueId = 2L;
             long originalPrice = 10000L;
 
-            ApplyCouponDiscountServiceRequest request = new ApplyCouponDiscountServiceRequest(userId, originalPrice, couponId);
+            ApplyCouponDiscountServiceRequest request = new ApplyCouponDiscountServiceRequest(
+                    couponId, couponIssueId, userId, originalPrice
+            );
 
             when(couponRedisRepository.findAllIssuedCoupons(userId)).thenReturn(Map.of());
 
@@ -117,12 +134,16 @@ class CouponServiceTest {
             // given
             Long userId = 1L;
             Long couponId = 10L;
+            Long couponIssueId = 2L;
             long originalPrice = 10000L;
 
-            ApplyCouponDiscountServiceRequest request = new ApplyCouponDiscountServiceRequest(couponId, userId, originalPrice);
+            ApplyCouponDiscountServiceRequest request = new ApplyCouponDiscountServiceRequest(
+                    couponId, couponIssueId, userId, originalPrice
+            );
 
+            CouponIssueRedisDto usedCouponDto = new CouponIssueRedisDto(couponIssueId, 1);
             when(couponRedisRepository.findAllIssuedCoupons(userId)).thenReturn(
-                    Map.of(10L, 1)
+                    Map.of(couponId, usedCouponDto)
             );
 
             when(couponRedisRepository.findCouponInfo(couponId)).thenReturn(Optional.of(
@@ -141,11 +162,15 @@ class CouponServiceTest {
             // given
             Long userId = 1L;
             Long couponId = 10L;
+            Long couponIssueId = 2L;
             long originalPrice = 10000L;
 
-            ApplyCouponDiscountServiceRequest request = new ApplyCouponDiscountServiceRequest(couponId, userId, originalPrice);
+            ApplyCouponDiscountServiceRequest request = new ApplyCouponDiscountServiceRequest(
+                    couponId, couponIssueId, userId, originalPrice
+            );
 
-            when(couponRedisRepository.findAllIssuedCoupons(userId)).thenReturn(Map.of(couponId, 0));
+            CouponIssueRedisDto unusedCoupon = new CouponIssueRedisDto(couponIssueId, 0);
+            when(couponRedisRepository.findAllIssuedCoupons(userId)).thenReturn(Map.of(couponId, unusedCoupon));
             when(couponRedisRepository.findCouponInfo(couponId)).thenReturn(Optional.of(
                     "{\"id\":10,\"type\":\"FIXED\",\"description\":\"2000원 할인\",\"discount\":2000,\"expirationDays\":30}"
             ));
@@ -180,7 +205,8 @@ class CouponServiceTest {
         Long userId = 1L;
         GetCouponsServiceRequest request = new GetCouponsServiceRequest(userId);
 
-        when(couponRedisRepository.findAllIssuedCoupons(userId)).thenReturn(Map.of(1L, 0));
+        CouponIssueRedisDto unusedCoupon = new CouponIssueRedisDto(null, 0);
+        when(couponRedisRepository.findAllIssuedCoupons(userId)).thenReturn(Map.of(1L, unusedCoupon));
         when(couponRedisRepository.findCouponInfos(List.of(1L))).thenReturn(null);
 
         // when, then
@@ -198,7 +224,7 @@ class CouponServiceTest {
         IssueNewCouponServiceRequest request = new IssueNewCouponServiceRequest(userId, couponId);
 
         when(couponRedisRepository.decreaseStock(couponId)).thenReturn(true);
-        when(couponRedisRepository.addCouponForUser(userId, couponId, 0)).thenReturn(true);
+        when(couponRedisRepository.addCouponForUser(userId, couponId, null, 0)).thenReturn(true);
         when(couponRedisRepository.findCouponInfo(couponId)).thenReturn(
                 Optional.of("{\"id\":1,\"type\":\"FIXED\",\"description\":\"테스트 쿠폰\",\"discount\":1000,\"expirationDays\":30}")
         );
@@ -232,10 +258,11 @@ class CouponServiceTest {
         // given
         Long userId = 1L;
         Long couponId = 1L;
+        Long couponIssueId = 2L;
         IssueNewCouponServiceRequest request = new IssueNewCouponServiceRequest(userId, couponId);
 
         when(couponRedisRepository.decreaseStock(couponId)).thenReturn(true);
-        when(couponRedisRepository.addCouponForUser(userId, couponId, 0)).thenReturn(false);
+        when(couponRedisRepository.addCouponForUser(userId, couponId, couponIssueId, 0)).thenReturn(false);
 
         // when, then
         assertThatThrownBy(() -> couponService.issueNewCoupon(request))
@@ -252,7 +279,7 @@ class CouponServiceTest {
         IssueNewCouponServiceRequest request = new IssueNewCouponServiceRequest(userId, couponId);
 
         when(couponRedisRepository.decreaseStock(couponId)).thenReturn(true);
-        when(couponRedisRepository.addCouponForUser(userId, couponId, 0)).thenReturn(true);
+        when(couponRedisRepository.addCouponForUser(userId, couponId, null, 0)).thenReturn(true);
         when(couponRedisRepository.findCouponInfo(couponId)).thenReturn(Optional.empty());
 
         // when, then

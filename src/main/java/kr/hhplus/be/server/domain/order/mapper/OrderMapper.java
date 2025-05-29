@@ -18,7 +18,7 @@ public interface OrderMapper {
                 .map(p -> new CreateOrderOptionDto(p.optionId(), p.quantity()))
                 .toList();
 
-        return new CreateOrderServiceRequest(userId, request.couponId(), options);
+        return new CreateOrderServiceRequest(userId, request.couponId(), request.couponIssueId(), options);
     }
 
     default List<ProductOptionKeyDto> toProductOptionKeyDtoList(List<OrderItem> dtoList) {
