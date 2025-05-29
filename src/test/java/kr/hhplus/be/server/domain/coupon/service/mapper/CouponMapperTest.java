@@ -28,7 +28,7 @@ class CouponMapperTest {
     void map_toApplyCouponDiscountServiceRequest_success() {
         // given
         ProductTotalPriceCompletedEvent event = new ProductTotalPriceCompletedEvent(
-                1L, 10L, 5L, 10000L, List.of(1L, 2L)
+                1L, 10L, 5L, 1L, 10000L, List.of(1L, 2L)
         );
 
         // when
@@ -45,7 +45,7 @@ class CouponMapperTest {
     void map_toApplyCouponDiscountCompletedEvent_success() {
         // given
         ProductTotalPriceCompletedEvent event = new ProductTotalPriceCompletedEvent(
-                1L, 20L, 99L, 8000L, List.of(10L, 20L)
+                1L, 20L, 99L, 1L, 8000L, List.of(10L, 20L)
         );
         ApplyCouponDiscountServiceResponse response = new ApplyCouponDiscountServiceResponse(7000L);
 

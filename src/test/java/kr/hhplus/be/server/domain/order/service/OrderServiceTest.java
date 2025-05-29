@@ -70,9 +70,10 @@ class OrderServiceTest {
     void create_order_fail_saveAll_exception() {
         // given
         Long userId = 1L;
+        Long couponId = 1L;
         Long couponIssueId = 5L;
         List<CreateOrderOptionDto> items = List.of(new CreateOrderOptionDto(1L, 1));
-        CreateOrderServiceRequest request = new CreateOrderServiceRequest(userId, couponIssueId, items);
+        CreateOrderServiceRequest request = new CreateOrderServiceRequest(userId, couponId, couponIssueId, items);
         Order savedOrder = Order.builder().id(101L).userId(userId).couponIssueId(couponIssueId).totalPrice(0L).state(0).createdAt("2025-04-10T12:00:00").updatedAt("2025-04-10T12:00:00").build();
 
         when(orderRepository.save(any())).thenReturn(savedOrder);

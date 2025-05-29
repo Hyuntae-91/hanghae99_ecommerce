@@ -25,11 +25,12 @@ class OrderMapperTest {
     @DisplayName("성공: PaymentRequest -> CreateOrderServiceRequest 매핑")
     void toServiceRequest_success() {
         PaymentProductDto product = new PaymentProductDto(1L, "item1", 2L, 3L, 5);
-        PaymentRequest request = new PaymentRequest(List.of(product), 10L);
+        PaymentRequest request = new PaymentRequest(List.of(product), 1L, 10L);
         CreateOrderServiceRequest result = mapper.toServiceRequest(100L, request);
 
         assertThat(result.userId()).isEqualTo(100L);
-        assertThat(result.couponId()).isEqualTo(10L);
+        assertThat(result.couponId()).isEqualTo(1L);
+        assertThat(result.couponIssueId()).isEqualTo(10L);
         assertThat(result.options()).hasSize(1);
         assertThat(result.options().get(0).optionId()).isEqualTo(3L);
         assertThat(result.options().get(0).quantity()).isEqualTo(5);

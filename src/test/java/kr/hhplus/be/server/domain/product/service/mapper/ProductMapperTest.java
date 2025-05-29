@@ -65,6 +65,7 @@ class ProductMapperTest {
                 999L,
                 888L,
                 777L,
+                1L,
                 items
         );
 
