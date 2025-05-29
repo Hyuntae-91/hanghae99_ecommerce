@@ -63,6 +63,11 @@ dependencies {
 
 	// Resilience4j 의존성
 	implementation("io.github.resilience4j:resilience4j-spring-boot3:2.2.0")
+
+	// Kafka 의존성
+	implementation("org.springframework.kafka:spring-kafka")
+	testImplementation("org.testcontainers:kafka:1.19.3")
+	testImplementation("org.testcontainers:junit-jupiter:1.19.3")
 }
 
 tasks.withType<Test> {
