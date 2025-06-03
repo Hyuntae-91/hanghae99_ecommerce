@@ -1,5 +1,7 @@
 package kr.hhplus.be.server.domain.order.service;
 
+import kr.hhplus.be.server.application.publisher.MessagePublisher;
+import kr.hhplus.be.server.common.constants.Topics;
 import kr.hhplus.be.server.domain.order.dto.event.OrderCreatedEvent;
 import kr.hhplus.be.server.domain.order.dto.request.*;
 import kr.hhplus.be.server.domain.order.dto.response.AddCartServiceResponse;
@@ -13,12 +15,12 @@ import kr.hhplus.be.server.domain.order.model.OrderOption;
 import kr.hhplus.be.server.domain.order.repository.OrderItemRepository;
 import kr.hhplus.be.server.domain.order.repository.OrderOptionRepository;
 import kr.hhplus.be.server.domain.order.repository.OrderRepository;
-import kr.hhplus.be.server.domain.product.dto.request.ProductOptionKeyDto;
 import kr.hhplus.be.server.exception.custom.OrderItemNotFoundException;
+import kr.hhplus.be.server.interfaces.event.product.payload.OrderCreatedPayload;
+import kr.hhplus.be.server.interfaces.event.product.payload.ProductDataIds;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,7 +36,7 @@ public class OrderService {
     private final OrderRepository orderRepository;
     private final OrderItemRepository orderItemRepository;
     private final OrderOptionRepository orderOptionRepository;
-    private final ApplicationEventPublisher eventPublisher;
+    private final MessagePublisher<OrderCreatedPayload> orderCreatedPayloadPublisher;
     private final OrderMapper orderMapper;
 
     private record CartItemResponseBundle(List<CartItemResponse> items, long totalPrice) {}
@@ -101,6 +103,7 @@ public class OrderService {
         }
 
         // 4. Order 생성 및 저장
+        // TODO: order 관련 데이터를 event 로 넘겨서, 한번에 save 하도록 하는 작업 필요
         Order order = Order.of(requestDto.userId(), 0L, 0);
         Order savedOrder = orderRepository.save(order);
 
@@ -116,19 +119,37 @@ public class OrderService {
         }
         orderItemRepository.saveAll(cartItems);
 
-        List<ProductOptionKeyDto> items = orderMapper.toProductOptionKeyDtoList(cartItems);
-        eventPublisher.publishEvent(new OrderCreatedEvent(
-                    savedOrder.getId(), requestDto.userId(), requestDto.couponId(), requestDto.couponIssueId(), items
-                )
+        List<ProductDataIds> items = orderMapper.toProductDataIds(cartItems);
+        OrderCreatedPayload event = new OrderCreatedPayload(
+                savedOrder.getId(), requestDto.userId(), requestDto.couponId(), requestDto.couponIssueId(), items
         );
+        orderCreatedPayloadPublisher.publish(Topics.ORDER_CREATED_TOPIC, null, event);
 
         return new CreateOrderServiceResponse(savedOrder.getId());
     }
 
+    @Transactional
     public void updateOrder(UpdateOrderServiceRequest request) {
         Order order = orderRepository.getById(request.orderId());
         order.applyTotalPrice(request.totalPrice());
         order.updateState(1);
         orderRepository.save(order);
+    }
+
+    @Transactional
+    public void updateOrderStatus(UpdateOrderStateRequest request) {
+        Order order = orderRepository.getById(request.orderId());
+        order.updateState(-1);
+        orderRepository.save(order);
+    }
+
+    @Transactional
+    public void orderStockRollback(OrderStockRollbackRequest request) {
+        for (ProductInfoDataIds item : request.items()) {
+            Long optionId = item.optionId();
+            OrderOption orderOption = orderOptionRepository.findWithLockById(optionId);
+            orderOption.incrementStockQuantity(item.quantity());
+            orderOptionRepository.save(orderOption);
+        }
     }
 }

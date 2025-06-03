@@ -12,7 +12,6 @@ import kr.hhplus.be.server.domain.coupon.repository.CouponIssueRepository;
 import kr.hhplus.be.server.domain.coupon.repository.CouponRedisRepository;
 import kr.hhplus.be.server.domain.coupon.repository.CouponRepository;
 import kr.hhplus.be.server.interfaces.event.coupon.payload.CouponIssuePayload;
-import kr.hhplus.be.server.interfaces.event.coupon.payload.CouponUsePayload;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
@@ -22,6 +21,7 @@ import java.util.List;
 import java.util.Map;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.transaction.annotation.Transactional;
 
 @Slf4j
 @Service
@@ -32,7 +32,6 @@ public class CouponService {
     private final CouponIssueRepository couponIssueRepository;
     private final CouponRedisRepository couponRedisRepository;
     private final MessagePublisher<CouponIssuePayload> couponIssuePayloadPublisher;
-    private final MessagePublisher<CouponUsePayload> couponUsePayloadPublisher;
 
     public void syncAllActiveCouponsToRedis() {
         List<Coupon> activeCoupons = couponRepository.findActiveCoupons();
@@ -80,7 +79,10 @@ public class CouponService {
         return new GetCouponsServiceResponse(couponDtoList);
     }
 
-    @CircuitBreaker(name = "couponIssue", fallbackMethod = "fallbackIssueCoupon")
+    @CircuitBreaker(
+            name = "coupon_issue:" + "#root.args[0].couponId()",
+            fallbackMethod = "fallbackIssueCoupon"
+    )
     public IssueNewCouponServiceResponse issueNewCoupon(IssueNewCouponServiceRequest request) {
         boolean stockAvailable = couponRedisRepository.decreaseStock(request.couponId());
         if (!stockAvailable) {
@@ -125,6 +127,8 @@ public class CouponService {
         couponRedisRepository.updateCouponIssueId(request.userId(), request.couponId(), couponIssue.getId());
     }
 
+    @Transactional
+    @CacheEvict(value = "getCoupon", key = "#root.args[0].userId()")
     public ApplyCouponDiscountServiceResponse applyCouponDiscount(ApplyCouponDiscountServiceRequest request) {
         long finalPrice = request.originalPrice();
         if (request.couponId() != null && request.couponId() > 0) {
@@ -135,11 +139,11 @@ public class CouponService {
             Map<Long, CouponIssueRedisDto> issuedCoupons = couponRedisRepository.findAllIssuedCoupons(userId);
 
             // 2. couponId로 발급 내역 검색
-            CouponIssueRedisDto couponIssue = issuedCoupons.get(couponId);
-            if (couponIssue == null) {
+            CouponIssueRedisDto couponIssueRedis = issuedCoupons.get(couponId);
+            if (couponIssueRedis == null) {
                 throw new IllegalArgumentException("발급된 쿠폰이 없습니다.");
             }
-            if (couponIssue.getUse() == 1) {
+            if (couponIssueRedis.getUse() == 1) {
                 throw new IllegalArgumentException("이미 사용된 쿠폰입니다.");
             }
 
@@ -153,16 +157,21 @@ public class CouponService {
             long discountAmount = coupon.calculateDiscount(finalPrice);
             finalPrice = Math.max(0, finalPrice - discountAmount);
 
-            // 5. 쿠폰 사용 이벤트 발행
-            CouponUsePayload event = new CouponUsePayload(userId, request.couponIssueId());
-            couponUsePayloadPublisher.publish(Topics.COUPON_USE_TOPIC, null, event);
+            // 5. 쿠폰 사용 처리 (use = 1 업데이트)
+            couponRedisRepository.updateCouponUse(request.userId(), request.couponIssueId(), 1);
+
+            // 6. CouponIssue 사용 DB 저장
+            CouponIssue couponIssue = couponIssueRepository.findById(request.couponIssueId());
+            couponIssue.updateState(1);
+            couponIssueRepository.save(couponIssue);
         }
         return new ApplyCouponDiscountServiceResponse(finalPrice);
     }
 
+    @Transactional
     @CacheEvict(value = "getCoupon", key = "#root.args[0].userId()")
-    public void applyCouponUse(CouponUseRequest request) {
-        // 1. 쿠폰 사용 처리 (use = 1 업데이트)
+    public void applyCouponRollback(CouponUseRequest request) {
+        // 1. 쿠폰 롤백 처리
         couponRedisRepository.updateCouponUse(request.userId(), request.couponIssueId(), request.state());
 
         // 2. CouponIssue 사용 DB 저장

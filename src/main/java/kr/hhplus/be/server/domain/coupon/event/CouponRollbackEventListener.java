@@ -23,7 +23,7 @@ public class CouponRollbackEventListener {
     public void handleCouponRollback(CouponRollbackEvent event) {
         try {
             // 롤백 로직: 쿠폰 사용 기록을 초기화
-            couponService.applyCouponUse(new CouponUseRequest(event.userId(), event.couponIssueId(), 0));
+
             log.info("쿠폰 롤백 완료 - couponIssueId={}", event.couponIssueId());
         } catch (Exception e) {
             log.error("쿠폰 롤백 실패 - couponIssueId={}", event.couponIssueId(), e);

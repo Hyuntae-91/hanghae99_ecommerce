@@ -1,32 +1,29 @@
 package kr.hhplus.be.server.interfaces.event;
 
-import jakarta.transaction.Transactional;
-import kr.hhplus.be.server.common.constants.Groups;
 import kr.hhplus.be.server.common.constants.Topics;
-import kr.hhplus.be.server.domain.order.model.Order;
-import kr.hhplus.be.server.domain.payment.dto.event.PaymentCompletedEvent;
-import kr.hhplus.be.server.infrastructure.order.repository.OrderJpaRepository;
+import kr.hhplus.be.server.interfaces.event.order.OrderUpdateProcessor;
+import kr.hhplus.be.server.interfaces.event.product.ProductScoreUpdater;
+import kr.hhplus.be.server.interfaces.event.payment.payload.PaymentCompletedPayload;
 import kr.hhplus.be.server.testhelper.TestKafkaConsumer;
+import org.awaitility.Awaitility;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Bean;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
-import org.springframework.test.context.transaction.TestTransaction;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.KafkaContainer;
 import org.testcontainers.containers.MySQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
-import org.testcontainers.shaded.org.awaitility.Awaitility;
 import org.testcontainers.utility.DockerImageName;
 
 import java.util.List;
-import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -34,33 +31,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 @SpringBootTest
 @ActiveProfiles("local")
 @Testcontainers
-public class KafkaPublishIntegrationTest {
+class KafkaPublishIntegrationTest {
 
     @TestConfiguration
-    static class KafkaTestConsumerConfig {
+    static class TestKafkaConsumerConfig {
         @Bean
-        public TestKafkaConsumer testKafkaConsumer() {
+        TestKafkaConsumer testKafkaConsumer() {
             return new TestKafkaConsumer();
         }
     }
-
-    @DynamicPropertySource
-    static void overrideProperties(DynamicPropertyRegistry registry) {
-        kafkaContainer.start();
-        registry.add("spring.kafka.bootstrap-servers", kafkaContainer::getBootstrapServers);
-
-        registry.add("test.kafka.topic", () -> Topics.MOCK_API_TOPIC);
-        registry.add("test.kafka.group", () -> "test-consumer-group");
-    }
-
-    @Autowired
-    private ApplicationEventPublisher eventPublisher;
-
-    @Autowired
-    private TestKafkaConsumer testKafkaConsumer;
-
-    @Autowired
-    private OrderJpaRepository orderJpaRepository;
 
     @Container
     static final MySQLContainer<?> mysqlContainer = new MySQLContainer<>("mysql:8.0")
@@ -72,15 +51,22 @@ public class KafkaPublishIntegrationTest {
     static final GenericContainer<?> redisContainer = new GenericContainer<>("redis:7.0")
             .withExposedPorts(6379);
 
+    @MockBean
+    OrderUpdateProcessor orderUpdateConsumer;
+
+    @MockBean
+    ProductScoreUpdater productScoreConsumer;
+
     @Container
     static final KafkaContainer kafkaContainer =
             new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.5.1"));
 
     @DynamicPropertySource
     static void registerKafkaProperties(DynamicPropertyRegistry registry) {
-        kafkaContainer.start();
         registry.add("spring.kafka.bootstrap-servers", kafkaContainer::getBootstrapServers);
-
+        registry.add("test.kafka.topic", () -> Topics.MOCK_API_TOPIC);
+        registry.add("test.kafka.group", () -> "test-consumer-group");
+        kafkaContainer.start();
         if (!mysqlContainer.isRunning()) {
             mysqlContainer.start();
         }
@@ -97,33 +83,31 @@ public class KafkaPublishIntegrationTest {
         registry.add("spring.data.redis.port", () -> redisContainer.getMappedPort(6379));
     }
 
+    @Autowired
+    private KafkaTemplate<String, Object> kafkaTemplate;
+
+    @Autowired
+    private TestKafkaConsumer testKafkaConsumer;
+
     @Test
-    @Transactional
-    void whenPaymentEventPublished_thenMessageSentToKafka() throws Exception {
+    void whenPaymentCompletedMessagePublished_thenMockApiTopicReceivesPayload() {
         // given
-        Order order = Order.create(1L, 100_000L);
-        Order savedOrder = orderJpaRepository.save(order);
-        PaymentCompletedEvent event = new PaymentCompletedEvent(
+        PaymentCompletedPayload payload = new PaymentCompletedPayload(
                 1L,
-                order.getId(),
+                1L,
                 1,
                 100_000L,
-                "2025-05-28",
+                "2025-06-02",
                 List.of(1L)
         );
 
         // when
-        eventPublisher.publishEvent(event);
-        TestTransaction.flagForCommit();  // 트랜잭션 커밋 예정 표시
-        TestTransaction.end();            // 트랜잭션 실제 커밋 (AFTER_COMMIT 이벤트 트리거됨)
+        kafkaTemplate.send(Topics.PAYMENT_COMPLETE_TOPIC, String.valueOf(payload.orderId()), payload);
 
-        // then (간단한 polling 대기)
+        // then
         Awaitility.await()
                 .atMost(5, TimeUnit.SECONDS)
-                .until(() -> !testKafkaConsumer.getMessages().isEmpty());
-
-        assertThat(testKafkaConsumer.getMessages())
-                .anyMatch(msg -> msg.contains("1"));  // orderId: 1L
+                .untilAsserted(() -> assertThat(testKafkaConsumer.getMessages())
+                        .anyMatch(msg -> msg.contains("\"orderId\":1")));
     }
-
 }

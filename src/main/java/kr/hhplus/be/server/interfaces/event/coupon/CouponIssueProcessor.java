@@ -15,13 +15,14 @@ import org.springframework.stereotype.Component;
 @Component
 @Slf4j
 @RequiredArgsConstructor
-public class CouponIssueConsumer {
+public class CouponIssueProcessor {
 
     private final CouponService couponService;
     private final ObjectMapper objectMapper;
 
     @KafkaListener(topics = Topics.COUPON_ISSUE_TOPIC, groupId = Groups.COUPON_ISSUE_GROUP)
     public void consume(@Payload CouponIssuePayload event) {
+        log.info("== [Kafka] Consumed message: userId={}, couponId={} ==", event.userId(), event.couponId());
         couponService.issueNewCouponToDb(new IssueNewCouponServiceRequest(event.userId(), event.couponId()));
     }
 }

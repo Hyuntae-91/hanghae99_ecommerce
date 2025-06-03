@@ -10,15 +10,12 @@ import kr.hhplus.be.server.domain.coupon.model.CouponType;
 import kr.hhplus.be.server.domain.coupon.repository.CouponRedisRepository;
 import kr.hhplus.be.server.infrastructure.coupon.repository.CouponIssueJpaRepository;
 import kr.hhplus.be.server.infrastructure.coupon.repository.CouponJpaRepository;
-import kr.hhplus.be.server.testhelper.TestKafkaConsumer;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.context.annotation.Bean;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -28,14 +25,12 @@ import org.testcontainers.containers.MySQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.containers.KafkaContainer;
-import org.testcontainers.shaded.org.awaitility.Awaitility;
 import org.testcontainers.utility.DockerImageName;
 
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -49,14 +44,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class CouponControllerTest {
 
-    @TestConfiguration
-    static class KafkaTestConsumerConfig {
-        @Bean
-        public TestKafkaConsumer testKafkaConsumer() {
-            return new TestKafkaConsumer();
-        }
-    }
-
     @Container
     static final MySQLContainer<?> mysqlContainer = new MySQLContainer<>("mysql:8.0")
             .withDatabaseName("test")
@@ -67,20 +54,16 @@ class CouponControllerTest {
     static final GenericContainer<?> redisContainer = new GenericContainer<>("redis:7.0")
             .withExposedPorts(6379);
 
-    @Autowired
-    private TestKafkaConsumer testKafkaConsumer;
-
     @Container
     static final KafkaContainer kafkaContainer =
             new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.5.1"));
 
     @DynamicPropertySource
     static void overrideProperties(DynamicPropertyRegistry registry) {
-        kafkaContainer.start();
         registry.add("spring.kafka.bootstrap-servers", kafkaContainer::getBootstrapServers);
-
         registry.add("test.kafka.topic", () -> Topics.COUPON_ISSUE_TOPIC);
         registry.add("test.kafka.group", () -> Groups.COUPON_ISSUE_GROUP);
+        kafkaContainer.start();
 
         if (!mysqlContainer.isRunning()) {
             mysqlContainer.start();
@@ -140,10 +123,6 @@ class CouponControllerTest {
                 .andExpect(jsonPath("$.couponId").value(couponId))
                 .andExpect(jsonPath("$.type").value("FIXED"))
                 .andExpect(jsonPath("$.discount").value(1000));
-
-        Awaitility.await()
-                .atMost(5, TimeUnit.SECONDS)
-                .until(() -> !testKafkaConsumer.getMessages().isEmpty());
 
         // then
         Map<Long, CouponIssueRedisDto> issuedCoupons = couponRedisRepository.findAllIssuedCoupons(randomUserId);

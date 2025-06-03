@@ -1,11 +1,14 @@
 package kr.hhplus.be.server.interfaces.api.payment;
 
+import kr.hhplus.be.server.common.constants.Topics;
 import kr.hhplus.be.server.domain.coupon.model.Coupon;
 import kr.hhplus.be.server.domain.coupon.model.CouponIssue;
 import kr.hhplus.be.server.domain.coupon.model.CouponType;
 import kr.hhplus.be.server.domain.coupon.repository.CouponRedisRepository;
+import kr.hhplus.be.server.domain.order.model.Order;
 import kr.hhplus.be.server.domain.order.model.OrderItem;
 import kr.hhplus.be.server.domain.order.model.OrderOption;
+import kr.hhplus.be.server.domain.payment.model.Payment;
 import kr.hhplus.be.server.domain.payment.repository.PaymentRepository;
 import kr.hhplus.be.server.domain.point.model.UserPoint;
 import kr.hhplus.be.server.domain.product.model.Product;
@@ -17,6 +20,8 @@ import kr.hhplus.be.server.infrastructure.order.repository.OrderOptionJpaReposit
 import kr.hhplus.be.server.infrastructure.point.repository.UserPointJpaRepository;
 import kr.hhplus.be.server.infrastructure.product.repository.ProductJpaRepository;
 import kr.hhplus.be.server.testhelper.RepositoryCleaner;
+import kr.hhplus.be.server.testhelper.TestKafkaConsumer;
+import org.awaitility.Awaitility;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -24,18 +29,23 @@ import org.junit.jupiter.api.TestInstance;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.testcontainers.containers.GenericContainer;
+import org.testcontainers.containers.KafkaContainer;
 import org.testcontainers.containers.MySQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
+import org.testcontainers.utility.DockerImageName;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -47,6 +57,18 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 @Testcontainers
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class PaymentConcurrencyTest {
+
+    @TestConfiguration
+    static class TestKafkaConsumerConfig {
+        @Bean
+        TestKafkaConsumer testKafkaConsumer() {
+            return new TestKafkaConsumer();
+        }
+    }
+
+    @Container
+    static final KafkaContainer kafkaContainer =
+            new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.5.1"));
 
     @Container
     static final MySQLContainer<?> mysqlContainer = new MySQLContainer<>("mysql:8.0")
@@ -60,6 +82,10 @@ public class PaymentConcurrencyTest {
 
     @DynamicPropertySource
     static void overrideProperties(DynamicPropertyRegistry registry) {
+        registry.add("spring.kafka.bootstrap-servers", kafkaContainer::getBootstrapServers);
+        registry.add("test.kafka.topic", () -> Topics.MOCK_API_TOPIC);
+        registry.add("test.kafka.group", () -> "test-consumer-group");
+        kafkaContainer.start();
         if (!mysqlContainer.isRunning()) {
             mysqlContainer.start();
         }
@@ -184,11 +210,16 @@ public class PaymentConcurrencyTest {
         latch.await();
 
         // then
-        long successPayments = paymentRepository.findAll().stream()
-                .filter(p -> p.getState() == 1)
-                .count();
+        Awaitility.await()
+                .atMost(5, TimeUnit.SECONDS)
+                .pollInterval(200, TimeUnit.MILLISECONDS)
+                .untilAsserted(() -> {
+                    long successPayments = paymentRepository.findAll().stream()
+                            .filter(p -> p.getState() == 1)
+                            .count();
 
-        assertThat(successPayments).isEqualTo(1);
+                    assertThat(successPayments).isEqualTo(1);
+                });
     }
 
     @Test
@@ -254,11 +285,16 @@ public class PaymentConcurrencyTest {
         latch.await();
 
         // then
-        long successCount = paymentRepository.findAll().stream()
-                .filter(p -> p.getState() == 1)
-                .count();
+        Awaitility.await()
+                .atMost(5, TimeUnit.SECONDS)
+                .pollInterval(200, TimeUnit.MILLISECONDS)
+                .untilAsserted(() -> {
+                    long successCount = paymentRepository.findAll().stream()
+                            .filter(p -> p.getState() == 1)
+                            .count();
 
-        assertThat(successCount).isEqualTo(1);
+                    assertThat(successCount).isEqualTo(1);
+                });
     }
 
     @Test
@@ -340,11 +376,16 @@ public class PaymentConcurrencyTest {
         }
         latch.await();
 
-        long successCount = paymentRepository.findAll().stream()
-                .filter(p -> p.getState() == 1)
-                .count();
+        Awaitility.await()
+                .atMost(5, TimeUnit.SECONDS)
+                .pollInterval(200, TimeUnit.MILLISECONDS)
+                .untilAsserted(() -> {
+                    long successCount = paymentRepository.findAll().stream()
+                            .filter(p -> p.getState() == 1)
+                            .count();
 
-        assertThat(successCount).isEqualTo(1);
+                    assertThat(successCount).isEqualTo(1);
+                });
     }
 
     @Test
@@ -414,11 +455,16 @@ public class PaymentConcurrencyTest {
 
         latch.await();
 
-        long successCount = paymentRepository.findAll().stream()
-                .filter(p -> p.getState() == 1)
-                .count();
+        Awaitility.await()
+                .atMost(5, TimeUnit.SECONDS)
+                .pollInterval(200, TimeUnit.MILLISECONDS)
+                .untilAsserted(() -> {
+                    long successCount = paymentRepository.findAll().stream()
+                            .filter(p -> p.getState() == 1)
+                            .count();
 
-        assertThat(successCount).isEqualTo(1);
+                    assertThat(successCount).isEqualTo(1);
+                });
     }
 
     @Test
@@ -500,14 +546,19 @@ public class PaymentConcurrencyTest {
         latch.await();
 
         // then: 결제는 단 1건만 성공해야 한다
-        long successCount = paymentRepository.findAll().stream()
-                .filter(p -> p.getState() == 1)
-                .count();
+        Awaitility.await()
+                .atMost(5, TimeUnit.SECONDS)
+                .pollInterval(200, TimeUnit.MILLISECONDS)
+                .untilAsserted(() -> {
+                    long successCount = paymentRepository.findAll().stream()
+                            .filter(p -> p.getState() == 1)
+                            .count();
 
-        assertThat(successCount).isEqualTo(1);
+                    assertThat(successCount).isEqualTo(1);
 
-        UserPoint userPoint = userPointJpaRepository.findById(randomUserId).orElseThrow();
-        assertThat(userPoint.getPoint()).isEqualTo(3000L);
+                    UserPoint userPoint = userPointJpaRepository.findById(randomUserId).orElseThrow();
+                    assertThat(userPoint.getPoint()).isEqualTo(3000L);
+                });
     }
 
 }

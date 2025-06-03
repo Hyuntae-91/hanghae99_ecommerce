@@ -1,6 +1,5 @@
 package kr.hhplus.be.server.domain.product.service;
 
-import kr.hhplus.be.server.domain.product.dto.event.ProductTotalPriceRequestedEvent;
 import kr.hhplus.be.server.domain.order.model.OrderItem;
 import kr.hhplus.be.server.domain.order.model.OrderOption;
 import kr.hhplus.be.server.domain.order.repository.OrderItemRepository;
@@ -14,6 +13,7 @@ import kr.hhplus.be.server.domain.product.dto.request.ProductServiceRequest;
 import kr.hhplus.be.server.domain.product.dto.response.ProductServiceResponse;
 import kr.hhplus.be.server.domain.product.dto.response.ProductTotalPriceResponse;
 import kr.hhplus.be.server.domain.product.model.Product;
+import kr.hhplus.be.server.interfaces.event.product.payload.ProductDataIds;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.context.ApplicationEventPublisher;
@@ -70,9 +70,9 @@ public class ProductService {
         return result;
     }
 
-    public ProductTotalPriceResponse calculateTotalPrice(ProductTotalPriceRequestedEvent requestDto) {
+    public ProductTotalPriceResponse calculateTotalPrice(List<ProductDataIds> requestDto) {
         long total = 0;
-        for (ProductOptionKeyDto dto : requestDto.items()) {
+        for (ProductDataIds dto : requestDto) {
             OrderItem item = orderItemRepository.findById(dto.itemId());
             total += item.calculateTotalPrice();
         }
