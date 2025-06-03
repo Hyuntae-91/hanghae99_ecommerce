@@ -6,6 +6,7 @@ public record ProductTotalPriceCompletedEvent(
         Long orderId,
         Long userId,
         Long couponId,
+        Long couponIssueId,
         Long totalPrice,
         List<Long> productIds
 ) {
@@ -18,6 +19,9 @@ public record ProductTotalPriceCompletedEvent(
         }
         if (couponId != null && couponId < 1) {
             throw new IllegalArgumentException("couponId는 1 이상이거나 null이어야 합니다.");
+        }
+        if (couponIssueId != null && couponIssueId < 1) {
+            throw new IllegalArgumentException("couponIssueId는 1 이상이거나 null이어야 합니다.");
         }
         if (totalPrice == null || totalPrice < 0) {
             throw new IllegalArgumentException("totalPrice는 0 이상이어야 합니다.");

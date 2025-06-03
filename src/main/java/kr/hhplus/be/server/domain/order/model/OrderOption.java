@@ -42,6 +42,13 @@ public class OrderOption {
         }
     }
 
+    public void incrementStockQuantity(int quantity) {
+        if (quantity < 1) {
+            throw new IllegalArgumentException("추가 수량은 1 이상이어야 합니다.");
+        }
+        this.stockQuantity += quantity;
+    }
+
     public void decreaseStock(int quantity) {
         if (quantity < 1) {
             throw new IllegalArgumentException("차감 수량은 1 이상이어야 합니다.");

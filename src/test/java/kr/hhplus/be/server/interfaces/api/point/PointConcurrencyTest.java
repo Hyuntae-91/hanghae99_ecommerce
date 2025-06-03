@@ -49,6 +49,8 @@ public class PointConcurrencyTest {
 
     @DynamicPropertySource
     static void overrideProperties(DynamicPropertyRegistry registry) {
+        registry.add("test.kafka.topic", () -> "test-consumer-topic");
+        registry.add("test.kafka.group", () -> "test-consumer-group");
         if (!mysqlContainer.isRunning()) {
             mysqlContainer.start();
         }

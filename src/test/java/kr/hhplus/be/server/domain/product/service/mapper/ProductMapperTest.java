@@ -9,6 +9,9 @@ import kr.hhplus.be.server.domain.product.dto.response.ProductServiceResponse;
 import kr.hhplus.be.server.domain.product.dto.response.ProductTotalPriceResponse;
 import kr.hhplus.be.server.domain.product.mapper.ProductMapper;
 import kr.hhplus.be.server.domain.product.model.Product;
+import kr.hhplus.be.server.interfaces.event.product.payload.OrderCreatedPayload;
+import kr.hhplus.be.server.interfaces.event.product.payload.ProductDataIds;
+import kr.hhplus.be.server.interfaces.event.product.payload.ProductTotalPriceCompletedPayload;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mapstruct.factory.Mappers;
@@ -54,29 +57,30 @@ class ProductMapperTest {
     }
 
     @Test
-    @DisplayName("성공: OrderCreatedEvent + Response → ProductTotalPriceCompletedEvent 변환")
+    @DisplayName("성공: OrderCreatedPayload + Response → ProductTotalPriceCompletedEvent 변환")
     void toProductTotalPriceCompletedEvent_success() {
-        List<ProductOptionKeyDto> items = List.of(
-                new ProductOptionKeyDto(1L, 101L, 1001L),
-                new ProductOptionKeyDto(2L, 102L, 1002L)
+        List<ProductDataIds> items = List.of(
+                new ProductDataIds(1L, 101L, 1001L, 1),
+                new ProductDataIds(2L, 102L, 1002L, 1)
         );
 
-        OrderCreatedEvent event = new OrderCreatedEvent(
+        OrderCreatedPayload event = new OrderCreatedPayload(
                 999L,
                 888L,
                 777L,
+                1L,
                 items
         );
 
         ProductTotalPriceResponse response = ProductTotalPriceResponse.from(5000L);
 
-        ProductTotalPriceCompletedEvent completedEvent = mapper.toProductTotalPriceCompletedEvent(event, response);
+        ProductTotalPriceCompletedPayload completedEvent = mapper.toProductTotalPriceCompletedPayload(event, response);
 
         assertThat(completedEvent.orderId()).isEqualTo(999L);
         assertThat(completedEvent.userId()).isEqualTo(888L);
         assertThat(completedEvent.couponId()).isEqualTo(777L);
         assertThat(completedEvent.totalPrice()).isEqualTo(5000L);
-        assertThat(completedEvent.productIds()).containsExactly(1L, 2L);
+        assertThat(completedEvent.items().isEmpty()).isFalse();
     }
 
     @Test

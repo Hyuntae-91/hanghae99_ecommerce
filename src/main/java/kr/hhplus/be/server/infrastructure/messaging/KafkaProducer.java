@@ -10,6 +10,10 @@ public class KafkaProducer<T> implements MessagePublisher<T> {
 
     @Override
     public void publish(String topic, String key, T message) {
-        kafkaTemplate.send(topic, key, message);
+        if (key != null) {
+            kafkaTemplate.send(topic, key, message);
+        } else {
+            kafkaTemplate.send(topic, message);
+        }
     }
 }

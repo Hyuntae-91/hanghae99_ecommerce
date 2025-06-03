@@ -1,5 +1,6 @@
 package kr.hhplus.be.server.interfaces.api.product;
 
+import kr.hhplus.be.server.common.constants.Topics;
 import kr.hhplus.be.server.domain.order.model.OrderItem;
 import kr.hhplus.be.server.domain.order.model.OrderOption;
 import kr.hhplus.be.server.domain.order.repository.OrderOptionRepository;
@@ -9,6 +10,7 @@ import kr.hhplus.be.server.infrastructure.order.repository.OrderItemJpaRepositor
 import kr.hhplus.be.server.infrastructure.order.repository.OrderJpaRepository;
 import kr.hhplus.be.server.infrastructure.product.repository.ProductJpaRepository;
 import kr.hhplus.be.server.testhelper.RepositoryCleaner;
+import kr.hhplus.be.server.testhelper.TestKafkaConsumer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -16,6 +18,8 @@ import org.junit.jupiter.api.TestInstance;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -23,16 +27,16 @@ import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 import org.testcontainers.containers.GenericContainer;
+import org.testcontainers.containers.KafkaContainer;
 import org.testcontainers.containers.MySQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
+import org.testcontainers.utility.DockerImageName;
 
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @ActiveProfiles("local")
@@ -41,6 +45,18 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Testcontainers
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class ProductControllerTest {
+
+    @TestConfiguration
+    static class TestKafkaConsumerConfig {
+        @Bean
+        TestKafkaConsumer testKafkaConsumer() {
+            return new TestKafkaConsumer();
+        }
+    }
+
+    @Container
+    static final KafkaContainer kafkaContainer =
+            new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.5.1"));
 
     @Container
     static final MySQLContainer<?> mysqlContainer = new MySQLContainer<>("mysql:8.0")
@@ -54,6 +70,10 @@ class ProductControllerTest {
 
     @DynamicPropertySource
     static void overrideProperties(DynamicPropertyRegistry registry) {
+        registry.add("spring.kafka.bootstrap-servers", kafkaContainer::getBootstrapServers);
+        registry.add("test.kafka.topic", () -> Topics.MOCK_API_TOPIC);
+        registry.add("test.kafka.group", () -> "test-consumer-group");
+        kafkaContainer.start();
         if (!mysqlContainer.isRunning()) {
             mysqlContainer.start();
         }

@@ -9,6 +9,12 @@ import kr.hhplus.be.server.domain.product.dto.response.ProductOptionResponse;
 import kr.hhplus.be.server.domain.product.dto.response.ProductServiceResponse;
 import kr.hhplus.be.server.domain.product.dto.response.ProductTotalPriceResponse;
 import kr.hhplus.be.server.domain.product.model.Product;
+import kr.hhplus.be.server.interfaces.event.coupon.payload.CouponUseRollbackPayload;
+import kr.hhplus.be.server.interfaces.event.point.payload.PointUseRollbackPayload;
+import kr.hhplus.be.server.interfaces.event.product.payload.OrderCreatedPayload;
+import kr.hhplus.be.server.interfaces.event.product.payload.ProductDataIds;
+import kr.hhplus.be.server.interfaces.event.product.payload.ProductTotalPriceCompletedPayload;
+import kr.hhplus.be.server.interfaces.event.product.payload.ProductTotalPriceFailRollbackPayload;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
@@ -29,6 +35,8 @@ public interface ProductMapper {
 
     List<ProductOptionResponse> toProductOptionResponseList(List<OrderOption> orderOptions);
 
+    CouponUseRollbackPayload toProductTotalPriceFailRollbackPayload(OrderCreatedPayload orderCreatedPayload);
+
     default List<Long> extractProductIds(List<ProductOptionKeyDto> dtoList) {
         if (dtoList == null) return List.of();
         return dtoList.stream()
@@ -37,23 +45,17 @@ public interface ProductMapper {
                 .toList();
     }
 
-    ProductTotalPriceRequestedEvent toProductTotalPriceRequestedEvent(OrderCreatedEvent event);
-
-    default ProductTotalPriceCompletedEvent toProductTotalPriceCompletedEvent(
-            OrderCreatedEvent event,
+    default ProductTotalPriceCompletedPayload toProductTotalPriceCompletedPayload(
+            OrderCreatedPayload event,
             ProductTotalPriceResponse response
     ) {
-        List<Long> productIds = event.items().stream()
-                .map(ProductOptionKeyDto::productId)
-                .distinct()
-                .toList();
-
-        return new ProductTotalPriceCompletedEvent(
+        return new ProductTotalPriceCompletedPayload(
                 event.orderId(),
                 event.userId(),
                 event.couponId(),
+                event.couponIssueId(),
                 response.totalPrice(),
-                productIds
+                event.items()
         );
     }
 }

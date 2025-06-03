@@ -1,11 +1,12 @@
 package kr.hhplus.be.server.domain.coupon.service.mapper;
 
-import kr.hhplus.be.server.domain.coupon.dto.event.ApplyCouponDiscountCompletedEvent;
 import kr.hhplus.be.server.domain.coupon.dto.request.ApplyCouponDiscountServiceRequest;
 import kr.hhplus.be.server.domain.coupon.dto.response.ApplyCouponDiscountServiceResponse;
 import kr.hhplus.be.server.domain.coupon.mapper.CouponMapper;
 import kr.hhplus.be.server.domain.coupon.mapper.CouponMapperImpl;
-import kr.hhplus.be.server.domain.product.dto.event.ProductTotalPriceCompletedEvent;
+import kr.hhplus.be.server.interfaces.event.coupon.payload.CouponApplyCompletedPayload;
+import kr.hhplus.be.server.interfaces.event.product.payload.ProductDataIds;
+import kr.hhplus.be.server.interfaces.event.product.payload.ProductTotalPriceCompletedPayload;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -24,11 +25,15 @@ class CouponMapperTest {
     }
 
     @Test
-    @DisplayName("성공: ProductTotalPriceCompletedEvent → ApplyCouponDiscountServiceRequest 매핑")
+    @DisplayName("성공: ProductTotalPriceCompletedPayload → ApplyCouponDiscountServiceRequest 매핑")
     void map_toApplyCouponDiscountServiceRequest_success() {
         // given
-        ProductTotalPriceCompletedEvent event = new ProductTotalPriceCompletedEvent(
-                1L, 10L, 5L, 10000L, List.of(1L, 2L)
+        List<ProductDataIds> items = List.of(
+                new ProductDataIds(1L, 101L, 1001L, 1),
+                new ProductDataIds(2L, 102L, 1002L, 1)
+        );
+        ProductTotalPriceCompletedPayload event = new ProductTotalPriceCompletedPayload(
+                1L, 10L, 5L, 1L, 10000L, items
         );
 
         // when
@@ -41,22 +46,26 @@ class CouponMapperTest {
     }
 
     @Test
-    @DisplayName("성공: event + response → ApplyCouponDiscountCompletedEvent 매핑")
+    @DisplayName("성공: event + response → ApplyCouponDiscountCompletedPayload 매핑")
     void map_toApplyCouponDiscountCompletedEvent_success() {
         // given
-        ProductTotalPriceCompletedEvent event = new ProductTotalPriceCompletedEvent(
-                1L, 20L, 99L, 8000L, List.of(10L, 20L)
+        List<ProductDataIds> items = List.of(
+                new ProductDataIds(1L, 101L, 1001L, 1),
+                new ProductDataIds(2L, 102L, 1002L, 1)
+        );
+        ProductTotalPriceCompletedPayload event = new ProductTotalPriceCompletedPayload(
+                1L, 20L, 99L, 1L, 8000L, items
         );
         ApplyCouponDiscountServiceResponse response = new ApplyCouponDiscountServiceResponse(7000L);
 
         // when
-        ApplyCouponDiscountCompletedEvent result = mapper.toApplyCouponDiscountCompletedEvent(event, response);
+        CouponApplyCompletedPayload result = mapper.toCouponApplyCompletedPayload(event, response);
 
         // then
         assertThat(result.orderId()).isEqualTo(1L);
         assertThat(result.userId()).isEqualTo(20L);
         assertThat(result.couponId()).isEqualTo(99L);
         assertThat(result.finalPrice()).isEqualTo(7000L);
-        assertThat(result.productIds()).containsExactly(10L, 20L);
+        assertThat(result.items().isEmpty()).isFalse();
     }
 }

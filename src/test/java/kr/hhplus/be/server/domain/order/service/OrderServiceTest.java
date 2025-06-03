@@ -1,9 +1,8 @@
 package kr.hhplus.be.server.domain.order.service;
 
+import kr.hhplus.be.server.application.publisher.MessagePublisher;
 import kr.hhplus.be.server.domain.order.dto.request.*;
 import kr.hhplus.be.server.domain.order.dto.response.AddCartServiceResponse;
-import kr.hhplus.be.server.domain.order.dto.response.CartItemResponse;
-import kr.hhplus.be.server.domain.order.dto.response.CartItemServiceResponse;
 import kr.hhplus.be.server.domain.order.mapper.OrderMapper;
 import kr.hhplus.be.server.domain.order.repository.OrderItemRepository;
 import kr.hhplus.be.server.domain.order.repository.OrderOptionRepository;
@@ -12,10 +11,13 @@ import kr.hhplus.be.server.domain.order.model.Order;
 import kr.hhplus.be.server.domain.order.model.OrderItem;
 import kr.hhplus.be.server.domain.order.model.OrderOption;
 import kr.hhplus.be.server.exception.custom.ResourceNotFoundException;
-import org.junit.jupiter.api.BeforeEach;
+import kr.hhplus.be.server.interfaces.event.product.payload.OrderCreatedPayload;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.context.ApplicationEventPublisher;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
 
@@ -24,24 +26,22 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.Mockito.*;
 
+@ExtendWith(MockitoExtension.class)
 class OrderServiceTest {
 
+    @Mock
     private OrderRepository orderRepository;
+    @Mock
     private OrderItemRepository orderItemRepository;
+    @Mock
     private OrderOptionRepository orderOptionRepository;
-    private ApplicationEventPublisher applicationEventPublisher;
+    @Mock
+    private MessagePublisher<OrderCreatedPayload> orderCreatedPayloadPublisher;
+    @Mock
     private OrderMapper orderMapper;
-    private OrderService orderService;
 
-    @BeforeEach
-    void setUp() {
-        orderRepository = mock(OrderRepository.class);
-        orderItemRepository = mock(OrderItemRepository.class);
-        orderOptionRepository = mock(OrderOptionRepository.class);
-        applicationEventPublisher = mock(ApplicationEventPublisher.class);
-        orderMapper = mock(OrderMapper.class);
-        orderService = new OrderService(orderRepository, orderItemRepository, orderOptionRepository, applicationEventPublisher, orderMapper);
-    }
+    @InjectMocks
+    private OrderService orderService;
 
     @Test
     @DisplayName("성공: 장바구니에 상품 추가")
@@ -70,9 +70,10 @@ class OrderServiceTest {
     void create_order_fail_saveAll_exception() {
         // given
         Long userId = 1L;
+        Long couponId = 1L;
         Long couponIssueId = 5L;
         List<CreateOrderOptionDto> items = List.of(new CreateOrderOptionDto(1L, 1));
-        CreateOrderServiceRequest request = new CreateOrderServiceRequest(userId, couponIssueId, items);
+        CreateOrderServiceRequest request = new CreateOrderServiceRequest(userId, couponId, couponIssueId, items);
         Order savedOrder = Order.builder().id(101L).userId(userId).couponIssueId(couponIssueId).totalPrice(0L).state(0).createdAt("2025-04-10T12:00:00").updatedAt("2025-04-10T12:00:00").build();
 
         when(orderRepository.save(any())).thenReturn(savedOrder);
