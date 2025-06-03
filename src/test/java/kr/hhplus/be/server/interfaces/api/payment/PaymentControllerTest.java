@@ -1,6 +1,7 @@
 package kr.hhplus.be.server.interfaces.api.payment;
 
 import com.jayway.jsonpath.JsonPath;
+import kr.hhplus.be.server.common.constants.Topics;
 import kr.hhplus.be.server.domain.coupon.mapper.CouponJsonMapper;
 import kr.hhplus.be.server.domain.coupon.model.Coupon;
 import kr.hhplus.be.server.domain.coupon.model.CouponIssue;
@@ -12,6 +13,7 @@ import kr.hhplus.be.server.domain.order.model.OrderOption;
 import kr.hhplus.be.server.domain.payment.model.Payment;
 import kr.hhplus.be.server.domain.point.model.UserPoint;
 import kr.hhplus.be.server.domain.product.model.Product;
+import kr.hhplus.be.server.exception.custom.ResourceNotFoundException;
 import kr.hhplus.be.server.infrastructure.coupon.repository.CouponIssueJpaRepository;
 import kr.hhplus.be.server.infrastructure.coupon.repository.CouponJpaRepository;
 import kr.hhplus.be.server.infrastructure.order.repository.OrderItemJpaRepository;
@@ -20,24 +22,33 @@ import kr.hhplus.be.server.infrastructure.order.repository.OrderOptionJpaReposit
 import kr.hhplus.be.server.infrastructure.payment.repository.PaymentJpaRepository;
 import kr.hhplus.be.server.infrastructure.point.repository.UserPointJpaRepository;
 import kr.hhplus.be.server.infrastructure.product.repository.ProductJpaRepository;
+import kr.hhplus.be.server.testhelper.TestKafkaConsumer;
+import org.assertj.core.api.Assertions;
+import org.awaitility.Awaitility;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.TestInstance;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.testcontainers.containers.GenericContainer;
+import org.testcontainers.containers.KafkaContainer;
 import org.testcontainers.containers.MySQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
+import org.testcontainers.utility.DockerImageName;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -51,6 +62,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class PaymentControllerTest {
 
+    @TestConfiguration
+    static class TestKafkaConsumerConfig {
+        @Bean
+        TestKafkaConsumer testKafkaConsumer() {
+            return new TestKafkaConsumer();
+        }
+    }
+
     @Container
     static final MySQLContainer<?> mysqlContainer = new MySQLContainer<>("mysql:8.0")
             .withDatabaseName("test")
@@ -61,8 +80,16 @@ public class PaymentControllerTest {
     static final GenericContainer<?> redisContainer = new GenericContainer<>("redis:7.0")
             .withExposedPorts(6379);
 
+    @Container
+    static final KafkaContainer kafkaContainer =
+            new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.5.1"));
+
     @DynamicPropertySource
     static void overrideProperties(DynamicPropertyRegistry registry) {
+        registry.add("spring.kafka.bootstrap-servers", kafkaContainer::getBootstrapServers);
+        registry.add("test.kafka.topic", () -> Topics.MOCK_API_TOPIC);
+        registry.add("test.kafka.group", () -> "test-consumer-group");
+        kafkaContainer.start();
         if (!mysqlContainer.isRunning()) {
             mysqlContainer.start();
         }
@@ -81,6 +108,9 @@ public class PaymentControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @Autowired
+    private TestKafkaConsumer testKafkaConsumer;
 
     @Autowired
     private UserPointJpaRepository userPointJpaRepository;
@@ -127,7 +157,7 @@ public class PaymentControllerTest {
         // 상품 저장
         Product product = productJpaRepository.save(Product.builder()
                 .name("결제상품")
-                .price(2000L)
+                .price(2_000L)
                 .state(1)
                 .createdAt("2025-04-16T10:00:00")
                 .updatedAt("2025-04-16T10:00:00")
@@ -144,7 +174,7 @@ public class PaymentControllerTest {
 
         // 장바구니 항목 저장
         OrderItem savedItem = orderItemJpaRepository.save(OrderItem.of(
-                randomUserId, product.getId(), option.getId(), 2000L, 2
+                randomUserId, product.getId(), option.getId(), 2_000L, 2
         ));
 
         // Redis에 옵션 재고 저장
@@ -177,17 +207,19 @@ public class PaymentControllerTest {
 
         Integer orderIdInt = JsonPath.read(response, "$.orderId");
         Long orderId = orderIdInt.longValue();
-        Order order = orderJpaRepository.findById(orderId)
-                .orElseThrow(() -> new IllegalStateException("주문이 저장되지 않았습니다."));
 
-        List<OrderItem> orderItems = orderItemJpaRepository.findAllByOrderId(orderId);
+        Awaitility.await()
+                .atMost(5, TimeUnit.SECONDS)
+                .pollInterval(200, TimeUnit.MILLISECONDS)
+                .untilAsserted(() -> {
+                    Order order = orderJpaRepository.findById(orderId).orElseThrow();
+                    List<OrderItem> items = orderItemJpaRepository.findAllByOrderId(orderId);
+                    Payment payment = paymentJpaRepository.findByOrderId(orderId).orElseThrow();
 
-        Payment payment = paymentJpaRepository.findByOrderId(orderId)
-                .orElseThrow(() -> new IllegalStateException("결제 정보가 존재하지 않습니다."));
-
-        assertThat(order.getState()).isEqualTo(1);
-        assertThat(payment.getTotalPrice()).isEqualTo(4000);
-        assertThat(orderItems.get(0).getQuantity()).isEqualTo(2);
+                    assertThat(order.getState()).isEqualTo(1);
+                    assertThat(payment.getTotalPrice()).isEqualTo(6_000L);
+                    assertThat(items.get(0).getQuantity()).isEqualTo(2);
+                });
     }
 
     @Test
@@ -339,12 +371,27 @@ public class PaymentControllerTest {
         """.formatted(product.getId(), option.getId(), item.getId());
 
         // when & then
-        mockMvc.perform(post("/v1/payment")
+        String response = mockMvc.perform(post("/v1/payment")
                         .header("userId", randomUserId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(payload))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value("포인트가 부족합니다."));
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.orderId").exists())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        Awaitility.await()
+                .atMost(5, TimeUnit.SECONDS)
+                .pollInterval(200, TimeUnit.MILLISECONDS)
+                .untilAsserted(() -> {
+                    UserPoint user = userPointJpaRepository.findById(randomUserId).orElseThrow();
+                    OrderOption orderOption = orderOptionJpaRepository.findById(option.getId())
+                            .orElseThrow(() -> new ResourceNotFoundException(""));
+
+                    assertThat(user.getPoint()).isEqualTo(100L);
+                    assertThat(orderOption.getStockQuantity()).isEqualTo(10);
+                });
     }
 
     @Test
@@ -380,6 +427,7 @@ public class PaymentControllerTest {
 
         Coupon coupon = couponJpaRepository.save(Coupon.builder()
                 .type(CouponType.FIXED)
+                .id(1L)
                 .description("test")
                 .discount(100)
                 .quantity(10)
@@ -400,7 +448,7 @@ public class PaymentControllerTest {
                 .updatedAt("2025-04-01T00:00:00")
                 .build());
 
-        couponRedisRepository.addCouponForUser(randomUserId, coupon.getId(), 1);
+        couponRedisRepository.addCouponForUser(randomUserId, coupon.getId(), 1L,1);
 
         String payload = """
         {
@@ -417,12 +465,25 @@ public class PaymentControllerTest {
         """.formatted(product.getId(), option.getId(), item.getId(), invalidCoupon.getId());
 
         // when & then
-        mockMvc.perform(post("/v1/payment")
+        String response = mockMvc.perform(post("/v1/payment")
                         .header("userId", randomUserId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(payload))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value("이미 사용된 쿠폰입니다."));
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.orderId").exists())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        Awaitility.await()
+                .atMost(5, TimeUnit.SECONDS)
+                .pollInterval(200, TimeUnit.MILLISECONDS)
+                .untilAsserted(() -> {
+                    OrderOption orderOption = orderOptionJpaRepository.findById(option.getId())
+                            .orElseThrow(() -> new ResourceNotFoundException(""));
+
+                    assertThat(orderOption.getStockQuantity()).isEqualTo(10);
+                });
     }
 
     @Test
@@ -459,6 +520,7 @@ public class PaymentControllerTest {
 
         Coupon coupon = couponJpaRepository.save(Coupon.builder()
                 .type(CouponType.FIXED)
+                .id(1L)
                 .description("테스트 쿠폰")
                 .discount(discountAmount)
                 .quantity(10)
@@ -470,7 +532,7 @@ public class PaymentControllerTest {
 
         couponRedisRepository.saveCouponInfo(coupon.getId(), CouponJsonMapper.toCouponJson(coupon));
         couponRedisRepository.saveStock(coupon.getId(), coupon.getQuantity());
-        couponRedisRepository.addCouponForUser(randomUserId, coupon.getId(), 0);
+        couponRedisRepository.addCouponForUser(randomUserId, coupon.getId(), 1L,0);
 
         String payload = """
         {
@@ -532,6 +594,7 @@ public class PaymentControllerTest {
         // 쿠폰 저장
         Coupon coupon = couponJpaRepository.save(Coupon.builder()
                 .type(CouponType.FIXED)
+                .id(1L)
                 .description("롤백 쿠폰")
                 .discount(1000)
                 .quantity(10)
@@ -554,7 +617,7 @@ public class PaymentControllerTest {
 
         // Redis에 쿠폰 정보 저장
         couponRedisRepository.saveCouponInfo(coupon.getId(), CouponJsonMapper.toCouponJson(coupon));
-        couponRedisRepository.addCouponForUser(randomUserId, coupon.getId(), 1);
+        couponRedisRepository.addCouponForUser(randomUserId, coupon.getId(), 1L,1);
 
         String payload = """
         {

@@ -1,9 +1,12 @@
 package kr.hhplus.be.server.domain.payment.mapper;
 
-import kr.hhplus.be.server.domain.payment.dto.event.PaymentCompletedEvent;
 import kr.hhplus.be.server.domain.payment.dto.request.PaymentServiceRequest;
 import kr.hhplus.be.server.domain.payment.dto.response.PaymentServiceResponse;
-import kr.hhplus.be.server.domain.point.dto.event.PointUsedCompletedEvent;
+import kr.hhplus.be.server.domain.product.dto.request.ProductOptionKeyDto;
+import kr.hhplus.be.server.interfaces.event.payment.payload.PaymentCompletedPayload;
+import kr.hhplus.be.server.interfaces.event.payment.payload.PaymentRollbackPayload;
+import kr.hhplus.be.server.interfaces.event.point.payload.PointUsedCompletedPayload;
+import kr.hhplus.be.server.interfaces.event.product.payload.ProductDataIds;
 import org.mapstruct.Mapper;
 
 import java.util.List;
@@ -11,7 +14,7 @@ import java.util.List;
 @Mapper(componentModel = "spring")
 public interface PaymentMapper {
 
-    default PaymentServiceRequest toPaymentServiceRequest(PointUsedCompletedEvent event) {
+    default PaymentServiceRequest toPaymentServiceRequest(PointUsedCompletedPayload event) {
         return new PaymentServiceRequest(
                 event.userId(),
                 event.usedPoint(),
@@ -19,8 +22,12 @@ public interface PaymentMapper {
         );
     }
 
-    default PaymentCompletedEvent toPaymentCompletedEvent(PaymentServiceResponse response, List<Long> productIds) {
-        return new PaymentCompletedEvent(
+    default PaymentCompletedPayload toPaymentCompletedPayload(PaymentServiceResponse response, PointUsedCompletedPayload event) {
+        List<Long> productIds = event.items().stream()
+                .map(ProductDataIds::productId)
+                .distinct()
+                .toList();
+        return new PaymentCompletedPayload(
                 response.paymentId(),
                 response.orderId(),
                 response.status(),
@@ -30,4 +37,5 @@ public interface PaymentMapper {
         );
     }
 
+    PaymentRollbackPayload toPaymentRollbackPayload(PointUsedCompletedPayload event);
 }

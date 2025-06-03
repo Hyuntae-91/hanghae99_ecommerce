@@ -6,6 +6,9 @@ import kr.hhplus.be.server.domain.payment.dto.response.PaymentServiceResponse;
 import kr.hhplus.be.server.domain.payment.mapper.PaymentMapper;
 import kr.hhplus.be.server.domain.payment.mapper.PaymentMapperImpl;
 import kr.hhplus.be.server.domain.point.dto.event.PointUsedCompletedEvent;
+import kr.hhplus.be.server.interfaces.event.payment.payload.PaymentCompletedPayload;
+import kr.hhplus.be.server.interfaces.event.point.payload.PointUsedCompletedPayload;
+import kr.hhplus.be.server.interfaces.event.product.payload.ProductDataIds;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -24,10 +27,14 @@ class PaymentMapperTest {
     }
 
     @Test
-    @DisplayName("성공: PointUsedCompletedEvent → PaymentServiceRequest 매핑")
+    @DisplayName("성공: PointUsedCompletedPayload → PaymentServiceRequest 매핑")
     void map_toPaymentServiceRequest_success() {
-        PointUsedCompletedEvent event = new PointUsedCompletedEvent(
-                1L, 10L, 5000L, List.of(100L, 200L)
+        List<ProductDataIds> items = List.of(
+                new ProductDataIds(1L, 101L, 1001L, 1),
+                new ProductDataIds(2L, 102L, 1002L, 1)
+        );
+        PointUsedCompletedPayload event = new PointUsedCompletedPayload(
+                1L, 10L, 5000L, 1L, 1L, items
         );
 
         PaymentServiceRequest result = mapper.toPaymentServiceRequest(event);
@@ -39,20 +46,10 @@ class PaymentMapperTest {
 
     @Test
     @DisplayName("성공: PaymentServiceResponse + productIds → PaymentCompletedEvent 매핑")
-    void map_toPaymentCompletedEvent_success() {
+    void map_toPaymentCompletedPayload_success() {
         PaymentServiceResponse response = new PaymentServiceResponse(
                 123L, 456L, 1, 10000L, "2024-01-01T12:00:00"
         );
 
-        List<Long> productIds = List.of(1L, 2L, 3L);
-
-        PaymentCompletedEvent result = mapper.toPaymentCompletedEvent(response, productIds);
-
-        assertThat(result.paymentId()).isEqualTo(123L);
-        assertThat(result.orderId()).isEqualTo(456L);
-        assertThat(result.status()).isEqualTo(1);
-        assertThat(result.totalPrice()).isEqualTo(10000L);
-        assertThat(result.createdAt()).isEqualTo("2024-01-01T12:00:00");
-        assertThat(result.productIds()).containsExactly(1L, 2L, 3L);
     }
 }

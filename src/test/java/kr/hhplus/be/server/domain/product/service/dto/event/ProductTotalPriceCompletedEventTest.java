@@ -15,7 +15,7 @@ class ProductTotalPriceCompletedEventTest {
     @DisplayName("성공: 정상 생성")
     void create_success() {
         ProductTotalPriceCompletedEvent event = new ProductTotalPriceCompletedEvent(
-                1L, 2L, 3L, 1000L, List.of(10L, 20L)
+                1L, 2L, 3L, 1L, 1000L, List.of(10L, 20L)
         );
 
         assertThat(event.orderId()).isEqualTo(1L);
@@ -29,7 +29,7 @@ class ProductTotalPriceCompletedEventTest {
     @DisplayName("성공: couponId가 null이어도 생성 가능")
     void create_success_with_null_couponId() {
         ProductTotalPriceCompletedEvent event = new ProductTotalPriceCompletedEvent(
-                1L, 2L, null, 1000L, List.of(10L)
+                1L, 2L, null, 1L, 1000L, List.of(10L)
         );
 
         assertThat(event.couponId()).isNull();
@@ -39,7 +39,7 @@ class ProductTotalPriceCompletedEventTest {
     @DisplayName("실패: orderId가 null")
     void fail_if_orderId_null() {
         assertThatThrownBy(() ->
-                new ProductTotalPriceCompletedEvent(null, 2L, 3L, 1000L, List.of(10L))
+                new ProductTotalPriceCompletedEvent(null, 2L, 3L, 1L, 1000L, List.of(10L))
         ).isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -47,7 +47,7 @@ class ProductTotalPriceCompletedEventTest {
     @DisplayName("실패: userId가 null")
     void fail_if_userId_null() {
         assertThatThrownBy(() ->
-                new ProductTotalPriceCompletedEvent(1L, null, 3L, 1000L, List.of(10L))
+                new ProductTotalPriceCompletedEvent(1L, null, 3L, 1L,1000L, List.of(10L))
         ).isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -55,7 +55,7 @@ class ProductTotalPriceCompletedEventTest {
     @DisplayName("실패: totalPrice가 null")
     void fail_if_totalPrice_null() {
         assertThatThrownBy(() ->
-                new ProductTotalPriceCompletedEvent(1L, 2L, 3L, null, List.of(10L))
+                new ProductTotalPriceCompletedEvent(1L, 2L, 3L, 1L,null, List.of(10L))
         ).isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -63,7 +63,7 @@ class ProductTotalPriceCompletedEventTest {
     @DisplayName("실패: productIds가 null")
     void fail_if_productIds_null() {
         assertThatThrownBy(() ->
-                new ProductTotalPriceCompletedEvent(1L, 2L, 3L, 1000L, null)
+                new ProductTotalPriceCompletedEvent(1L, 2L, 3L, 1L,1000L, null)
         ).isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -71,7 +71,7 @@ class ProductTotalPriceCompletedEventTest {
     @DisplayName("실패: productIds가 비어있음")
     void fail_if_productIds_empty() {
         assertThatThrownBy(() ->
-                new ProductTotalPriceCompletedEvent(1L, 2L, 3L, 1000L, List.of())
+                new ProductTotalPriceCompletedEvent(1L, 2L, 3L, 1L,1000L, List.of())
         ).isInstanceOf(IllegalArgumentException.class);
     }
 }

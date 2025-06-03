@@ -16,6 +16,8 @@ import kr.hhplus.be.server.domain.product.dto.request.ProductServiceRequest;
 import kr.hhplus.be.server.domain.product.dto.response.ProductServiceResponse;
 import kr.hhplus.be.server.domain.product.dto.response.ProductTotalPriceResponse;
 import kr.hhplus.be.server.domain.product.model.Product;
+import kr.hhplus.be.server.interfaces.event.product.payload.OrderCreatedPayload;
+import kr.hhplus.be.server.interfaces.event.product.payload.ProductDataIds;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -181,11 +183,9 @@ class ProductServiceTest {
     @DisplayName("성공: 인기 상품 총액 계산")
     void calculate_total_price_success() {
         // given
-        ProductOptionKeyDto item1 = new ProductOptionKeyDto(1L, 11L, 1L);
-        ProductOptionKeyDto item2 = new ProductOptionKeyDto(1L, 12L, 2L);
-        List<ProductOptionKeyDto> items = List.of(item1, item2);
-
-        ProductTotalPriceRequestedEvent event = new ProductTotalPriceRequestedEvent(items);
+        ProductDataIds item1 = new ProductDataIds(1L, 11L, 1L, 1);
+        ProductDataIds item2 = new ProductDataIds(1L, 12L, 2L, 1);
+        List<ProductDataIds> items = List.of(item1, item2);
 
         // OrderItem mock
         OrderItem orderItem1 = OrderItem.of(1L, 1L, 11L, 100L, 1);
@@ -197,7 +197,7 @@ class ProductServiceTest {
         when(orderItemRepository.findById(2L)).thenReturn(orderItem2);
 
         // when
-        ProductTotalPriceResponse result = productService.calculateTotalPrice(event);
+        ProductTotalPriceResponse result = productService.calculateTotalPrice(items);
 
         // then
         assertThat(result.totalPrice()).isEqualTo(400L);
@@ -218,78 +218,65 @@ class ProductServiceTest {
     @DisplayName("실패: OrderItem이 존재하지 않으면 ResourceNotFoundException 발생")
     void calculateTotalPrice_when_orderItem_not_found_should_throw_exception() {
         // given
-        ProductOptionKeyDto item = new ProductOptionKeyDto(1L, 1L, 1L);
-        List<ProductOptionKeyDto> items = List.of(item);
-
-        ProductTotalPriceRequestedEvent event = new ProductTotalPriceRequestedEvent(items);
+        ProductDataIds item = new ProductDataIds(1L, 1L, 1L, 1);
+        List<ProductDataIds> items = List.of(item);
 
         when(orderItemRepository.findById(1L))
                 .thenThrow(new ResourceNotFoundException("OrderItem not found: 1"));
 
         // when & then
-        assertThrows(ResourceNotFoundException.class, () -> productService.calculateTotalPrice(event));
+        assertThrows(ResourceNotFoundException.class, () -> productService.calculateTotalPrice(items));
     }
 
     @Test
-    @DisplayName("실패: 빈 주문 항목 리스트는 예외를 발생시킨다")
-    void calculateTotalPrice_when_items_empty_should_throw_exception() {
-        List<ProductOptionKeyDto> items = List.of();
+    @DisplayName("실패: ProductDataIds - productId가 null이면 예외 발생")
+    void productDataIds_fail_productId_null() {
         assertThrows(IllegalArgumentException.class, () ->
-                new ProductTotalPriceRequestedEvent(items)
-        );
+                new ProductDataIds(null, 1L, 1L, 1));
     }
 
     @Test
-    @DisplayName("실패: ProductOptionKeyDto - productId가 null이면 예외 발생")
-    void productOptionKeyDto_fail_productId_null() {
+    @DisplayName("실패: ProductDataIds - productId가 1 미만이면 예외 발생")
+    void productDataIds_fail_productId_invalid() {
         assertThrows(IllegalArgumentException.class, () ->
-                new ProductOptionKeyDto(null, 1L, 1L));
+                new ProductDataIds(0L, 1L, 1L, 1));
     }
 
     @Test
-    @DisplayName("실패: ProductOptionKeyDto - productId가 1 미만이면 예외 발생")
-    void productOptionKeyDto_fail_productId_invalid() {
+    @DisplayName("실패: ProductDataIds - optionId가 null이면 예외 발생")
+    void productDataIds_fail_optionId_null() {
         assertThrows(IllegalArgumentException.class, () ->
-                new ProductOptionKeyDto(0L, 1L, 1L));
+                new ProductDataIds(1L, null, 1L, 1));
     }
 
     @Test
-    @DisplayName("실패: ProductOptionKeyDto - optionId가 null이면 예외 발생")
-    void productOptionKeyDto_fail_optionId_null() {
+    @DisplayName("실패: ProductDataIds - optionId가 1 미만이면 예외 발생")
+    void productDataIds_fail_optionId_invalid() {
         assertThrows(IllegalArgumentException.class, () ->
-                new ProductOptionKeyDto(1L, null, 1L));
+                new ProductDataIds(1L, 0L, 1L, 1));
     }
 
     @Test
-    @DisplayName("실패: ProductOptionKeyDto - optionId가 1 미만이면 예외 발생")
-    void productOptionKeyDto_fail_optionId_invalid() {
+    @DisplayName("실패: ProductDataIds - quantity가 null이면 예외 발생")
+    void productDataIds_fail_quantity_null() {
         assertThrows(IllegalArgumentException.class, () ->
-                new ProductOptionKeyDto(1L, 0L, 1L));
+                new ProductDataIds(1L, 1L, null, 1));
     }
 
     @Test
-    @DisplayName("실패: ProductOptionKeyDto - quantity가 null이면 예외 발생")
-    void productOptionKeyDto_fail_quantity_null() {
+    @DisplayName("실패: ProductDataIds - quantity가 1 미만이면 예외 발생")
+    void productDataIds_fail_quantity_invalid() {
         assertThrows(IllegalArgumentException.class, () ->
-                new ProductOptionKeyDto(1L, 1L, null));
-    }
-
-    @Test
-    @DisplayName("실패: ProductOptionKeyDto - quantity가 1 미만이면 예외 발생")
-    void productOptionKeyDto_fail_quantity_invalid() {
-        assertThrows(IllegalArgumentException.class, () ->
-                new ProductOptionKeyDto(1L, 1L, 0L));
+                new ProductDataIds(1L, 1L, 0L, 1));
     }
 
     @Test
     @DisplayName("성공: 요청된 itemId들에 대해서만 총합 계산")
     void calculateTotalPrice_with_selected_items_only() {
         // given
-        ProductOptionKeyDto item1 = new ProductOptionKeyDto(1L, 11L, 1L);
-        ProductOptionKeyDto item2 = new ProductOptionKeyDto(1L, 12L, 2L);
-        List<ProductOptionKeyDto> items = List.of(item1, item2);
-
-        ProductTotalPriceRequestedEvent event = new ProductTotalPriceRequestedEvent(items);
+        ProductDataIds item1 = new ProductDataIds(1L, 11L, 1L, 1);
+        ProductDataIds item2 = new ProductDataIds(1L, 12L, 2L, 1);
+        List<ProductDataIds> items = List.of(item1, item2);
 
         OrderItem orderItem1 = OrderItem.of(1L, 1L, 11L, 100L, 1);
         OrderItem orderItem2 = OrderItem.of(1L, 1L, 12L, 300L, 1);
@@ -301,7 +288,7 @@ class ProductServiceTest {
         when(orderItemRepository.findById(2L)).thenReturn(orderItem2);
 
         // when
-        ProductTotalPriceResponse result = productService.calculateTotalPrice(event);
+        ProductTotalPriceResponse result = productService.calculateTotalPrice(items);
 
         // then
         assertThat(result.totalPrice()).isEqualTo(400L);
@@ -329,11 +316,9 @@ class ProductServiceTest {
     @DisplayName("성공: 총 금액 계산")
     void calculateTotalPrice_success() {
         // given
-        ProductOptionKeyDto item1 = new ProductOptionKeyDto(1L, 1L, 1L);
-        ProductOptionKeyDto item2 = new ProductOptionKeyDto(2L, 2L, 2L);
-        List<ProductOptionKeyDto> items = List.of(item1, item2);
-
-        ProductTotalPriceRequestedEvent event = new ProductTotalPriceRequestedEvent(items);
+        ProductDataIds item1 = new ProductDataIds(1L, 1L, 1L, 1);
+        ProductDataIds item2 = new ProductDataIds(2L, 2L, 2L, 1);
+        List<ProductDataIds> items = List.of(item1, item2);
 
         // OrderItem(amount, quantity): 1000 * 2 = 2000, 2000 * 3 = 6000
         OrderItem orderItem1 = OrderItem.of(1L, 1L, 1L, 1000L, 2);
@@ -345,12 +330,11 @@ class ProductServiceTest {
         when(orderItemRepository.findById(2L)).thenReturn(orderItem2);
 
         // when
-        ProductTotalPriceResponse result = productService.calculateTotalPrice(event);
+        ProductTotalPriceResponse result = productService.calculateTotalPrice(items);
 
         // then
         assertThat(result.totalPrice()).isEqualTo(2000 + 6000);
     }
-
 
     @Test
     @DisplayName("성공: 상품 점수 업데이트")

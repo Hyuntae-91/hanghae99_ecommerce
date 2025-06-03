@@ -1,9 +1,12 @@
 package kr.hhplus.be.server.interfaces.api.coupon;
 
+import kr.hhplus.be.server.domain.coupon.dto.response.CouponIssueRedisDto;
 import kr.hhplus.be.server.domain.coupon.mapper.CouponJsonMapper;
 import kr.hhplus.be.server.domain.coupon.model.Coupon;
+import kr.hhplus.be.server.domain.coupon.model.CouponIssue;
 import kr.hhplus.be.server.domain.coupon.model.CouponType;
 import kr.hhplus.be.server.domain.coupon.repository.CouponRedisRepository;
+import kr.hhplus.be.server.infrastructure.coupon.repository.CouponIssueJpaRepository;
 import kr.hhplus.be.server.infrastructure.coupon.repository.CouponJpaRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -17,13 +20,18 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.testcontainers.containers.GenericContainer;
+import org.testcontainers.containers.KafkaContainer;
 import org.testcontainers.containers.MySQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
+import org.testcontainers.shaded.org.awaitility.Awaitility;
+import org.testcontainers.utility.DockerImageName;
 
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -34,6 +42,10 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 @Testcontainers
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class CouponConcurrencyTest {
+
+    @Container
+    static final KafkaContainer kafkaContainer =
+            new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.5.1"));
 
     @Container
     static final MySQLContainer<?> mysqlContainer = new MySQLContainer<>("mysql:8.0")
@@ -47,6 +59,11 @@ class CouponConcurrencyTest {
 
     @DynamicPropertySource
     static void overrideProperties(DynamicPropertyRegistry registry) {
+        registry.add("spring.kafka.bootstrap-servers", kafkaContainer::getBootstrapServers);
+        registry.add("test.kafka.topic", () -> "test");
+        registry.add("test.kafka.group", () -> "test");
+        kafkaContainer.start();
+
         if (!mysqlContainer.isRunning()) {
             mysqlContainer.start();
         }
@@ -71,6 +88,9 @@ class CouponConcurrencyTest {
 
     @Autowired
     private CouponRedisRepository couponRedisRepository;
+
+    @Autowired
+    private CouponIssueJpaRepository couponIssueJpaRepository;
 
     private String nowPlus(int days) {
         return java.time.LocalDateTime.now().plusDays(days).toString();
@@ -122,14 +142,21 @@ class CouponConcurrencyTest {
         long issuedCount = 0;
         for (int i = 0; i < threadCount; i++) {
             long userId = randomUserId + i;
-            Map<Long, Integer> userCoupons = couponRedisRepository.findAllIssuedCoupons(userId);
-            if (userCoupons.getOrDefault(randomCouponId, -1) == 0) { // 0이면 발급 성공
+            Map<Long, CouponIssueRedisDto> userCoupons = couponRedisRepository.findAllIssuedCoupons(userId);
+            CouponIssueRedisDto dto = userCoupons.get(randomCouponId);
+            if (dto != null && dto.getUse() == 0) { // 0이면 발급 성공
                 issuedCount++;
             }
         }
 
-        // 발급된 유저 수 검증
-        assertThat(issuedCount).isEqualTo(3); // 또는 15
+        Awaitility.await()
+                .pollInterval(100, TimeUnit.MILLISECONDS)
+                .atMost(5, TimeUnit.SECONDS)
+                .untilAsserted(() -> {
+                    List<CouponIssue> result = couponIssueJpaRepository.findAllByCouponId(randomCouponId);
+                    assertThat(result.size()).isEqualTo(3);
+                });
+        assertThat(issuedCount).isEqualTo(3);
     }
 
     @Test
@@ -179,12 +206,20 @@ class CouponConcurrencyTest {
         long issuedCount = 0;
         for (int i = 0; i < threadCount; i++) {
             long uid = randomUserId + i;
-            Map<Long, Integer> issued = couponRedisRepository.findAllIssuedCoupons(uid);
-            if (issued.getOrDefault(randomCouponId, -1) == 0) {
+            Map<Long, CouponIssueRedisDto> issued = couponRedisRepository.findAllIssuedCoupons(uid);
+            CouponIssueRedisDto dto = issued.get(randomCouponId);
+            if (dto != null && dto.getUse() == 0) {
                 issuedCount++;
             }
         }
 
+        Awaitility.await()
+                .pollInterval(100, TimeUnit.MILLISECONDS)
+                .atMost(5, TimeUnit.SECONDS)
+                .untilAsserted(() -> {
+                    List<CouponIssue> result = couponIssueJpaRepository.findAllByCouponId(randomCouponId);
+                    assertThat(result.size()).isEqualTo(15);
+                });
         assertThat(issuedCount).isEqualTo(15);
     }
 

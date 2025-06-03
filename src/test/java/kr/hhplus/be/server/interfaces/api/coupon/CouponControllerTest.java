@@ -1,9 +1,14 @@
 package kr.hhplus.be.server.interfaces.api.coupon;
 
+import kr.hhplus.be.server.common.constants.Groups;
+import kr.hhplus.be.server.common.constants.Topics;
+import kr.hhplus.be.server.domain.coupon.dto.response.CouponIssueRedisDto;
 import kr.hhplus.be.server.domain.coupon.mapper.CouponJsonMapper;
 import kr.hhplus.be.server.domain.coupon.model.Coupon;
+import kr.hhplus.be.server.domain.coupon.model.CouponIssue;
 import kr.hhplus.be.server.domain.coupon.model.CouponType;
 import kr.hhplus.be.server.domain.coupon.repository.CouponRedisRepository;
+import kr.hhplus.be.server.infrastructure.coupon.repository.CouponIssueJpaRepository;
 import kr.hhplus.be.server.infrastructure.coupon.repository.CouponJpaRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -23,6 +28,7 @@ import org.testcontainers.containers.KafkaContainer;
 import org.testcontainers.utility.DockerImageName;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -54,6 +60,11 @@ class CouponControllerTest {
 
     @DynamicPropertySource
     static void overrideProperties(DynamicPropertyRegistry registry) {
+        registry.add("spring.kafka.bootstrap-servers", kafkaContainer::getBootstrapServers);
+        registry.add("test.kafka.topic", () -> Topics.COUPON_ISSUE_TOPIC);
+        registry.add("test.kafka.group", () -> Groups.COUPON_ISSUE_GROUP);
+        kafkaContainer.start();
+
         if (!mysqlContainer.isRunning()) {
             mysqlContainer.start();
         }
@@ -75,6 +86,9 @@ class CouponControllerTest {
 
     @Autowired
     private CouponJpaRepository couponJpaRepository;
+
+    @Autowired
+    private CouponIssueJpaRepository couponIssueJpaRepository;
 
     @Autowired
     private CouponRedisRepository couponRedisRepository;
@@ -111,10 +125,14 @@ class CouponControllerTest {
                 .andExpect(jsonPath("$.discount").value(1000));
 
         // then
-        Map<Long, Integer> issuedCoupons = couponRedisRepository.findAllIssuedCoupons(randomUserId);
+        Map<Long, CouponIssueRedisDto> issuedCoupons = couponRedisRepository.findAllIssuedCoupons(randomUserId);
+        CouponIssueRedisDto dto = issuedCoupons.get(couponId);
 
-        assertThat(issuedCoupons)
-                .containsEntry(couponId, 0);
+        assertThat(dto).isNotNull();
+        assertThat(dto.getUse()).isEqualTo(0);
+
+        List<CouponIssue> result = couponIssueJpaRepository.findAllByUserId(randomUserId);
+        System.out.println(result);
     }
 
     @Test
@@ -137,7 +155,7 @@ class CouponControllerTest {
 
         couponRedisRepository.saveCouponInfo(coupon.getId(), CouponJsonMapper.toCouponJson(coupon));
         couponRedisRepository.saveStock(coupon.getId(), coupon.getQuantity());
-        couponRedisRepository.addCouponForUser(randomUserId, coupon.getId(), 0);
+        couponRedisRepository.addCouponForUser(randomUserId, coupon.getId(), 1L, 0);
 
         mockMvc.perform(get("/v1/coupon")
                         .header("userId", randomUserId))
@@ -195,7 +213,7 @@ class CouponControllerTest {
 
         couponRedisRepository.saveCouponInfo(validCoupon.getId(), CouponJsonMapper.toCouponJson(validCoupon));
         couponRedisRepository.saveStock(validCoupon.getId(), validCoupon.getQuantity());
-        couponRedisRepository.addCouponForUser(randomUserId, validCoupon.getId(), 0);
+        couponRedisRepository.addCouponForUser(randomUserId, validCoupon.getId(), 1L,0);
 
         mockMvc.perform(get("/v1/coupon")
                         .header("userId", randomUserId))
