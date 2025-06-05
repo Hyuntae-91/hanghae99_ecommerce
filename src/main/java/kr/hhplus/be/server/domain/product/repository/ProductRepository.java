@@ -17,6 +17,8 @@ public interface ProductRepository {
 
     List<Product> findByStateNotIn(int page, int size, String sort, List<Integer> excludeStates);
 
+    List<Product> findByStateNotInCursor(Long cursorId, int size, String sort, List<Integer> excludeStates);
+
     List<Product> getDailyPageProducts(int page, int size);
 
     List<Product> getWeeklyPageProducts(int page, int size);

@@ -6,6 +6,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 import java.util.Optional;
@@ -36,5 +37,29 @@ public interface ProductJpaRepository extends JpaRepository<Product, Long> {
         ) best ON p.id = best.product_id;
     """, nativeQuery = true)
     List<Product> findTop5PopularProducts();
+
+    // 첫 페이지용
+    @Query("""
+           SELECT p FROM Product p
+           WHERE p.state NOT IN :states
+           ORDER BY p.id DESC
+           """)
+    List<Product> findFirstPage(
+            @Param("states") List<Integer> states,
+            Pageable pageable
+    );
+
+    // cursor 이후(slice) 페이지용
+    @Query("""
+           SELECT p FROM Product p
+           WHERE p.state NOT IN :states
+             AND p.id < :cursorId
+           ORDER BY p.id DESC
+           """)
+    List<Product> findSliceAfterCursor(
+            @Param("cursorId") Long cursorId,
+            @Param("states")   List<Integer> states,
+            Pageable pageable
+    );
 
 }

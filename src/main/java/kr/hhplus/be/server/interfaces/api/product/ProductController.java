@@ -37,7 +37,7 @@ public class ProductController implements ProductApi {
     @GetMapping
     public ResponseEntity<?> getProducts(@Valid @ModelAttribute ProductsRequest request) {
         ProductListServiceRequest reqController = new ProductListServiceRequest(
-                request.page(), request.size(), request.sort()
+                request.cursorId(), request.size(), request.sort()
         );
         return ResponseEntity.ok(ProductResponse.fromList(productService.getProductList(reqController)));
     }

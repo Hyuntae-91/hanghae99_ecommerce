@@ -1,14 +1,11 @@
 package kr.hhplus.be.server.domain.product.dto.request;
 
 public record ProductListServiceRequest(
-        int page,
+        Long cursorId,
         int size,
         String sort
 ) {
     public ProductListServiceRequest {
-        if (page < 1) {
-            throw new IllegalArgumentException("Page index must not be less than one");
-        }
         if (size < 1) {
             throw new IllegalArgumentException("Page size must not be less than one");
         }
