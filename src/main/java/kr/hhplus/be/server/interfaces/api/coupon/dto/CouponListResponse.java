@@ -11,6 +11,7 @@ public record CouponListResponse(
         List<CouponResponse> responses = serviceResponse.coupons().stream()
                 .map(coupon -> new CouponResponse(
                         coupon.id(),
+                        coupon.issueId(),
                         coupon.discount(),
                         coupon.description(),
                         coupon.expirationDays()

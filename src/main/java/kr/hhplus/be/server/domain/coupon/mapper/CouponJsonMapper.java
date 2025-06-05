@@ -6,6 +6,7 @@ import kr.hhplus.be.server.domain.coupon.dto.response.CouponDto;
 import kr.hhplus.be.server.domain.coupon.model.Coupon;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 public class CouponJsonMapper {
@@ -32,7 +33,7 @@ public class CouponJsonMapper {
         }
     }
 
-    public static List<CouponDto> fromCouponJsonList(List<String> couponJsonList) {
+    public static List<CouponDto> fromCouponJsonList(List<String> couponJsonList, Map<Long, Long> couponIssueIdMap) {
         if (couponJsonList == null || couponJsonList.isEmpty()) {
             return List.of();
         }
@@ -40,7 +41,8 @@ public class CouponJsonMapper {
                 .filter(Objects::nonNull) // 혹시 null 들어있는 경우 필터링
                 .map(json -> {
                     Coupon coupon = fromCouponJson(json);
-                    return CouponDto.from(coupon);
+                    Long issueId = couponIssueIdMap.get(coupon.getId());
+                    return CouponDto.from(coupon, issueId);
                 })
                 .toList();
     }

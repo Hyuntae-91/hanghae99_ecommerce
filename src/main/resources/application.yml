@@ -1,8 +1,6 @@
 spring:
   application:
     name: hhplus
-  profiles:
-    active: local
   datasource:
     name: HangHaePlusDataSource
     type: com.zaxxer.hikari.HikariDataSource
@@ -17,55 +15,62 @@ spring:
     show-sql: false
     hibernate:
       ddl-auto: none
+      dialect: org.hibernate.dialect.MySQL8Dialect
     properties:
       hibernate.timezone.default_storage: NORMALIZE_UTC
-      hibernate.jdbc.time_zone: UTC
-      hibernate.dialect: org.hibernate.dialect.MySQL8Dialect
-  cache:
-    type: redis
-  data:
-    redis:
-      host: localhost
-      port: 6379
-  kafka:
-    bootstrap-servers: localhost:9092
-    properties:
-      request.timeout.ms: 20000
-      retry.backoff.ms: 500
-      auto:
-        create.topics.enable: false
-        register.schemas: false
-        offset.reset: earliest
-      use.latest.version: true
-      basic.auth.credentials.source: USER_INFO
-    consumer:
-      auto-offset-reset: earliest
-      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      properties:
-        spring.json.trusted.packages: "kr.hhplus.be.server.interfaces.event.*"
-    producer:
-      key-serializer: org.apache.kafka.common.serialization.StringSerializer
-      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
-      properties:
-        enable-auto-commit: false
-    listener:
-      ack-mode: manual
-
+      hibernate.jdbc.time_zone: Asia/Seoul
 ---
-spring.config.activate.on-profile: local, test
-
 spring:
   datasource:
-    url: jdbc:mysql://localhost:3306/hhplus?characterEncoding=UTF-8&serverTimezone=UTC
+    url: jdbc:mysql://mysql:3306/hhplus?characterEncoding=UTF-8
     username: application
     password: application
-  hikari:
-    maximum-pool-size: 1000       # 동시에 사용할 수 있는 DB 커넥션 수 (기본값: 10)
-    minimum-idle: 10             # 유휴 커넥션 최소 수
-    idle-timeout: 300000         # 커넥션 유휴 타임아웃 (ms)
-    max-lifetime: 1800000        # 커넥션 최대 생명 주기 (ms)
-    connection-timeout: 300000    # 커넥션 가져오기 최대 대기 시간 (ms)
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+---
+spring:
+  data:
+    redis:
+      host: redis
+      port: 6379
+
+---
+spring:
+  kafka:
+    bootstrap-servers: kafka:9094 #${KAFKA_BOOTSTRAP_SERVERS}
+    properties:
+      security.protocol: PLAINTEXT
+      request.timeout.ms: 300000
+      retry.backoff.ms: 60000
+      auto:
+        offset.reset: earliest
+        register.schemas: false
+        create.topics.enable: true
+      use.latest.version: true
+      basic.auth.credentials.source: USER_INFO
+    producer:
+      client-id: ${spring.application.name}
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      retries: 5
+    consumer:
+      group-id: ${spring.application.name}
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.ByteArrayDeserializer
+      properties:
+        enable-auto-commit: false
+        spring.json.trusted.packages: "*"
+    listener:
+      ack-mode: manual
+---
+commerce-api:
+  payment:
+    topic-name: commerce.payment-success-event.v1
+
+---
+
+ratelimit:
+  enabled: false
 
 resilience4j:
   circuitbreaker:

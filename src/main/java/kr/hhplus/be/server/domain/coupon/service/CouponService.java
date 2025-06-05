@@ -17,8 +17,10 @@ import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.transaction.annotation.Transactional;
@@ -60,20 +62,25 @@ public class CouponService {
         }
 
         // 2. 사용 가능한 쿠폰만 필터링
-        List<Long> availableCouponIds = issuedCoupons.entrySet().stream()
-                .filter(entry -> entry.getValue().getUse() == 0) // 사용 가능(0)인 쿠폰만
-                .map(Map.Entry::getKey)
-                .toList();
+        Map<Long, Long> availableCouponMap = issuedCoupons.entrySet().stream()
+                .filter(entry -> entry.getValue().getUse() == 0)
+                .collect(Collectors.toMap(
+                        Map.Entry::getKey,                                        // couponId
+                        entry -> entry.getValue().getCouponIssueId()
+                ));
 
-        if (availableCouponIds.isEmpty()) {
+        if (availableCouponMap.isEmpty()) {
             return new GetCouponsServiceResponse(List.of());
         }
 
-        // 3. couponId 리스트로 Redis에서 여러개 쿠폰 상세 조회
-        List<String> couponJsonList = couponRedisRepository.findCouponInfos(availableCouponIds);
+        // 3. Redis에서 쿠폰 상세 정보 다건 조회
+        List<String> couponJsonList = couponRedisRepository.findCouponInfos(
+                new ArrayList<>(availableCouponMap.keySet())
+        );
 
-        // 4. JSON → CouponDto 변환
-        List<CouponDto> couponDtoList = CouponJsonMapper.fromCouponJsonList(couponJsonList);
+        // 4. JSON → CouponDto 변환 + couponIssueId 세팅
+        List<CouponDto> couponDtoList =
+                CouponJsonMapper.fromCouponJsonList(couponJsonList, availableCouponMap);
 
         // 5. 결과 반환
         return new GetCouponsServiceResponse(couponDtoList);

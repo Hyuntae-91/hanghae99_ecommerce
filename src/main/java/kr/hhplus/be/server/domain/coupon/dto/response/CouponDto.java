@@ -4,6 +4,7 @@ import kr.hhplus.be.server.domain.coupon.model.Coupon;
 
 public record CouponDto(
         Long id,
+        Long issueId,
         String type,
         String description,
         Integer discount,
@@ -11,6 +12,9 @@ public record CouponDto(
 ) {
     public CouponDto {
         if (id == null || id < 1) {
+            throw new IllegalArgumentException("id는 1 이상이어야 합니다.");
+        }
+        if (issueId == null || issueId < 1) {
             throw new IllegalArgumentException("id는 1 이상이어야 합니다.");
         }
         if (type == null || type.isBlank()) {
@@ -24,9 +28,10 @@ public record CouponDto(
         }
     }
 
-    public static CouponDto from(Coupon coupon) {
+    public static CouponDto from(Coupon coupon, Long issueId) {
         return new CouponDto(
                 coupon.getId(),
+                issueId,
                 coupon.getType().name(),
                 coupon.getDescription(),
                 coupon.getDiscount(),

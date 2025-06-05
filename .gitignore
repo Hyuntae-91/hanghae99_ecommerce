@@ -39,3 +39,7 @@ out/
 data
 
 src/main/generated/*
+
+grafana/
+redis-data/
+influxdb/
