@@ -1,0 +1,8 @@
+# .dockerignore
+data/
+redis-data/
+*.sock
+.idea
+target/
+build/
+.gradle
