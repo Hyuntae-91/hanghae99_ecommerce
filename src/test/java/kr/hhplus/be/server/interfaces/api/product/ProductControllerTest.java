@@ -172,14 +172,14 @@ class ProductControllerTest {
 
         String payload = """
         {
-          "page": 1,
+          "cursorId": 1,
           "size": 10,
           "sort": "createdAt"
         }
         """;
 
         // when & then
-        mockMvc.perform(get("/v1/products?page=1&size=10&sort=createdAt")
+        mockMvc.perform(get("/v1/products?cursorId=1&size=10&sort=id")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(payload))
                 .andExpect(status().isOk())
