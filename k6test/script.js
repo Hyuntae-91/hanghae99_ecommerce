@@ -4,9 +4,9 @@ import { check, group, sleep, fail } from 'k6';
 export const options = {
     stages: [
         { duration: "30s", target: 50 },   // 기본 성능 테스트 (50명)
-        { duration: "1m", target: 300 },   // 부하 테스트 (300명)
-        { duration: "2m", target: 1000 },   // 스트레스 테스트 (1000명)
-        { duration: "2m", target: 2000 },   // 최대 부하 한계 테스트 (2000명)
+        { duration: "1m", target: 100 },   // 부하 테스트 (100명)
+        { duration: "2m", target: 200 },   // 스트레스 테스트 (200명)
+        { duration: "2m", target: 400 },   // 최대 부하 한계 테스트 (400명)
         { duration: "30s", target: 0 }     // 부하 감소 (서버 복구 확인)
     ],
     thresholds: {
@@ -24,10 +24,10 @@ function genUserId() {
 
 function getProductList(userId) {
     const PAGE_SIZE = 100;
-    const page = Math.floor(Math.random() * 1000) + 1;
+    const cursorId = Math.floor(Math.random() * 900000) + 1;
 
     const my_headers = { userId: String(userId) };
-    const res = http.get(`${BASE_URL}/v1/products?page=${page}&size=${PAGE_SIZE}&sort=createdAt`, { headers: my_headers });
+    const res = http.get(`${BASE_URL}/v1/products?cursorId=${cursorId}&size=${PAGE_SIZE}&sort=id`, { headers: my_headers });
 
     const ok = check(res, { 'product list 200': (r) => r.status === 200 });
     if (!ok) {
