@@ -17,8 +17,8 @@ class GetCouponsServiceResponseTest {
     void createGetCouponsServiceResponse_success() {
         // given
         List<CouponDto> couponList = List.of(
-                new CouponDto(1L, "FIXED", "1000원 할인", 1000, 30),
-                new CouponDto(2L, "PERCENT", "10% 할인", 10, 30)
+                new CouponDto(1L, 1L, "FIXED", "1000원 할인", 1000, 30),
+                new CouponDto(2L, 1L, "PERCENT", "10% 할인", 10, 30)
         );
 
         // when

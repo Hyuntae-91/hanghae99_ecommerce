@@ -50,6 +50,19 @@ public class ProductRepositoryImpl implements ProductRepository {
     }
 
     @Override
+    public List<Product> findByStateNotInCursor(Long cursorId, int size, String sort, List<Integer> excludeStates) {
+        Sort sortSpec = Sort.by(Sort.Direction.ASC, sort);
+        Pageable pageable = PageRequest.of(0, size, sortSpec);
+
+        if (cursorId == null) {
+            // 첫 페이지
+            return productJpaRepository.findFirstPage(excludeStates, pageable);
+        }
+        // cursorId 기준 이후(slice) 페이지
+        return productJpaRepository.findSliceAfterCursor(cursorId, excludeStates, pageable);
+    }
+
+    @Override
     public List<Product> getDailyPageProducts(int page, int size) {
         ProductRankingKey rankingKey = ProductRankingKey.ofDaily(LocalDate.now());
         Set<ZSetOperations.TypedTuple<Object>> rankingData = redisTemplate.opsForZSet()
