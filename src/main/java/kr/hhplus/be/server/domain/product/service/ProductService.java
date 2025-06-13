@@ -49,13 +49,13 @@ public class ProductService {
 
     @Cacheable(
             value = "productList",
-            key = "'productList::page=' + #root.args[0].page() + ':size=' + #root.args[0].size() + ':sort=' + #root.args[0].sort()"
+            key = "'productList::cursor=' + (#root.args[0].cursorId() == null ? 'null' : #root.args[0].cursorId()) + ':size=' + #root.args[0].size() + ':sort=' + #root.args[0].sort()"
     )
     public List<ProductServiceResponse> getProductList(ProductListServiceRequest requestDto) {
         List<Integer> excludedStates = ProductStates.excludedInProductList();
 
-        List<Product> productList = productRepository.findByStateNotIn(
-                requestDto.page(),
+        List<Product> productList = productRepository.findByStateNotInCursor(
+                requestDto.cursorId(),
                 requestDto.size(),
                 requestDto.sort(),
                 excludedStates

@@ -8,6 +8,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.*;
 
@@ -103,8 +104,12 @@ class CouponJsonMapperTest {
             """;
 
         List<String> jsonList = List.of(json1, json2);
+        Map<Long, Long> issueIdMap = Map.of(
+                1L, 101L,
+                2L, 102L
+        );
 
-        List<CouponDto> result = CouponJsonMapper.fromCouponJsonList(jsonList);
+        List<CouponDto> result = CouponJsonMapper.fromCouponJsonList(jsonList, issueIdMap);
 
         assertThat(result).hasSize(2);
         assertThat(result.get(0).description()).isEqualTo("A쿠폰");
@@ -114,8 +119,12 @@ class CouponJsonMapperTest {
     @Test
     @DisplayName("성공: null 또는 빈 리스트 입력 시 빈 리스트 반환")
     void fromCouponJsonList_nullOrEmpty() {
-        assertThat(CouponJsonMapper.fromCouponJsonList(null)).isEmpty();
-        assertThat(CouponJsonMapper.fromCouponJsonList(List.of())).isEmpty();
+        Map<Long, Long> issueIdMap = Map.of(
+                1L, 101L,
+                2L, 102L
+        );
+        assertThat(CouponJsonMapper.fromCouponJsonList(null, issueIdMap)).isEmpty();
+        assertThat(CouponJsonMapper.fromCouponJsonList(List.of(), issueIdMap)).isEmpty();
     }
 }
 

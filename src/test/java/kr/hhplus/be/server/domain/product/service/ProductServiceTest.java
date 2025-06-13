@@ -168,7 +168,7 @@ class ProductServiceTest {
         when(productAssembler.toResponseWithOptions(product2, List.of(option2))).thenReturn(dto2);
 
         // when
-        var result = productService.getProductList(new ProductListServiceRequest(1, 10, "createdAt"));
+        var result = productService.getProductList(new ProductListServiceRequest(1L, 10, "createdAt"));
 
         // then
         assertThat(result).hasSize(2);
@@ -309,7 +309,7 @@ class ProductServiceTest {
 
         // then
         assertThrows(IllegalArgumentException.class, () ->
-                productService.getProductList(new ProductListServiceRequest(1, 10, "invalidField")));
+                productService.getProductList(new ProductListServiceRequest(1L, 10, "invalidField")));
     }
 
     @Test
